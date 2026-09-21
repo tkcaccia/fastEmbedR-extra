@@ -1,0 +1,4 @@
+"dataset","machine","hardware","backend","n.cores","n_runs","runtime_sec_median","runtime_sec_q1","runtime_sec_q3","source_file","speedup_vs_cpu1"
+"MNIST","Local Mac","Apple M3 (8 CPU cores; integrated Metal GPU)","CPU",1,3,0.241,0.2345,0.319,,1
+"MNIST","Local Mac","Apple M3 (8 CPU cores; integrated Metal GPU)","CPU",4,3,0.178,0.1755,0.18,,1.35393258426966
+"MNIST","Local Mac","Apple M3 (8 CPU cores; integrated Metal GPU)","METAL",,3,0.21,0.2085,0.353,,1.14761904761905

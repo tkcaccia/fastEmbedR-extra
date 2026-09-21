@@ -1,0 +1,49 @@
+Draft fastEmbedR source version: 0.99.8
+Frozen source commit: NOT_YET_FROZEN
+Current tracked base commit: a74ce04633efe324c8137498320816a55b9fff61
+Current source status: DIRTY_WORKTREE_DO_NOT_BENCHMARK_OR_SUBMIT
+GitHub branch: tkcaccia/fastEmbedR main
+Bioconductor branch: BiocStaging/fastEmbedR devel
+
+Archived numerical tables and figures:
+  Recorded package version: 0.99.0
+  Recorded package commit: unavailable in historical run manifests
+  Interpretation: validates archived 0.99.0 runs only
+
+Historical release-era smoke-test identity (not the identity of every table row):
+  fastEmbedR commit: 58e39d53d38f73cf2a792b80d56491e7e60fc6dd
+  CUDA image: /mnt/sata_ssd/fastEmbedR/singularity/fastembedr_cuda_20260727_release_58e39d5.sif
+  CUDA image SHA-256: 8a91df71be0dd4ab5a01caaccef159fa281a596d38127e62b22cd5cda846c6b9
+  Embedded fastEmbedR.so SHA-256: 7975ae24f9523f350bbb96b24f2badc3194f69f7cc93da0da5d76ba38064ed80
+
+0.99.8 confirmatory benchmark status: BLOCKED until the implementation is
+committed, the worktree is clean, the release is frozen, and the
+identity-matched CPU/Metal/CUDA rerun is complete
+
+Local release-candidate confirmation (not a publication benchmark):
+  Date: 2026-08-22
+  Dataset: MNIST70k flattened 784-variable float32 input
+  Backend: CPU, 4 cores, seed 4, k/perplexity 30
+  fastEmbedR openTSNE: 45.479 seconds; trustworthiness 0.9233762; Preserve@30 0.4778245
+  fastEmbedR fuzzy UMAP: 29.586 seconds; trustworthiness 0.9276029; Preserve@30 0.5002334
+  fastEmbedR binary UMAP: 57.109 seconds; trustworthiness 0.9264609; Preserve@30 0.5021008
+  Package version/commit: 0.99.8 / UNFROZEN_DEVELOPMENT_TREE
+  Benchmark workflow commit: 36c4e3a7dfab6a457d842bc18b5ccba0217be1d1
+  Interpretation: one-seed CPU confirmation only; it does not replace the
+    required three-seed CPU/Metal/CUDA publication rerun.
+
+Required release-lock fields:
+  package version
+  full source commit
+  clean source status
+  package source-archive SHA-256
+  installed fastEmbedR shared-library SHA-256
+  container SHA-256
+  benchmark repository commit
+  requested backend
+  observed backend
+
+No result may be labeled as validating 0.99.8 until every required identity
+field is present and agrees across all contributing runs. The final manuscript
+must not contain archived 0.99.0 numerical claims or future-tense release
+promises.

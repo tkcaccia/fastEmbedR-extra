@@ -1,0 +1,4 @@
+component,source,commit_or_version,dirty_at_extraction,purpose
+fastEmbedR,/Users/stefano/Documents/umap,09ee7212f22b0502a8b363c190577d6c6aac09b6,yes,Current package source used to curate the benchmark API
+benchmark_source,/Users/stefano/Documents/fastEmbedR-benchmark,36c4e3a7dfab6a457d842bc18b5ccba0217be1d1,yes,Source of the release-validation driver and aggregation logic
+reported_results,results/aggregate/release_identity.txt,recorded package version 0.99.0,not_applicable,Identity and limitations of the bundled compact result snapshot
