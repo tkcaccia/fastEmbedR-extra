@@ -83,149 +83,99 @@ latex_escape <- function(x) {
   gsub("&", "\\\\&", x, fixed = TRUE)
 }
 
-standard <- read_runtime("all_methods_all_datasets_standard.csv")
-python <- read_runtime("python_summary_median.csv")
+table_dataset_labels <- c(
+  "COIL-20", "USPS", "Fashion", "FlowRepo.", "flow18", "MNIST",
+  "ImageNet", "MetRef", "mass41", "Tabula", "Retina"
+)
 
-format_metric <- function(x) {
-  x <- suppressWarnings(as.numeric(x))
-  ifelse(is.finite(x), formatC(x, digits = 3L, format = "f"), "--")
-}
-
-quality_for <- function(dataset, method, backend, profile, timing_scope) {
-  if (timing_scope %in% c("r_mediated_total_call", "direct_python_fit")) {
-    hit <- python[
-      python$dataset == dataset & python$method == method &
-        python$backend == backend & python$profile == profile &
-        python$timing_scope == timing_scope,
-      , drop = FALSE
-    ]
-    if (!nrow(hit)) return(rep(NA_real_, 4L))
-    return(c(
-      hit$trustworthiness_median[[1L]], hit$nn_preservation_median[[1L]],
-      hit$label_accuracy_median[[1L]], NA_real_
-    ))
+total_runtime <- function(row) {
+  if (row$timing_interface == "direct Python") {
+    return(row$direct_python_process_total_sec)
   }
-  hit <- standard[
-    standard$dataset == dataset & standard$method == method &
-      standard$backend == backend & standard$profile == profile &
-      standard$timing_scope == "full_pipeline",
-    , drop = FALSE
-  ]
-  if (!nrow(hit)) return(rep(NA_real_, 4L))
-  c(
-    hit$trustworthiness_median[[1L]],
-    hit$knn_preservation_30_median[[1L]],
-    hit$label_knn_accuracy_median[[1L]], hit$tsne_kl_median[[1L]]
-  )
+  row$runtime
 }
 
-make_performance_rows <- function(data, methods, family_label) {
-  template <- unique(data[, c(
-    "method", "display_label", "backend", "profile", "timing_scope"
-  )])
-  template <- template[match(methods, template$method), , drop = FALSE]
-  output <- vector("list", length(datasets) * nrow(template))
-  counter <- 0L
-  for (dataset in datasets) {
-    for (i in seq_len(nrow(template))) {
-      counter <- counter + 1L
-      info <- template[i, ]
-      hit <- data[
-        data$dataset == dataset & data$method == info$method,
-        , drop = FALSE
-      ]
-      quality <- rep(NA_real_, 4L)
-      runtime <- NA_real_
-      if (nrow(hit)) {
-        runtime <- hit$runtime[[1L]]
-        quality <- quality_for(
-          dataset, info$method, info$backend, info$profile,
-          info$timing_scope
-        )
-      }
-      output[[counter]] <- data.frame(
-        dataset = dataset_labels[[dataset]], family = family_label,
-        method = info$display_label, runtime = runtime,
-        trust = quality[[1L]], preserve = quality[[2L]],
-        accuracy = quality[[3L]], kl = quality[[4L]],
-        stringsAsFactors = FALSE
+runtime_matrix <- function(data, methods, row_labels) {
+  output <- matrix(
+    "--", nrow = length(methods), ncol = length(datasets),
+    dimnames = list(row_labels, table_dataset_labels)
+  )
+  for (i in seq_len(nrow(data))) {
+    dataset_index <- match(data$dataset[[i]], datasets)
+    method_index <- match(data$method[[i]], methods)
+    if (!is.na(dataset_index) && !is.na(method_index)) {
+      output[method_index, dataset_index] <- format_seconds(
+        total_runtime(data[i, ])
       )
     }
   }
-  do.call(rbind, output)
+  output
 }
 
-performance <- rbind(
-  make_performance_rows(tsne, tsne_order, "t-SNE"),
-  make_performance_rows(umap, umap_order, "UMAP")
+tsne_rows <- c(
+  "Rtsne [R total]", "FIt-SNE [R total]",
+  "fastEmbedR CPU [R total]", "fastEmbedR CUDA [R total]",
+  "openTSNE [R-mediated total]", "openTSNE [Python process total]",
+  "cuML t-SNE [R-mediated total]", "cuML t-SNE [Python process total]"
 )
-performance$dataset <- factor(
-  performance$dataset, levels = unname(dataset_labels[datasets])
+umap_rows <- c(
+  "umap [R total]", "uwot [R total]", "uwot fast SGD [R total]",
+  "fastEmbedR fuzzy CPU [R total]", "fastEmbedR binary CPU [R total]",
+  "umap-learn [R-mediated total]", "umap-learn [Python process total]",
+  "fastEmbedR fuzzy CUDA [R total]", "fastEmbedR binary CUDA [R total]",
+  "cuML UMAP [R-mediated total]", "cuML UMAP [Python process total]"
 )
-performance$family <- factor(performance$family, levels = c("t-SNE", "UMAP"))
-performance <- performance[order(performance$dataset, performance$family), ]
 
-table_header <- c(
-  "\\toprule",
-  "Data set & Family & Method and timing route & Seconds & Trust & P@30 & Acc. & KL \\\\",
-  "\\midrule"
-)
-table_lines <- c(
-  "\\begingroup",
-  "\\scriptsize",
-  "\\setlength{\\tabcolsep}{2.2pt}",
-  "\\begin{longtable}{p{1.65cm}p{0.9cm}p{3.8cm}rrrrr}",
-  paste0(
-    "\\caption{Performance of every tested R and Python method on every data ",
-    "set. Values are medians over available seeds. Seconds denote complete R ",
-    "public calls, complete R-mediated calls, or direct-Python fit-only time ",
-    "as stated in the method label. Trust is trustworthiness, P@30 is ",
-    "30-neighbor preservation, Acc. is embedding-space label KNN accuracy, ",
-    "and KL is the t-SNE Kullback--Leibler divergence when available. ",
-    "\\texttt{--} denotes an unavailable, failed, timed-out, unrun, or ",
-    "inapplicable value.}\\label{tab:all-method-performance}\\\\"
-  ),
-  table_header,
-  "\\endfirsthead",
-  "\\multicolumn{8}{c}{\\tablename\\ \\thetable{} -- continued} \\\\",
-  table_header,
-  "\\endhead",
-  "\\midrule",
-  "\\multicolumn{8}{r}{Continued on next page} \\\\",
-  "\\endfoot",
-  "\\bottomrule",
-  "\\endlastfoot"
-)
-for (i in seq_len(nrow(performance))) {
-  row <- performance[i, ]
-  dataset_text <- as.character(row$dataset)
-  if (dataset_text == "FlowRepository") dataset_text <- "FlowRepo."
-  dataset_text <- latex_escape(dataset_text)
-  family_text <- as.character(row$family)
-  table_lines <- c(
-    table_lines,
-    paste(
-      c(
-        dataset_text, family_text, latex_escape(row$method),
-        format_seconds(row$runtime), format_metric(row$trust),
-        format_metric(row$preserve), format_metric(row$accuracy),
-        format_metric(row$kl)
-      ),
-      collapse = " & "
-    ) |> paste0(" \\\\")
+latex_runtime_panel <- function(title, matrix) {
+  columns <- paste0("l", paste(rep("r", ncol(matrix)), collapse = ""))
+  header <- paste(c("Method", colnames(matrix)), collapse = " & ")
+  body <- vapply(seq_len(nrow(matrix)), function(i) {
+    paste(c(latex_escape(rownames(matrix)[[i]]), matrix[i, ]),
+          collapse = " & ") |> paste0(" \\\\")
+  }, character(1L))
+  c(
+    paste0("\\textbf{", title, "}\\par\\smallskip"),
+    "\\resizebox{\\textwidth}{!}{%",
+    paste0("\\begin{tabular}{", columns, "}"),
+    "\\toprule",
+    paste0(header, " \\\\"),
+    "\\midrule",
+    body,
+    "\\bottomrule",
+    "\\end{tabular}%",
+    "}"
   )
-  current_dataset <- as.character(row$dataset)
-  current_family <- as.character(row$family)
-  next_row_new_group <- i == nrow(performance) ||
-    as.character(performance$dataset[[i + 1L]]) != current_dataset ||
-    as.character(performance$family[[i + 1L]]) != current_family
-  if (next_row_new_group && i < nrow(performance)) {
-    table_lines <- c(table_lines, "\\addlinespace[2pt]")
-  }
 }
-table_lines <- c(table_lines, "\\end{longtable}", "\\endgroup")
-writeLines(table_lines,
-           file.path(generated_dir, "table5_all_methods_runtime.tex"))
+
+table_lines <- c(
+  "\\begin{table}[p]",
+  "\\centering",
+  paste0(
+    "\\caption{Median total elapsed time in seconds for every tested method ",
+    "and data set. Methods are rows and data sets are columns. R rows report ",
+    "complete public-call time, R-mediated rows report the complete call made ",
+    "from R, and direct-Python rows report process-wall time rather than ",
+    "fit-only time. \\texttt{--} denotes an unavailable, failed, timed-out, ",
+    "or unrun combination. FlowRepo. denotes FlowRepository and Tabula denotes ",
+    "Tabula Muris.}"
+  ),
+  "\\label{tab:all-method-performance}",
+  "\\scriptsize",
+  latex_runtime_panel(
+    "A. t-SNE",
+    runtime_matrix(tsne, tsne_order, tsne_rows)
+  ),
+  "\\medskip",
+  latex_runtime_panel(
+    "B. UMAP",
+    runtime_matrix(umap, umap_order, umap_rows)
+  ),
+  "\\end{table}"
+)
+writeLines(
+  table_lines,
+  file.path(generated_dir, "table5_all_methods_runtime.tex")
+)
 
 spec <- data.frame(
   family = c(rep("tsne", 6L), rep("umap", 9L)),

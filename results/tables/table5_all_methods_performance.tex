@@ -1,251 +1,44 @@
-\begingroup
+\begin{table}[p]
+\centering
+\caption{Median total elapsed time in seconds for every tested method and data set. Methods are rows and data sets are columns. R rows report complete public-call time, R-mediated rows report the complete call made from R, and direct-Python rows report process-wall time rather than fit-only time. \texttt{--} denotes an unavailable, failed, timed-out, or unrun combination. FlowRepo. denotes FlowRepository and Tabula denotes Tabula Muris.}
+\label{tab:all-method-performance}
 \scriptsize
-\setlength{\tabcolsep}{2.2pt}
-\begin{longtable}{p{1.65cm}p{0.9cm}p{3.8cm}rrrrr}
-\caption{Performance of every tested R and Python method on every data set. Values are medians over available seeds. Seconds denote complete R public calls, complete R-mediated calls, or direct-Python fit-only time as stated in the method label. Trust is trustworthiness, P@30 is 30-neighbor preservation, Acc. is embedding-space label KNN accuracy, and KL is the t-SNE Kullback--Leibler divergence when available. \texttt{--} denotes an unavailable, failed, timed-out, unrun, or inapplicable value.}\label{tab:all-method-performance}\\
+\textbf{A. t-SNE}\par\smallskip
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrrrrrr}
 \toprule
-Data set & Family & Method and timing route & Seconds & Trust & P@30 & Acc. & KL \\
+Method & COIL-20 & USPS & Fashion & FlowRepo. & flow18 & MNIST & ImageNet & MetRef & mass41 & Tabula & Retina \\
 \midrule
-\endfirsthead
-\multicolumn{8}{c}{\tablename\ \thetable{} -- continued} \\
-\toprule
-Data set & Family & Method and timing route & Seconds & Trust & P@30 & Acc. & KL \\
-\midrule
-\endhead
-\midrule
-\multicolumn{8}{r}{Continued on next page} \\
-\endfoot
+Rtsne [R total] & 5.05 & 8.89 & 68.5 & -- & 1585 & 93.8 & 13820 & 1.01 & 1604 & 77.8 & 34.9 \\
+FIt-SNE [R total] & 18.8 & 14.7 & 80.7 & 3059 & 397 & 88.7 & 1987 & 4.50 & 330 & 45.9 & 21.8 \\
+fastEmbedR CPU [R total] & 8.72 & 7.32 & 44.0 & 1315 & 179 & 43.3 & 490 & 1.73 & 165 & 30.2 & 11.7 \\
+fastEmbedR CUDA [R total] & 6.40 & 0.73 & 1.93 & 90.7 & 5.39 & 1.91 & 519 & 0.70 & 5.68 & 3.05 & 0.91 \\
+openTSNE [R-mediated total] & 36.6 & 47.8 & 120 & -- & 623 & 156 & -- & 18.3 & 577 & 94.4 & 75.3 \\
+openTSNE [Python process total] & 32.4 & 44.9 & 111 & -- & 613 & 151 & -- & 16.4 & 575 & 88.5 & 66.7 \\
+cuML t-SNE [R-mediated total] & 5.81 & 5.36 & 6.78 & -- & -- & 6.43 & -- & 5.05 & -- & 6.20 & 5.67 \\
+cuML t-SNE [Python process total] & 3.23 & 2.40 & 4.54 & 792 & 36.7 & 3.75 & 210 & 1.98 & 35.6 & 3.42 & 2.81 \\
 \bottomrule
-\endlastfoot
-COIL-20 & t-SNE & Rtsne [CPU] & 5.05 & 0.824 & 0.524 & 0.641 & 0.945 \\
-COIL-20 & t-SNE & FIt-SNE [CPU] & 18.8 & 0.870 & 0.626 & 0.622 & 1.018 \\
-COIL-20 & t-SNE & fastEmbedR t-SNE [CPU] & 8.72 & 0.906 & 0.574 & 0.577 & 0.722 \\
-COIL-20 & t-SNE & fastEmbedR t-SNE [CUDA] & 6.40 & 0.910 & 0.578 & 0.564 & 0.723 \\
-COIL-20 & t-SNE & Python openTSNE via R (total call) [CPU] & 36.6 & 0.982 & 0.733 & 0.892 & -- \\
-COIL-20 & t-SNE & Python openTSNE direct (fit only) [CPU] & 31.0 & 0.982 & 0.733 & 0.892 & -- \\
-COIL-20 & t-SNE & RAPIDS cuML t-SNE via R (total call) [CUDA] & 5.81 & 0.983 & 0.729 & 0.890 & -- \\
-COIL-20 & t-SNE & RAPIDS cuML t-SNE direct (fit only) [CUDA] & 2.11 & 0.982 & 0.731 & 0.883 & -- \\
-\addlinespace[2pt]
-COIL-20 & UMAP & umap [CPU] & 33.9 & 0.831 & 0.537 & 0.558 & -- \\
-COIL-20 & UMAP & uwot default [CPU] & 20.0 & 0.855 & 0.556 & 0.596 & -- \\
-COIL-20 & UMAP & uwot fast SGD [CPU] & 19.2 & 0.852 & 0.586 & 0.635 & -- \\
-COIL-20 & UMAP & fastEmbedR fuzzy [CPU] & 6.25 & 0.827 & 0.485 & 0.628 & -- \\
-COIL-20 & UMAP & fastEmbedR binary [CPU] & 6.57 & 0.805 & 0.438 & 0.494 & -- \\
-COIL-20 & UMAP & Python umap-learn via R (total call) [CPU] & 21.0 & 0.984 & 0.735 & 0.821 & -- \\
-COIL-20 & UMAP & Python umap-learn direct (fit only) [CPU] & 19.3 & 0.984 & 0.735 & 0.821 & -- \\
-COIL-20 & UMAP & fastEmbedR fuzzy [CUDA] & 0.59 & 0.863 & 0.492 & 0.628 & -- \\
-COIL-20 & UMAP & fastEmbedR binary [CUDA] & 0.59 & 0.880 & 0.559 & 0.500 & -- \\
-COIL-20 & UMAP & RAPIDS cuML UMAP via R (total call) [CUDA] & 3.36 & 0.979 & 0.716 & 0.800 & -- \\
-COIL-20 & UMAP & RAPIDS cuML UMAP direct (fit only) [CUDA] & 1.86 & 0.979 & 0.716 & 0.800 & -- \\
-\addlinespace[2pt]
-USPS & t-SNE & Rtsne [CPU] & 8.89 & 0.943 & 0.449 & 0.758 & 2.032 \\
-USPS & t-SNE & FIt-SNE [CPU] & 14.7 & 0.945 & 0.458 & 0.728 & 2.111 \\
-USPS & t-SNE & fastEmbedR t-SNE [CPU] & 7.32 & 0.949 & 0.454 & 0.740 & 2.062 \\
-USPS & t-SNE & fastEmbedR t-SNE [CUDA] & 0.73 & 0.954 & 0.457 & 0.742 & 2.029 \\
-USPS & t-SNE & Python openTSNE via R (total call) [CPU] & 47.8 & 0.966 & 0.443 & 0.736 & -- \\
-USPS & t-SNE & Python openTSNE direct (fit only) [CPU] & 44.5 & 0.966 & 0.440 & 0.735 & -- \\
-USPS & t-SNE & RAPIDS cuML t-SNE via R (total call) [CUDA] & 5.36 & 0.958 & 0.446 & 0.722 & -- \\
-USPS & t-SNE & RAPIDS cuML t-SNE direct (fit only) [CUDA] & 1.94 & 0.956 & 0.443 & 0.725 & -- \\
-\addlinespace[2pt]
-USPS & UMAP & umap [CPU] & 78.3 & 0.897 & 0.383 & 0.734 & -- \\
-USPS & UMAP & uwot default [CPU] & 8.32 & 0.890 & 0.378 & 0.728 & -- \\
-USPS & UMAP & uwot fast SGD [CPU] & 5.84 & 0.897 & 0.380 & 0.714 & -- \\
-USPS & UMAP & fastEmbedR fuzzy [CPU] & 3.96 & 0.890 & 0.367 & 0.699 & -- \\
-USPS & UMAP & fastEmbedR binary [CPU] & 8.26 & 0.943 & 0.463 & 0.718 & -- \\
-USPS & UMAP & Python umap-learn via R (total call) [CPU] & 22.9 & 0.920 & 0.365 & 0.725 & -- \\
-USPS & UMAP & Python umap-learn direct (fit only) [CPU] & 21.4 & 0.920 & 0.365 & 0.725 & -- \\
-USPS & UMAP & fastEmbedR fuzzy [CUDA] & 0.57 & 0.887 & 0.366 & 0.723 & -- \\
-USPS & UMAP & fastEmbedR binary [CUDA] & 0.56 & 0.915 & 0.393 & 0.677 & -- \\
-USPS & UMAP & RAPIDS cuML UMAP via R (total call) [CUDA] & 2.98 & 0.916 & 0.348 & 0.725 & -- \\
-USPS & UMAP & RAPIDS cuML UMAP direct (fit only) [CUDA] & 1.76 & 0.916 & 0.348 & 0.725 & -- \\
-\addlinespace[2pt]
-Fashion-MNIST & t-SNE & Rtsne [CPU] & 68.5 & 0.922 & 0.509 & 0.732 & 1.885 \\
-Fashion-MNIST & t-SNE & FIt-SNE [CPU] & 80.7 & 0.931 & 0.517 & 0.734 & 1.963 \\
-Fashion-MNIST & t-SNE & fastEmbedR t-SNE [CPU] & 44.0 & 0.963 & 0.553 & 0.737 & 1.847 \\
-Fashion-MNIST & t-SNE & fastEmbedR t-SNE [CUDA] & 1.93 & 0.965 & 0.556 & 0.737 & 1.829 \\
-Fashion-MNIST & t-SNE & Python openTSNE via R (total call) [CPU] & 120 & 0.961 & 0.424 & 0.793 & -- \\
-Fashion-MNIST & t-SNE & Python openTSNE direct (fit only) [CPU] & 109 & 0.961 & 0.424 & 0.793 & -- \\
-Fashion-MNIST & t-SNE & RAPIDS cuML t-SNE via R (total call) [CUDA] & 6.78 & 0.533 & 0.018 & 0.176 & -- \\
-Fashion-MNIST & t-SNE & RAPIDS cuML t-SNE direct (fit only) [CUDA] & 2.91 & 0.693 & 0.093 & 0.420 & -- \\
-\addlinespace[2pt]
-Fashion-MNIST & UMAP & umap [CPU] & 986 & 0.942 & 0.550 & 0.737 & -- \\
-Fashion-MNIST & UMAP & uwot default [CPU] & 66.1 & 0.944 & 0.544 & 0.725 & -- \\
-Fashion-MNIST & UMAP & uwot fast SGD [CPU] & 46.7 & 0.944 & 0.544 & 0.720 & -- \\
-Fashion-MNIST & UMAP & fastEmbedR fuzzy [CPU] & 31.9 & 0.966 & 0.580 & 0.744 & -- \\
-Fashion-MNIST & UMAP & fastEmbedR binary [CPU] & 64.6 & 0.968 & 0.595 & 0.724 & -- \\
-Fashion-MNIST & UMAP & Python umap-learn via R (total call) [CPU] & 79.7 & 0.955 & 0.418 & 0.768 & -- \\
-Fashion-MNIST & UMAP & Python umap-learn direct (fit only) [CPU] & 77.2 & 0.955 & 0.418 & 0.768 & -- \\
-Fashion-MNIST & UMAP & fastEmbedR fuzzy [CUDA] & 0.98 & 0.964 & 0.575 & 0.745 & -- \\
-Fashion-MNIST & UMAP & fastEmbedR binary [CUDA] & 1.06 & 0.969 & 0.593 & 0.713 & -- \\
-Fashion-MNIST & UMAP & RAPIDS cuML UMAP via R (total call) [CUDA] & 4.13 & 0.953 & 0.401 & 0.764 & -- \\
-Fashion-MNIST & UMAP & RAPIDS cuML UMAP direct (fit only) [CUDA] & 2.60 & 0.953 & 0.401 & 0.764 & -- \\
-\addlinespace[2pt]
-FlowRepo. & t-SNE & Rtsne [CPU] & -- & -- & -- & -- & -- \\
-FlowRepo. & t-SNE & FIt-SNE [CPU] & 3059 & 0.946 & 0.364 & 0.436 & 2.387 \\
-FlowRepo. & t-SNE & fastEmbedR t-SNE [CPU] & 1315 & 0.972 & 0.441 & 0.470 & 2.036 \\
-FlowRepo. & t-SNE & fastEmbedR t-SNE [CUDA] & 90.7 & 0.974 & 0.445 & 0.473 & 1.996 \\
-FlowRepo. & t-SNE & Python openTSNE via R (total call) [CPU] & -- & -- & -- & -- & -- \\
-FlowRepo. & t-SNE & Python openTSNE direct (fit only) [CPU] & -- & -- & -- & -- & -- \\
-FlowRepo. & t-SNE & RAPIDS cuML t-SNE via R (total call) [CUDA] & -- & -- & -- & -- & -- \\
-FlowRepo. & t-SNE & RAPIDS cuML t-SNE direct (fit only) [CUDA] & 779 & 0.878 & 0.145 & 0.388 & -- \\
-\addlinespace[2pt]
-FlowRepo. & UMAP & umap [CPU] & -- & -- & -- & -- & -- \\
-FlowRepo. & UMAP & uwot default [CPU] & -- & -- & -- & -- & -- \\
-FlowRepo. & UMAP & uwot fast SGD [CPU] & -- & -- & -- & -- & -- \\
-FlowRepo. & UMAP & fastEmbedR fuzzy [CPU] & -- & -- & -- & -- & -- \\
-FlowRepo. & UMAP & fastEmbedR binary [CPU] & -- & -- & -- & -- & -- \\
-FlowRepo. & UMAP & Python umap-learn via R (total call) [CPU] & -- & -- & -- & -- & -- \\
-FlowRepo. & UMAP & Python umap-learn direct (fit only) [CPU] & -- & -- & -- & -- & -- \\
-FlowRepo. & UMAP & fastEmbedR fuzzy [CUDA] & 77.1 & 0.969 & 0.444 & 0.470 & -- \\
-FlowRepo. & UMAP & fastEmbedR binary [CUDA] & 81.3 & 0.970 & 0.449 & 0.471 & -- \\
-FlowRepo. & UMAP & RAPIDS cuML UMAP via R (total call) [CUDA] & 199 & 0.947 & 0.322 & 0.442 & -- \\
-FlowRepo. & UMAP & RAPIDS cuML UMAP direct (fit only) [CUDA] & 198 & 0.947 & 0.322 & 0.442 & -- \\
-\addlinespace[2pt]
-flow18 & t-SNE & Rtsne [CPU] & 1585 & 0.770 & 0.231 & 0.758 & 2.700 \\
-flow18 & t-SNE & FIt-SNE [CPU] & 397 & 0.974 & 0.436 & 0.953 & 2.058 \\
-flow18 & t-SNE & fastEmbedR t-SNE [CPU] & 179 & 0.975 & 0.439 & 0.955 & 2.025 \\
-flow18 & t-SNE & fastEmbedR t-SNE [CUDA] & 5.39 & 0.977 & 0.442 & 0.955 & 1.996 \\
-flow18 & t-SNE & Python openTSNE via R (total call) [CPU] & 623 & 0.978 & 0.401 & 0.955 & -- \\
-flow18 & t-SNE & Python openTSNE direct (fit only) [CPU] & 610 & 0.978 & 0.401 & 0.955 & -- \\
-flow18 & t-SNE & RAPIDS cuML t-SNE via R (total call) [CUDA] & -- & -- & -- & -- & -- \\
-flow18 & t-SNE & RAPIDS cuML t-SNE direct (fit only) [CUDA] & 34.4 & 0.980 & 0.419 & 0.952 & -- \\
-\addlinespace[2pt]
-flow18 & UMAP & umap [CPU] & -- & -- & -- & -- & -- \\
-flow18 & UMAP & uwot default [CPU] & 1007 & 0.967 & 0.428 & 0.954 & -- \\
-flow18 & UMAP & uwot fast SGD [CPU] & 689 & 0.968 & 0.429 & 0.955 & -- \\
-flow18 & UMAP & fastEmbedR fuzzy [CPU] & 221 & 0.964 & 0.430 & 0.954 & -- \\
-flow18 & UMAP & fastEmbedR binary [CPU] & 643 & 0.967 & 0.435 & 0.957 & -- \\
-flow18 & UMAP & Python umap-learn via R (total call) [CPU] & 1143 & 0.966 & 0.376 & 0.954 & -- \\
-flow18 & UMAP & Python umap-learn direct (fit only) [CPU] & 1127 & 0.966 & 0.376 & 0.954 & -- \\
-flow18 & UMAP & fastEmbedR fuzzy [CUDA] & 1.76 & 0.965 & 0.423 & 0.951 & -- \\
-flow18 & UMAP & fastEmbedR binary [CUDA] & 2.57 & 0.969 & 0.430 & 0.953 & -- \\
-flow18 & UMAP & RAPIDS cuML UMAP via R (total call) [CUDA] & 12.1 & 0.965 & 0.367 & 0.954 & -- \\
-flow18 & UMAP & RAPIDS cuML UMAP direct (fit only) [CUDA] & 10.7 & 0.965 & 0.367 & 0.954 & -- \\
-\addlinespace[2pt]
-MNIST & t-SNE & Rtsne [CPU] & 93.8 & 0.902 & 0.450 & 0.947 & 2.127 \\
-MNIST & t-SNE & FIt-SNE [CPU] & 88.7 & 0.917 & 0.461 & 0.951 & 2.281 \\
-MNIST & t-SNE & fastEmbedR t-SNE [CPU] & 43.3 & 0.924 & 0.477 & 0.952 & 2.224 \\
-MNIST & t-SNE & fastEmbedR t-SNE [CUDA] & 1.91 & 0.925 & 0.475 & 0.961 & 2.204 \\
-MNIST & t-SNE & Python openTSNE via R (total call) [CPU] & 156 & 0.959 & 0.408 & 0.969 & -- \\
-MNIST & t-SNE & Python openTSNE direct (fit only) [CPU] & 149 & 0.959 & 0.408 & 0.969 & -- \\
-MNIST & t-SNE & RAPIDS cuML t-SNE via R (total call) [CUDA] & 6.43 & 0.965 & 0.426 & 0.957 & -- \\
-MNIST & t-SNE & RAPIDS cuML t-SNE direct (fit only) [CUDA] & 2.72 & 0.965 & 0.427 & 0.957 & -- \\
-\addlinespace[2pt]
-MNIST & UMAP & umap [CPU] & 939 & 0.927 & 0.498 & 0.964 & -- \\
-MNIST & UMAP & uwot default [CPU] & 68.0 & 0.929 & 0.491 & 0.962 & -- \\
-MNIST & UMAP & uwot fast SGD [CPU] & 48.8 & 0.929 & 0.491 & 0.959 & -- \\
-MNIST & UMAP & fastEmbedR fuzzy [CPU] & 29.3 & 0.925 & 0.491 & 0.958 & -- \\
-MNIST & UMAP & fastEmbedR binary [CPU] & 61.5 & 0.928 & 0.497 & 0.945 & -- \\
-MNIST & UMAP & Python umap-learn via R (total call) [CPU] & 83.4 & 0.950 & 0.424 & 0.962 & -- \\
-MNIST & UMAP & Python umap-learn direct (fit only) [CPU] & 81.8 & 0.950 & 0.424 & 0.962 & -- \\
-MNIST & UMAP & fastEmbedR fuzzy [CUDA] & 0.97 & 0.924 & 0.484 & 0.965 & -- \\
-MNIST & UMAP & fastEmbedR binary [CUDA] & 1.06 & 0.926 & 0.499 & 0.948 & -- \\
-MNIST & UMAP & RAPIDS cuML UMAP via R (total call) [CUDA] & 4.10 & 0.943 & 0.402 & 0.956 & -- \\
-MNIST & UMAP & RAPIDS cuML UMAP direct (fit only) [CUDA] & 2.57 & 0.943 & 0.402 & 0.956 & -- \\
-\addlinespace[2pt]
-ImageNet & t-SNE & Rtsne [CPU] & 13820 & 0.548 & 0.081 & 0.030 & 4.040 \\
-ImageNet & t-SNE & FIt-SNE [CPU] & 1987 & 0.684 & 0.188 & 0.035 & 3.774 \\
-ImageNet & t-SNE & fastEmbedR t-SNE [CPU] & 490 & 0.613 & 0.130 & 0.032 & 4.243 \\
-ImageNet & t-SNE & fastEmbedR t-SNE [CUDA] & 519 & 0.680 & 0.183 & 0.037 & 3.823 \\
-ImageNet & t-SNE & Python openTSNE via R (total call) [CPU] & -- & -- & -- & -- & -- \\
-ImageNet & t-SNE & Python openTSNE direct (fit only) [CPU] & -- & -- & -- & -- & -- \\
-ImageNet & t-SNE & RAPIDS cuML t-SNE via R (total call) [CUDA] & -- & -- & -- & -- & -- \\
-ImageNet & t-SNE & RAPIDS cuML t-SNE direct (fit only) [CUDA] & 166 & 0.509 & 0.018 & 0.019 & -- \\
-\addlinespace[2pt]
-ImageNet & UMAP & umap [CPU] & -- & -- & -- & -- & -- \\
-ImageNet & UMAP & uwot default [CPU] & 2138 & 0.651 & 0.160 & 0.038 & -- \\
-ImageNet & UMAP & uwot fast SGD [CPU] & 1820 & 0.639 & 0.146 & 0.035 & -- \\
-ImageNet & UMAP & fastEmbedR fuzzy [CPU] & 531 & 0.592 & 0.108 & 0.021 & -- \\
-ImageNet & UMAP & fastEmbedR binary [CPU] & 1182 & 0.629 & 0.141 & 0.027 & -- \\
-ImageNet & UMAP & Python umap-learn via R (total call) [CPU] & -- & -- & -- & -- & -- \\
-ImageNet & UMAP & Python umap-learn direct (fit only) [CPU] & -- & -- & -- & -- & -- \\
-ImageNet & UMAP & fastEmbedR fuzzy [CUDA] & 512 & 0.612 & 0.126 & 0.029 & -- \\
-ImageNet & UMAP & fastEmbedR binary [CUDA] & 533 & 0.649 & 0.152 & 0.037 & -- \\
-ImageNet & UMAP & RAPIDS cuML UMAP via R (total call) [CUDA] & 327 & 0.766 & 0.227 & 0.195 & -- \\
-ImageNet & UMAP & RAPIDS cuML UMAP direct (fit only) [CUDA] & 314 & 0.766 & 0.227 & 0.195 & -- \\
-\addlinespace[2pt]
-MetRef & t-SNE & Rtsne [CPU] & 1.01 & 0.879 & 0.410 & 0.706 & 1.999 \\
-MetRef & t-SNE & FIt-SNE [CPU] & 4.50 & 0.869 & 0.404 & 0.726 & 2.117 \\
-MetRef & t-SNE & fastEmbedR t-SNE [CPU] & 1.73 & 0.884 & 0.443 & 0.708 & 1.834 \\
-MetRef & t-SNE & fastEmbedR t-SNE [CUDA] & 0.70 & 0.886 & 0.451 & 0.723 & 1.824 \\
-MetRef & t-SNE & Python openTSNE via R (total call) [CPU] & 18.3 & 0.872 & 0.412 & 0.729 & -- \\
-MetRef & t-SNE & Python openTSNE direct (fit only) [CPU] & 15.6 & 0.872 & 0.412 & 0.729 & -- \\
-MetRef & t-SNE & RAPIDS cuML t-SNE via R (total call) [CUDA] & 5.05 & 0.570 & 0.065 & 0.099 & -- \\
-MetRef & t-SNE & RAPIDS cuML t-SNE direct (fit only) [CUDA] & 1.59 & 0.570 & 0.065 & 0.097 & -- \\
-\addlinespace[2pt]
-MetRef & UMAP & umap [CPU] & 3.19 & 0.849 & 0.406 & 0.710 & -- \\
-MetRef & UMAP & uwot default [CPU] & 1.92 & 0.863 & 0.419 & 0.723 & -- \\
-MetRef & UMAP & uwot fast SGD [CPU] & 1.61 & 0.863 & 0.419 & 0.726 & -- \\
-MetRef & UMAP & fastEmbedR fuzzy [CPU] & 0.60 & 0.862 & 0.414 & 0.703 & -- \\
-MetRef & UMAP & fastEmbedR binary [CPU] & 0.85 & 0.802 & 0.347 & 0.551 & -- \\
-MetRef & UMAP & Python umap-learn via R (total call) [CPU] & 15.1 & 0.853 & 0.412 & 0.721 & -- \\
-MetRef & UMAP & Python umap-learn direct (fit only) [CPU] & 12.5 & 0.853 & 0.412 & 0.721 & -- \\
-MetRef & UMAP & fastEmbedR fuzzy [CUDA] & 0.54 & 0.872 & 0.423 & 0.717 & -- \\
-MetRef & UMAP & fastEmbedR binary [CUDA] & 0.57 & 0.820 & 0.363 & 0.559 & -- \\
-MetRef & UMAP & RAPIDS cuML UMAP via R (total call) [CUDA] & 3.01 & 0.852 & 0.409 & 0.710 & -- \\
-MetRef & UMAP & RAPIDS cuML UMAP direct (fit only) [CUDA] & 1.80 & 0.852 & 0.409 & 0.710 & -- \\
-\addlinespace[2pt]
-mass41 & t-SNE & Rtsne [CPU] & 1604 & 0.868 & 0.284 & 0.782 & 2.509 \\
-mass41 & t-SNE & FIt-SNE [CPU] & 330 & 0.970 & 0.398 & 0.889 & 2.108 \\
-mass41 & t-SNE & fastEmbedR t-SNE [CPU] & 165 & 0.973 & 0.409 & 0.879 & 2.066 \\
-mass41 & t-SNE & fastEmbedR t-SNE [CUDA] & 5.68 & 0.975 & 0.416 & 0.888 & 2.036 \\
-mass41 & t-SNE & Python openTSNE via R (total call) [CPU] & 577 & 0.974 & 0.354 & 0.877 & -- \\
-mass41 & t-SNE & Python openTSNE direct (fit only) [CPU] & 572 & 0.974 & 0.354 & 0.877 & -- \\
-mass41 & t-SNE & RAPIDS cuML t-SNE via R (total call) [CUDA] & -- & -- & -- & -- & -- \\
-mass41 & t-SNE & RAPIDS cuML t-SNE direct (fit only) [CUDA] & 33.3 & 0.977 & 0.374 & 0.893 & -- \\
-\addlinespace[2pt]
-mass41 & UMAP & umap [CPU] & -- & -- & -- & -- & -- \\
-mass41 & UMAP & uwot default [CPU] & 662 & 0.972 & 0.412 & 0.899 & -- \\
-mass41 & UMAP & uwot fast SGD [CPU] & 348 & 0.971 & 0.411 & 0.896 & -- \\
-mass41 & UMAP & fastEmbedR fuzzy [CPU] & 214 & 0.971 & 0.411 & 0.904 & -- \\
-mass41 & UMAP & fastEmbedR binary [CPU] & 648 & 0.971 & 0.413 & 0.907 & -- \\
-mass41 & UMAP & Python umap-learn via R (total call) [CPU] & 1118 & 0.969 & 0.345 & 0.893 & -- \\
-mass41 & UMAP & Python umap-learn direct (fit only) [CPU] & 1122 & 0.969 & 0.345 & 0.893 & -- \\
-mass41 & UMAP & fastEmbedR fuzzy [CUDA] & 2.09 & 0.970 & 0.406 & 0.902 & -- \\
-mass41 & UMAP & fastEmbedR binary [CUDA] & 3.00 & 0.971 & 0.411 & 0.904 & -- \\
-mass41 & UMAP & RAPIDS cuML UMAP via R (total call) [CUDA] & 9.58 & 0.967 & 0.339 & 0.890 & -- \\
-mass41 & UMAP & RAPIDS cuML UMAP direct (fit only) [CUDA] & 8.14 & 0.967 & 0.339 & 0.890 & -- \\
-\addlinespace[2pt]
-Tabula Muris & t-SNE & Rtsne [CPU] & 77.8 & 0.937 & 0.569 & 0.814 & 1.794 \\
-Tabula Muris & t-SNE & FIt-SNE [CPU] & 45.9 & 0.977 & 0.609 & 0.839 & 1.736 \\
-Tabula Muris & t-SNE & fastEmbedR t-SNE [CPU] & 30.2 & 0.977 & 0.618 & 0.840 & 1.711 \\
-Tabula Muris & t-SNE & fastEmbedR t-SNE [CUDA] & 3.05 & 0.983 & 0.632 & 0.843 & 1.660 \\
-Tabula Muris & t-SNE & Python openTSNE via R (total call) [CPU] & 94.4 & 0.986 & 0.618 & 0.859 & -- \\
-Tabula Muris & t-SNE & Python openTSNE direct (fit only) [CPU] & 87.9 & 0.986 & 0.618 & 0.859 & -- \\
-Tabula Muris & t-SNE & RAPIDS cuML t-SNE via R (total call) [CUDA] & 6.20 & 0.914 & 0.504 & 0.771 & -- \\
-Tabula Muris & t-SNE & RAPIDS cuML t-SNE direct (fit only) [CUDA] & 2.70 & 0.947 & 0.564 & 0.825 & -- \\
-\addlinespace[2pt]
-Tabula Muris & UMAP & umap [CPU] & 734 & 0.987 & 0.652 & 0.833 & -- \\
-Tabula Muris & UMAP & uwot default [CPU] & 70.2 & 0.982 & 0.640 & 0.821 & -- \\
-Tabula Muris & UMAP & uwot fast SGD [CPU] & 44.5 & 0.981 & 0.639 & 0.828 & -- \\
-Tabula Muris & UMAP & fastEmbedR fuzzy [CPU] & 20.4 & 0.972 & 0.617 & 0.814 & -- \\
-Tabula Muris & UMAP & fastEmbedR binary [CPU] & 65.5 & 0.986 & 0.649 & 0.814 & -- \\
-Tabula Muris & UMAP & Python umap-learn via R (total call) [CPU] & 90.4 & 0.991 & 0.651 & 0.841 & -- \\
-Tabula Muris & UMAP & Python umap-learn direct (fit only) [CPU] & 85.8 & 0.991 & 0.651 & 0.841 & -- \\
-Tabula Muris & UMAP & fastEmbedR fuzzy [CUDA] & 0.81 & 0.964 & 0.611 & 0.810 & -- \\
-Tabula Muris & UMAP & fastEmbedR binary [CUDA] & 0.90 & 0.984 & 0.645 & 0.824 & -- \\
-Tabula Muris & UMAP & RAPIDS cuML UMAP via R (total call) [CUDA] & 3.64 & 0.988 & 0.634 & 0.840 & -- \\
-Tabula Muris & UMAP & RAPIDS cuML UMAP direct (fit only) [CUDA] & 2.37 & 0.988 & 0.634 & 0.840 & -- \\
-\addlinespace[2pt]
-Retina & t-SNE & Rtsne [CPU] & 34.9 & 0.920 & 0.414 & 0.967 & 1.859 \\
-Retina & t-SNE & FIt-SNE [CPU] & 21.8 & 0.924 & 0.411 & 0.968 & 2.003 \\
-Retina & t-SNE & fastEmbedR t-SNE [CPU] & 11.7 & 0.925 & 0.419 & 0.968 & 2.013 \\
-Retina & t-SNE & fastEmbedR t-SNE [CUDA] & 0.91 & 0.924 & 0.426 & 0.965 & 1.916 \\
-Retina & t-SNE & Python openTSNE via R (total call) [CPU] & 75.3 & 0.935 & 0.394 & 0.974 & -- \\
-Retina & t-SNE & Python openTSNE direct (fit only) [CPU] & 66.0 & 0.935 & 0.394 & 0.974 & -- \\
-Retina & t-SNE & RAPIDS cuML t-SNE via R (total call) [CUDA] & 5.67 & 0.912 & 0.375 & 0.952 & -- \\
-Retina & t-SNE & RAPIDS cuML t-SNE direct (fit only) [CUDA] & 2.26 & 0.894 & 0.377 & 0.941 & -- \\
-\addlinespace[2pt]
-Retina & UMAP & umap [CPU] & 364 & 0.920 & 0.416 & 0.964 & -- \\
-Retina & UMAP & uwot default [CPU] & 25.6 & 0.918 & 0.410 & 0.967 & -- \\
-Retina & UMAP & uwot fast SGD [CPU] & 12.6 & 0.918 & 0.409 & 0.959 & -- \\
-Retina & UMAP & fastEmbedR fuzzy [CPU] & 10.1 & 0.917 & 0.408 & 0.966 & -- \\
-Retina & UMAP & fastEmbedR binary [CPU] & 32.8 & 0.919 & 0.415 & 0.967 & -- \\
-Retina & UMAP & Python umap-learn via R (total call) [CPU] & 51.0 & 0.930 & 0.389 & 0.974 & -- \\
-Retina & UMAP & Python umap-learn direct (fit only) [CPU] & 49.5 & 0.930 & 0.389 & 0.974 & -- \\
-Retina & UMAP & fastEmbedR fuzzy [CUDA] & 0.61 & 0.915 & 0.403 & 0.962 & -- \\
-Retina & UMAP & fastEmbedR binary [CUDA] & 0.67 & 0.921 & 0.418 & 0.968 & -- \\
-Retina & UMAP & RAPIDS cuML UMAP via R (total call) [CUDA] & 3.16 & 0.921 & 0.369 & 0.974 & -- \\
-Retina & UMAP & RAPIDS cuML UMAP direct (fit only) [CUDA] & 1.93 & 0.921 & 0.369 & 0.974 & -- \\
-\end{longtable}
-\endgroup
+\end{tabular}%
+}
+\medskip
+\textbf{B. UMAP}\par\smallskip
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrrrrrr}
+\toprule
+Method & COIL-20 & USPS & Fashion & FlowRepo. & flow18 & MNIST & ImageNet & MetRef & mass41 & Tabula & Retina \\
+\midrule
+umap [R total] & 33.9 & 78.3 & 986 & -- & -- & 939 & -- & 3.19 & -- & 734 & 364 \\
+uwot [R total] & 20.0 & 8.32 & 66.1 & -- & 1007 & 68.0 & 2138 & 1.92 & 662 & 70.2 & 25.6 \\
+uwot fast SGD [R total] & 19.2 & 5.84 & 46.7 & -- & 689 & 48.8 & 1820 & 1.61 & 348 & 44.5 & 12.6 \\
+fastEmbedR fuzzy CPU [R total] & 6.25 & 3.96 & 31.9 & -- & 221 & 29.3 & 531 & 0.60 & 214 & 20.4 & 10.1 \\
+fastEmbedR binary CPU [R total] & 6.57 & 8.26 & 64.6 & -- & 643 & 61.5 & 1182 & 0.85 & 648 & 65.5 & 32.8 \\
+umap-learn [R-mediated total] & 21.0 & 22.9 & 79.7 & -- & 1143 & 83.4 & -- & 15.1 & 1118 & 90.4 & 51.0 \\
+umap-learn [Python process total] & 20.7 & 22.0 & 79.1 & -- & 1129 & 83.5 & -- & 13.4 & 1125 & 87.2 & 50.4 \\
+fastEmbedR fuzzy CUDA [R total] & 0.59 & 0.57 & 0.98 & 77.1 & 1.76 & 0.97 & 512 & 0.54 & 2.09 & 0.81 & 0.61 \\
+fastEmbedR binary CUDA [R total] & 0.59 & 0.56 & 1.06 & 81.3 & 2.57 & 1.06 & 533 & 0.57 & 3.00 & 0.90 & 0.67 \\
+cuML UMAP [R-mediated total] & 3.36 & 2.98 & 4.13 & 199 & 12.1 & 4.10 & 327 & 3.01 & 9.58 & 3.64 & 3.16 \\
+cuML UMAP [Python process total] & 2.84 & 2.20 & 4.02 & 210 & 13.0 & 3.55 & 352 & 2.19 & 10.4 & 3.05 & 2.46 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
