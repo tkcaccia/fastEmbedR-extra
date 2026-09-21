@@ -14,6 +14,11 @@ CPU measurements use the `THREADS_GRID` values, while Metal measurements use
 the selected Apple GPU. The launcher fails when Metal is requested but not
 available; it does not silently substitute CPU.
 
+The launcher installs the selected fastEmbedR source into a private library
+inside the run directory before measuring it. A dirty source tree is rejected
+by default. `ALLOW_DIRTY=TRUE` is available only for explicitly labelled
+development experiments.
+
 ```bash
 FASTEMBEDR_PACKAGE_ROOT=/Users/me/src/fastEmbedR \
 FASTEMBEDR_DATA_ROOT=/Users/me/Data \

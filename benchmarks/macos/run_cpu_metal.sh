@@ -12,6 +12,8 @@ RUN_ID="${FASTEMBEDR_RUN_ID:-macos_$(date +%Y%m%d_%H%M%S)}"
 OUT_DIR="${OUT_DIR:-${RESULTS_ROOT}/${RUN_ID}}"
 INPUT_ROOT="${INPUT_ROOT:-${repo_root}/fastEmbedR-input/macos}"
 CACHE_DIR="${CACHE_DIR:-${INPUT_ROOT}/precomputed}"
+R_LIBRARY="${R_LIBRARY:-${OUT_DIR}/Rlib}"
+ALLOW_DIRTY="${ALLOW_DIRTY:-FALSE}"
 
 DATASETS="${DATASETS:-COIL20,USPS,FashionMNIST,FlowRepository_FR-FCM-ZYRM_files,flow18,MNIST,MetRef,mass41,TabulaMuris,Macosko2015_retina,imagenet}"
 METHODS="${METHODS:-fastEmbedR_pca_cpu,fastEmbedR_tsne_cpu_full,fastEmbedR_tsne_cpu_knn,fastEmbedR_umap_cpu_fuzzy_full,fastEmbedR_umap_cpu_fuzzy_knn,fastEmbedR_umap_cpu_binary_full,fastEmbedR_umap_cpu_binary_knn,fastEmbedR_pca_metal,fastEmbedR_tsne_metal_full,fastEmbedR_tsne_metal_knn,fastEmbedR_umap_metal_fuzzy_full,fastEmbedR_umap_metal_fuzzy_knn,fastEmbedR_umap_metal_binary_full,fastEmbedR_umap_metal_binary_knn}"
@@ -45,7 +47,36 @@ done
   exit 1
 }
 
-mkdir -p "${OUT_DIR}" "${INPUT_ROOT}" "${CACHE_DIR}"
+package_commit="$(git -C "${PACKAGE_ROOT}" rev-parse HEAD)"
+package_status="$(git -C "${PACKAGE_ROOT}" status --short)"
+if [[ -n "${package_status}" && "${ALLOW_DIRTY}" != "TRUE" ]]; then
+  echo "fastEmbedR source is dirty; set ALLOW_DIRTY=TRUE only for development." >&2
+  git -C "${PACKAGE_ROOT}" status --short >&2
+  exit 1
+fi
+
+mkdir -p "${OUT_DIR}" "${INPUT_ROOT}" "${CACHE_DIR}" "${R_LIBRARY}"
+
+{
+  echo "fastEmbedR_commit=${package_commit}"
+  echo "fastEmbedR_dirty=$([[ -n "${package_status}" ]] && echo yes || echo no)"
+  echo "benchmark_commit=$(git -C "${repo_root}" rev-parse HEAD)"
+  echo "benchmark_dirty=$([[ -n "$(git -C "${repo_root}" status --short)" ]] && echo yes || echo no)"
+} > "${OUT_DIR}/source_identity.txt"
+
+R CMD INSTALL --preclean --library="${R_LIBRARY}" "${PACKAGE_ROOT}" \
+  > "${OUT_DIR}/install.log" 2>&1
+export R_LIBS_USER="${R_LIBRARY}${R_LIBS_USER:+:${R_LIBS_USER}}"
+
+Rscript -e '
+  library(fastEmbedR)
+  capabilities <- fastEmbedR_capabilities()
+  print(capabilities)
+  metal <- capabilities[
+    capabilities$backend == "metal", c("knn_available", "embedding_available")
+  ]
+  stopifnot(nrow(metal) == 1L, all(unlist(metal), na.rm = FALSE))
+' > "${OUT_DIR}/capabilities.log" 2>&1
 
 export OMP_NUM_THREADS=4
 export OPENBLAS_NUM_THREADS=4
