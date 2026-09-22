@@ -197,14 +197,16 @@ stratified_rows <- function(labels, n, size, seed) {
             sample(index, 1L)
         }, integer(1L))))
     }
-    target <- pmax(1L, floor(size * lengths(groups) / n))
+    group_sizes <- as.double(lengths(groups))
+    target <- pmax(1, floor(as.double(size) * group_sizes / as.double(n)))
+    target <- as.integer(target)
     while (sum(target) > size) {
         eligible <- which(target > 1L)
         target[eligible[[which.max(target[eligible])]]] <-
             target[eligible[[which.max(target[eligible])]]] - 1L
     }
     while (sum(target) < size) {
-        capacity <- lengths(groups) - target
+        capacity <- group_sizes - target
         eligible <- which(capacity > 0L)
         if (!length(eligible)) break
         pick <- eligible[[which.max(capacity[eligible])]]

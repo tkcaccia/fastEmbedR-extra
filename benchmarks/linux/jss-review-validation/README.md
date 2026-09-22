@@ -1,29 +1,8 @@
 # fastEmbedR JSS reviewer-validation suite
 
-This directory is the source-of-record implementation of the release-level
-calculations requested during JSS review. It contains the platform-specific
-Slurm launchers, shared R measurement engine, Python reference runner,
-component-level numerical validator, staged campaign controller, and final
-audit. No file submits work merely by being sourced or synchronized.
-
-The recommended submission entry point is `submit_complete_campaign.sh`.
-`submit_all.sh` is retained only for provenance and is disabled by default
-because a monolithic submission can exceed the cluster QOS limit.
-
-## Repository and HPC paths
-
-- Repository: `benchmarks/linux/jss-review-validation/`
-- HPC deployment: `/scratch/firenze/NN/benchmark_scripts/fastembedr_jss_review_validation/`
-
-Deploy from a workstation with the HPC filesystem mounted:
-
-```bash
-HPC_ROOT=/path/to/hpc/mirror \
-bash benchmarks/linux/jss-review-validation/sync_to_hpc.sh
-```
-
-The deployment verifies `FILES.sha256`; it does not execute the image or
-submit a job.
+This directory prepares the release-level calculations requested during the
+JSS review. It does not submit jobs by itself. The only submission entry point
+is `submit_all.sh`, which the user runs explicitly on the HPC.
 
 ## Fixed paths
 
@@ -155,10 +134,9 @@ mass41, Tabula Muris, and Macosko2015 retina.
 The recommended launcher is a staged, self-submitting Slurm controller. It
 submits one bounded wave at a time, waits through Slurm dependencies rather
 than polling, retries submission-limit errors every 60 seconds, and records
-every job in a campaign-specific `jobs.tsv`. The shared-input stage uses
-`afterok` because all downstream calculations require those inputs. Later
-stages use `afterany`, allowing independent calculations and the final audit
-to record failures without silently stopping the campaign.
+every job in a campaign-specific `jobs.tsv`. Every wave advances through
+`afterany`, allowing independent calculations and the final audit to record
+partial failures without leaving mutually unsatisfied controller branches.
 
 After both preflights pass, start the complete campaign with one command:
 
@@ -175,12 +153,6 @@ records the submission graph, and `final_audit.txt` is `PASS` only when all
 worker jobs and required aggregate outputs succeed. No manual waiting or
 polling is required. Do not launch `submit_all.sh` on an account with a small
 queued-job limit.
-
-The campaign manifest records the exact image SHA-256 and installed
-fastEmbedR shared-library SHA-256 observed by the successful CPU and CUDA
-preflights. `jobs.tsv` is an append-only submission ledger. The strict final
-audit checks Slurm completion states, per-worker status files, and required
-aggregate outputs before writing `status=PASS`.
 
 First inspect the scripts, image, and expected version. Then run:
 

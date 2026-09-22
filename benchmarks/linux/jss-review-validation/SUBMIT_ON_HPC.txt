@@ -13,6 +13,9 @@ squeue -u "$USER"
 
 # Do not run submit_all.sh; its monolithic submission can exceed the QOS limit.
 
+# The controller uses afterany between bounded waves. Partial worker failures
+# therefore reach the strict final audit instead of freezing the campaign.
+
 # Focused observed-KNN-recall and backend-quality campaign. This launcher uses
 # 11 dataset tasks per backend instead of 132 quality tasks per backend, which
 # keeps the submission below the account's queued-job limit. Each dataset task

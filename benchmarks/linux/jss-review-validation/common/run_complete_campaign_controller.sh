@@ -188,17 +188,7 @@ for index in "${!WORKER_LABELS[@]}"; do
     "${WORKER_SCRIPTS[$index]}" "${WORKER_ARRAYS[$index]}")")
 done
 
-if [[ "$JSS_STAGE" == "shared_inputs" ]]; then
-  JOINED_IDS="$(IFS=:; echo "${WORKER_IDS[*]}")"
-  DEPENDENCY="afterok:$JOINED_IDS"
-  FAILURE_DEPENDENCY="afternotok:$JOINED_IDS"
-  FAILURE_JOB="$(campaign_submit_job \
-    controller controller_failed_shared_inputs "$FAILURE_DEPENDENCY" \
-    "$CONTROLLER" '' final_audit)"
-  echo "Failure-audit controller: $FAILURE_JOB ($FAILURE_DEPENDENCY)"
-else
-  DEPENDENCY="$(campaign_afterany_dependency "${WORKER_IDS[@]}")"
-fi
+DEPENDENCY="$(campaign_afterany_dependency "${WORKER_IDS[@]}")"
 NEXT_JOB="$(campaign_submit_job \
   controller "controller_$NEXT_STAGE" "$DEPENDENCY" \
   "$CONTROLLER" '' "$NEXT_STAGE")"
