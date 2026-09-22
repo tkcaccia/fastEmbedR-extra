@@ -62,6 +62,34 @@ cd /scratch/firenze/NN
 bash current_fastembedr_validation/submit_current_validation_hpc.sh
 ```
 
+## JSS reviewer-validation campaign
+
+The complete release-validation campaign requested for the Journal of
+Statistical Software submission is maintained under
+`benchmarks/linux/jss-review-validation/`. This is the canonical source for
+the staged Slurm controller, scientific workers, numerical component tests,
+aggregation, and strict final audit. The controller submits only one bounded
+wave at a time and records the complete job graph in `jobs.tsv`.
+
+Synchronize the repository-owned campaign without submitting jobs:
+
+```bash
+HPC_ROOT=/path/to/hpc/mirror \
+bash benchmarks/linux/jss-review-validation/sync_to_hpc.sh
+```
+
+After strict CPU and CUDA preflights pass, start it on the HPC with:
+
+```bash
+cd /scratch/firenze/NN
+bash \
+  benchmark_scripts/fastembedr_jss_review_validation/submit_complete_campaign.sh
+```
+
+Each launch has an isolated campaign manifest, input cache, result tree,
+submission ledger, and final audit. The repository does not contain datasets,
+container images, credentials, or replicate-heavy raw outputs.
+
 ## Rebuild tables and figures
 
 The committed figures and tables are generated only from the compact CSV files

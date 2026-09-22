@@ -1,0 +1,89 @@
+cd /scratch/firenze/NN
+
+# The CPU and CUDA preflights must already have passed.
+bash benchmark_scripts/fastembedr_jss_review_validation/verify_preflight.sh
+
+# Start the complete campaign. One controller submits bounded waves and
+# retries QOS submission-limit errors automatically after 60 seconds.
+bash \
+  benchmark_scripts/fastembedr_jss_review_validation/submit_complete_campaign.sh
+
+# The launcher prints the unique campaign directory. Monitoring is optional.
+squeue -u "$USER"
+
+# Do not run submit_all.sh; its monolithic submission can exceed the QOS limit.
+
+# Focused observed-KNN-recall and backend-quality campaign. This launcher uses
+# 11 dataset tasks per backend instead of 132 quality tasks per backend, which
+# keeps the submission below the account's queued-job limit. Each dataset task
+# continues through all 12 quality configurations and records failed subruns.
+bash benchmark_scripts/fastembedr_jss_review_validation/submit_recall_quality_compact.sh
+
+# Optional focused submission for held-out transformation and 20% landmark
+# reconstruction. Both families test compact-support t-SNE and fuzzy UMAP on
+# all datasets. CUDA is gated by its own strict preflight.
+CPU_PREFLIGHT_JOB=$(sbatch --parsable \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_preflight_cpu.sh)
+CUDA_PREFLIGHT_JOB=$(sbatch --parsable \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_preflight_cuda.sh)
+PRECOMPUTE_JOB=$(sbatch --parsable --dependency="afterok:$CPU_PREFLIGHT_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_precompute_cpu12.sh)
+sbatch --dependency="afterok:$PRECOMPUTE_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_transform_cpu4.sh
+sbatch --dependency="afterok:$PRECOMPUTE_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_landmark_reconstruction_cpu4.sh
+sbatch --dependency="afterok:$PRECOMPUTE_JOB:$CUDA_PREFLIGHT_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_transform_cuda.sh
+sbatch --dependency="afterok:$PRECOMPUTE_JOB:$CUDA_PREFLIGHT_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_landmark_reconstruction_cuda.sh
+
+# Optional focused PCA accuracy validation. This is separate from PCA timing
+# so the dense reference calculation does not contaminate runtime or memory.
+CPU_PREFLIGHT_JOB=$(sbatch --parsable \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_preflight_cpu.sh)
+CUDA_PREFLIGHT_JOB=$(sbatch --parsable \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_preflight_cuda.sh)
+sbatch --dependency="afterok:$CPU_PREFLIGHT_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_pca_accuracy_cpu4.sh
+sbatch --dependency="afterok:$CUDA_PREFLIGHT_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_pca_accuracy_cuda.sh
+
+# Do not submit run_backend_quality_cpu4.sh and run_backend_quality_cuda.sh
+# together on accounts with a small QOS submission limit. Those diagnostic
+# launchers expose 132 fine-grained tasks per backend. The compact launcher
+# above covers the same quality configurations plus observed KNN recall.
+
+# Optional focused submission for the long-run t-SNE correctness issue.
+CPU_PREFLIGHT_JOB=$(sbatch --parsable \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_preflight_cpu.sh)
+CUDA_PREFLIGHT_JOB=$(sbatch --parsable \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_preflight_cuda.sh)
+INPUT_JOB=$(sbatch --parsable --dependency="afterok:$CPU_PREFLIGHT_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_tsne_longrun_precompute_cpu12.sh)
+CPU_JOB=$(sbatch --parsable --dependency="afterok:$INPUT_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_tsne_longrun_cpu4.sh)
+CPU_FINAL_JOB=$(sbatch --parsable --dependency="afterok:$INPUT_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_tsne_longrun_final_cpu4.sh)
+THREAD_JOB=$(sbatch --parsable --dependency="afterok:$INPUT_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_tsne_longrun_threads_cpu12.sh)
+PYTHON_JOB=$(sbatch --parsable --dependency="afterok:$INPUT_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_tsne_longrun_python_cpu4.sh)
+CUDA_JOB=$(sbatch --parsable \
+  --dependency="afterok:$INPUT_JOB:$CUDA_PREFLIGHT_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_tsne_longrun_cuda.sh)
+CUDA_FINAL_JOB=$(sbatch --parsable \
+  --dependency="afterok:$INPUT_JOB:$CUDA_PREFLIGHT_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_tsne_longrun_final_cuda.sh)
+TIMING_CPU_JOB=$(sbatch --parsable --dependency="afterok:$INPUT_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_tsne_timing_cpu4.sh)
+TIMING_PYTHON_JOB=$(sbatch --parsable --dependency="afterok:$INPUT_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_tsne_timing_python_cpu4.sh)
+TIMING_CUDA_JOB=$(sbatch --parsable \
+  --dependency="afterok:$INPUT_JOB:$CUDA_PREFLIGHT_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_tsne_timing_cuda.sh)
+
+printf 'cpu_preflight=%s cuda_preflight=%s input=%s cpu=%s cpu_final=%s threads=%s python=%s cuda=%s cuda_final=%s timing_cpu=%s timing_python=%s timing_cuda=%s\n' \
+  "$CPU_PREFLIGHT_JOB" "$CUDA_PREFLIGHT_JOB" "$INPUT_JOB" \
+  "$CPU_JOB" "$CPU_FINAL_JOB" "$THREAD_JOB" \
+  "$PYTHON_JOB" "$CUDA_JOB" "$CUDA_FINAL_JOB" "$TIMING_CPU_JOB" \
+  "$TIMING_PYTHON_JOB" "$TIMING_CUDA_JOB"

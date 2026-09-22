@@ -11,7 +11,17 @@ required <- c(
   "results/figures/runtime_umap_all_methods.pdf",
   "results/figures/runtime_umap_all_methods.png",
   "provenance/source_manifest.csv",
-  "provenance/artifact_sha256.csv"
+  "provenance/artifact_sha256.csv",
+  "provenance/JSS_VALIDATION_INVENTORY.md",
+  paste0(
+    "benchmarks/linux/jss-review-validation/",
+    "submit_complete_campaign.sh"
+  ),
+  paste0(
+    "benchmarks/linux/jss-review-validation/",
+    "common/run_complete_campaign_controller.sh"
+  ),
+  "benchmarks/linux/jss-review-validation/FILES.sha256"
 )
 missing <- required[!file.exists(required) | file.info(required)$size <= 0L]
 if (length(missing)) {
@@ -60,6 +70,40 @@ missing_manifest_paths <- manifest$path[!file.exists(manifest$path)]
 if (length(missing_manifest_paths)) {
   stop("The artifact manifest references missing files: ",
        paste(missing_manifest_paths, collapse = ", "), call. = FALSE)
+}
+
+campaign <- "benchmarks/linux/jss-review-validation"
+checksum_tool <- if (nzchar(Sys.which("sha256sum"))) {
+  c("sha256sum", "-c", "FILES.sha256")
+} else if (nzchar(Sys.which("shasum"))) {
+  c("shasum", "-a", "256", "-c", "FILES.sha256")
+} else {
+  stop("Neither sha256sum nor shasum is available.", call. = FALSE)
+}
+checksum_status <- local({
+  previous <- setwd(campaign)
+  on.exit(setwd(previous), add = TRUE)
+  system2(
+    checksum_tool[[1L]], checksum_tool[-1L],
+    stdout = FALSE, stderr = FALSE
+  )
+})
+if (!identical(checksum_status, 0L)) {
+  stop("The JSS campaign checksum validation failed.", call. = FALSE)
+}
+
+tracked <- system2("git", "ls-files", stdout = TRUE, stderr = TRUE)
+forbidden <- grepl(
+  "([.]sif|[.]RData|[.]rds|[.]npz|[.]key|[.]tar[.]gz)$",
+  tracked, ignore.case = TRUE
+)
+forbidden <- forbidden | grepl("(^|/)credentials", tracked)
+if (any(forbidden)) {
+  stop(
+    "Forbidden generated or sensitive artifacts are tracked: ",
+    paste(tracked[forbidden], collapse = ", "),
+    call. = FALSE
+  )
 }
 
 message("fastEmbedR-extra repository validation passed.")

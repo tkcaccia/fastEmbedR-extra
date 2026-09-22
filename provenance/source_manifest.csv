@@ -1,4 +1,5 @@
 component,source,commit_or_version,dirty_at_extraction,purpose
-fastEmbedR,/Users/stefano/Documents/umap,09ee7212f22b0502a8b363c190577d6c6aac09b6,yes,Current package source used to curate the benchmark API
-benchmark_source,/Users/stefano/Documents/fastEmbedR-benchmark,36c4e3a7dfab6a457d842bc18b5ccba0217be1d1,yes,Source of the release-validation driver and aggregation logic
+fastEmbedR,https://github.com/tkcaccia/fastEmbedR,733c63b46f7c15ef898b79caa6807e7c52bf3025,yes; untracked benchmark staging only,Package source used to prepare the staged JSS validation campaign
+benchmark_source,https://github.com/tkcaccia/fastEmbedR-extra,repository commit containing this manifest,no,Canonical benchmark orchestration analysis and compact-result repository
+jss_validation,benchmarks/linux/jss-review-validation,FILES.sha256,not_applicable,Checksummed staged CPU and CUDA reviewer-validation campaign
 reported_results,results/aggregate/release_identity.txt,recorded package version 0.99.0,not_applicable,Identity and limitations of the bundled compact result snapshot
