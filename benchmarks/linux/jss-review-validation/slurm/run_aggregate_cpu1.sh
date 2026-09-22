@@ -3,7 +3,8 @@
 #SBATCH --partition=ada
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --mem=32G
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=8G
 #SBATCH --time=04:00:00
 #SBATCH --job-name=feR_JSS_agg
 #SBATCH --chdir=/scratch/firenze/NN

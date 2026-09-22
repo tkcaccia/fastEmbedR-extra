@@ -18,6 +18,13 @@ CONTROLLER="$SUITE/slurm/run_complete_campaign_controller_cpu1.sh"
 cd "$BASE_DIR"
 mkdir -p "$JSS_CAMPAIGN_DIR" "$INPUT_ROOT" "$OUTPUT_ROOT" benchmark_logs
 
+(
+  cd "$SUITE"
+  sha256sum -c FILES.sha256
+)
+SUITE_MANIFEST_SHA256="$(sha256sum "$SUITE/FILES.sha256" | awk '{print $1}')"
+cp "$SUITE/FILES.sha256" "$JSS_CAMPAIGN_DIR/source_FILES.sha256"
+
 EXPECTED_VERSION="$EXPECTED_VERSION" OUTPUT_ROOT="$PREFLIGHT_ROOT" \
   IMAGE="$IMAGE" bash "$SUITE/verify_preflight.sh"
 
@@ -60,6 +67,8 @@ image=$IMAGE
 image_sha256=$FASTEMBEDR_IMAGE_SHA256
 fastembedr_dll_sha256=$FASTEMBEDR_DLL_SHA256
 expected_version=$EXPECTED_VERSION
+suite_manifest_sha256=$SUITE_MANIFEST_SHA256
+suite_manifest=$JSS_CAMPAIGN_DIR/source_FILES.sha256
 input_root=$INPUT_ROOT
 output_root=$OUTPUT_ROOT
 preflight_root=$PREFLIGHT_ROOT

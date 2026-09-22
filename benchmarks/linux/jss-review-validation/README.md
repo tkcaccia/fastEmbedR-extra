@@ -56,7 +56,11 @@ embedding is unavailable. There is no CPU fallback.
    in light gray and projected points are colored by the benchmark labels.
 6. `scaling`: measures CPU strong scaling at 1, 2, 4, 8, and 12 threads for
    KNN, PCA, compact-support t-SNE optimization, and fuzzy UMAP optimization
-   on COIL20, MNIST, full flow18, and 100,000 ImageNet rows.
+   on COIL20, MNIST, full flow18, and 100,000 ImageNet rows. Each thread count
+   is submitted through a separate Slurm array with one task and a matching
+   `cpus-per-task` request. The 32 GB memory request avoids converting a small
+   thread-count experiment into a large CPU allocation under memory-per-CPU
+   accounting.
 7. `pca`: tests PCA ranks 2 and 50 on every dataset. CPU uses 1, 4, and 12
    threads; CUDA uses its native backend. `irlba` is timed only as an
    approximate performance comparator, never as an exact reference.
@@ -128,6 +132,16 @@ mass41, Tabula Muris, and Macosko2015 retina.
   seed variation remains in separate quality and stability files.
 - Missing, unavailable, failed, and timed-out Slurm tasks remain explicit in
   status files and scheduler accounting; no zero or artificial bar is created.
+- CPU launchers request one Slurm task and set `cpus-per-task` to the worker
+  count used by R. Variable-thread scaling and PCA experiments use separate
+  arrays for each worker count. Their 32 GB request is supported by the
+  measured peaks from the preliminary campaign and avoids memory-driven CPU
+  inflation on clusters that account memory per CPU. Each worker refuses to
+  start if its requested R thread count exceeds `SLURM_CPUS_PER_TASK`.
+- CUDA launchers request one L40S GPU, one Slurm task, two host CPUs, and 64 GB
+  of host memory. Their array throttle is five, matching the validated
+  `l40sfree` per-user QOS ceiling of five L40S GPUs; Slurm may run fewer tasks
+  when physical GPUs or shared-account resources are unavailable.
 
 ## Submit
 
@@ -151,8 +165,10 @@ Each launch creates an isolated directory below
 records the image and installed fastEmbedR binary checksums, `jobs.tsv`
 records the submission graph, and `final_audit.txt` is `PASS` only when all
 worker jobs and required aggregate outputs succeed. No manual waiting or
-polling is required. Do not launch `submit_all.sh` on an account with a small
-queued-job limit.
+polling is required. The launcher verifies `FILES.sha256`, copies that source
+manifest into the campaign directory, and records its own SHA-256 so a campaign
+cannot silently mix launcher revisions. Do not launch `submit_all.sh` on an
+account with a small queued-job limit.
 
 First inspect the scripts, image, and expected version. Then run:
 

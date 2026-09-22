@@ -2,8 +2,9 @@
 #SBATCH --account=immunology
 #SBATCH --partition=ada
 #SBATCH --nodes=1
-#SBATCH --ntasks=12
-#SBATCH --mem=64G
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=12
+#SBATCH --mem=32G
 #SBATCH --time=12:00:00
 #SBATCH --job-name=feR_JSS_num_c
 #SBATCH --chdir=/scratch/firenze/NN

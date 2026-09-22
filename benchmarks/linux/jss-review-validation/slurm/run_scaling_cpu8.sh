@@ -3,14 +3,14 @@
 #SBATCH --partition=ada
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=12
+#SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
 #SBATCH --time=48:00:00
 #SBATCH --array=0-3%4
-#SBATCH --job-name=feR_JSS_s12
+#SBATCH --job-name=feR_JSS_s8
 #SBATCH --chdir=/scratch/firenze/NN
-#SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_JSS_scale_%A_%a.out
-#SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_JSS_scale_%A_%a.err
+#SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_JSS_s8_%A_%a.out
+#SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_JSS_s8_%A_%a.err
 set -euo pipefail
-export SCALING_THREADS=12
+export SCALING_THREADS=8
 bash benchmark_scripts/fastembedr_jss_review_validation/common/run_array_task.sh scaling cpu

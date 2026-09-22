@@ -2,10 +2,11 @@
 #SBATCH --account=immunology
 #SBATCH --partition=ada
 #SBATCH --nodes=1
-#SBATCH --ntasks=12
-#SBATCH --mem=96G
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=12
+#SBATCH --mem=32G
 #SBATCH --time=08:00:00
-#SBATCH --array=0-3%2
+#SBATCH --array=0-3%4
 #SBATCH --job-name=feR_JSS_lr_in
 #SBATCH --chdir=/scratch/firenze/NN
 #SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_JSS_lr_in_%A_%a.out

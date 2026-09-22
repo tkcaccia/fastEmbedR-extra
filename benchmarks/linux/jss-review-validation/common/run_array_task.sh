@@ -96,10 +96,17 @@ case "$MODE" in
       echo "longrun_threads is CPU-only" >&2
       exit 2
     }
-    DATASET_INDEX=$((TASK_ID / 6))
-    REMAINDER=$((TASK_ID % 6))
-    THREAD_COUNT="${LONGRUN_THREAD_COUNTS[$((REMAINDER / 3))]}"
-    SEED="${LONGRUN_SEEDS[$((REMAINDER % 3))]}"
+    if [[ -n "${LONGRUN_THREADS_OVERRIDE:-}" ]]; then
+      DATASET_INDEX=$((TASK_ID / 3))
+      REMAINDER=$((TASK_ID % 3))
+      THREAD_COUNT="$LONGRUN_THREADS_OVERRIDE"
+      SEED="${LONGRUN_SEEDS[$REMAINDER]}"
+    else
+      DATASET_INDEX=$((TASK_ID / 6))
+      REMAINDER=$((TASK_ID % 6))
+      THREAD_COUNT="${LONGRUN_THREAD_COUNTS[$((REMAINDER / 3))]}"
+      SEED="${LONGRUN_SEEDS[$((REMAINDER % 3))]}"
+    fi
     DATASET="${LONGRUN_DATASETS[$DATASET_INDEX]}"
     EXTRA+=("--grid-size=256" "--normal-iterations=750")
     EXTRA+=("--run-seed=$SEED")
@@ -126,11 +133,20 @@ case "$MODE" in
     EXTRA+=("--method=$METHOD")
     ;;
   scaling)
-    DATASET="${SCALING_DATASETS[$((TASK_ID / 5))]}"
-    THREAD_COUNT="${THREADS[$((TASK_ID % 5))]}"
+    if [[ -n "${SCALING_THREADS:-}" ]]; then
+      DATASET="${SCALING_DATASETS[$TASK_ID]}"
+      THREAD_COUNT="$SCALING_THREADS"
+    else
+      DATASET="${SCALING_DATASETS[$((TASK_ID / 5))]}"
+      THREAD_COUNT="${THREADS[$((TASK_ID % 5))]}"
+    fi
     ;;
   pca)
-    if [[ "$BACKEND" == "cpu" ]]; then
+    if [[ "$BACKEND" == "cpu" && -n "${PCA_THREADS_OVERRIDE:-}" ]]; then
+      DATASET_INDEX=$((TASK_ID / 2))
+      THREAD_COUNT="$PCA_THREADS_OVERRIDE"
+      RANK="${PCA_RANKS[$((TASK_ID % 2))]}"
+    elif [[ "$BACKEND" == "cpu" ]]; then
       DATASET_INDEX=$((TASK_ID / 6))
       REMAINDER=$((TASK_ID % 6))
       THREAD_COUNT="${PCA_THREADS[$((REMAINDER / 2))]}"
@@ -158,6 +174,14 @@ case "$MODE" in
     exit 2
     ;;
 esac
+
+ALLOCATED_CPUS="${SLURM_CPUS_PER_TASK:-${SLURM_CPUS_ON_NODE:-}}"
+if [[ "$ALLOCATED_CPUS" =~ ^[0-9]+$ ]] && \
+   (( THREAD_COUNT > ALLOCATED_CPUS )); then
+  echo "Requested $THREAD_COUNT threads but Slurm allocated only " \
+    "$ALLOCATED_CPUS CPUs per task." >&2
+  exit 2
+fi
 
 export OMP_NUM_THREADS="$THREAD_COUNT"
 export OPENBLAS_NUM_THREADS="$THREAD_COUNT"
@@ -218,7 +242,9 @@ COMMAND=(
   "${EXTRA[@]}"
 )
 
-echo "[$(date --iso-8601=seconds)] mode=$MODE backend=$BACKEND dataset=$DATASET threads=$THREAD_COUNT task=$TASK_ID"
+echo "[$(date --iso-8601=seconds)] mode=$MODE backend=$BACKEND " \
+  "dataset=$DATASET threads=$THREAD_COUNT allocated_cpus=${ALLOCATED_CPUS:-unknown} " \
+  "task=$TASK_ID"
 set +e
 bash "$SUITE/common/run_measured.sh" "$BACKEND" "$PREFIX" -- "${COMMAND[@]}"
 STATUS=$?
