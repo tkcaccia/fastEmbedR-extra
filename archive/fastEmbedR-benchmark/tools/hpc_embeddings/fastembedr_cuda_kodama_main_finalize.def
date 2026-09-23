@@ -1,0 +1,17 @@
+Bootstrap: localimage
+From: /mnt/sata_ssd/fastEmbedR/singularity/fastembedr_cuda_20260731_kodama_main.sif
+
+%labels
+    Author tkcaccia
+    Project fastEmbedR
+    FastEmbedRBaseCommit ef064f2a13db0b28f257bcb25bd06fd031da6da6
+    FastEmbedRSourceSHA256 e361ec54d0289af66755c882106c9f391dcd9d11e3db67e6435aa67774787ba2
+    KODAMABaseCommit a1da4a54fb28f17e06abc0bee04953910568cb9d
+    KODAMACommit a1da4a54fb28f17e06abc0bee04953910568cb9d
+    KODAMARCommit a1da4a54fb28f17e06abc0bee04953910568cb9d
+    KODAMASourceSHA256 ffd3bf1db629fc459f7fa871391fd8c36722a1e0634f1ee780d5c3100c35156d
+    KODAMAPatch upstream-main-no-local-patch
+    KODAMACUDAScheduler upstream-main-a1da4a5
+    KODAMAGraphAPI reusable-serialized-graph-v1
+    CUDAArchitectures 75-80-86-89-90-120
+    Description fastEmbedR CUDA benchmark image with reusable KODAMA.graph checkpoints

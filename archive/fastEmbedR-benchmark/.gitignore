@@ -1,0 +1,41 @@
+# Data and generated inputs
+Data/
+data/
+fastEmbedR-input/
+*.RData
+*.rds
+*.npz
+*.h5
+*.h5ad
+*.loom
+
+# Results, caches, and logs
+results/
+fastEmbedR-results/
+fastEmbedR-rlayout/
+cache/
+tmp/
+*.log
+*.out
+*.err
+
+# Containers, archives, and native build outputs
+*.sif
+*.img
+*.tar
+*.tar.gz
+*.zip
+*.o
+*.so
+*.dylib
+
+# Credentials and local state
+*.key
+*.pem
+.env
+.Rhistory
+.RData
+.DS_Store
+__pycache__/
+*.pyc
+

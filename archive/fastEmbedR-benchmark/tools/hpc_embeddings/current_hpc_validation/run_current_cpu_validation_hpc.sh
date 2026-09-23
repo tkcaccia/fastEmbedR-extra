@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+
+#SBATCH --account=immunology
+#SBATCH --partition=ada
+#SBATCH --nodes=1
+#SBATCH --ntasks=4
+#SBATCH --mem=96G
+#SBATCH --time=48:00:00
+#SBATCH --job-name=feR_current_CPU
+#SBATCH --chdir=/scratch/firenze/NN
+#SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_current_cpu_%j.out
+#SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_current_cpu_%j.err
+
+set -euo pipefail
+
+BASE_DIR=/scratch/firenze/NN
+BUNDLE_DIR="${BASE_DIR}/current_fastembedr_validation"
+DATA_ROOT="${BASE_DIR}/Data"
+IMAGE="${BASE_DIR}/singularity/fastembedr_cuda.sif"
+RUN_ID="${FASTEMBEDR_RUN_ID:-current_$(date +%Y%m%d_%H%M%S)}"
+OUT_DIR="${BASE_DIR}/fastEmbedR-results/${RUN_ID}/cpu"
+INPUT_ROOT="${BASE_DIR}/fastEmbedR-input"
+CACHE_DIR="${INPUT_ROOT}/precomputed"
+IDENTITY="${BUNDLE_DIR}/validated_release_identity.env"
+
+[[ -f "${BUNDLE_DIR}/INSTALL_OK" ]] || {
+  echo "Current package installation is not validated." >&2
+  exit 1
+}
+[[ -f "${IDENTITY}" ]] || { echo "Missing validated identity: ${IDENTITY}" >&2; exit 1; }
+# shellcheck disable=SC1090
+source "${IDENTITY}"
+
+mkdir -p "${OUT_DIR}" "${INPUT_ROOT}" "${CACHE_DIR}" "${BASE_DIR}/benchmark_logs"
+
+CONTAINER="$(command -v apptainer || command -v singularity || true)"
+[[ -n "${CONTAINER}" ]] || {
+  echo "apptainer/singularity is unavailable" >&2
+  exit 1
+}
+
+export APPTAINERENV_FASTEMBEDR_CURRENT_RLIB="${BUNDLE_DIR}/Rlib"
+export APPTAINERENV_R_PROFILE_USER="${BUNDLE_DIR}/Rprofile.current"
+export APPTAINERENV_OMP_NUM_THREADS=4
+export APPTAINERENV_OPENBLAS_NUM_THREADS=4
+export APPTAINERENV_MKL_NUM_THREADS=4
+export APPTAINERENV_RCPP_PARALLEL_NUM_THREADS=4
+export APPTAINERENV_FASTEMBEDR_RELEASE_TAG="${FASTEMBEDR_RELEASE_TAG}"
+export APPTAINERENV_FASTEMBEDR_RELEASE_VERSION="${FASTEMBEDR_RELEASE_VERSION}"
+export APPTAINERENV_FASTEMBEDR_RELEASE_COMMIT="${FASTEMBEDR_RELEASE_COMMIT}"
+export APPTAINERENV_FASTEMBEDR_SOURCE_ARCHIVE_SHA256="${FASTEMBEDR_SOURCE_ARCHIVE_SHA256}"
+export APPTAINERENV_FASTEMBEDR_PACKAGE_TARBALL_SHA256="${FASTEMBEDR_PACKAGE_TARBALL_SHA256}"
+export APPTAINERENV_FASTEMBEDR_DLL_SHA256="${FASTEMBEDR_DLL_SHA256}"
+export APPTAINERENV_FASTEMBEDR_IMAGE_SHA256="${FASTEMBEDR_IMAGE_SHA256}"
+export APPTAINERENV_FASTEMBEDR_BENCHMARK_COMMIT="${FASTEMBEDR_BENCHMARK_COMMIT}"
+export APPTAINERENV_FASTEMBEDR_RESULT_DOI="${FASTEMBEDR_RESULT_DOI}"
+export APPTAINERENV_FASTEMBEDR_ENFORCE_RELEASE_LOCK=1
+
+"${CONTAINER}" exec \
+  --bind "${BASE_DIR}:${BASE_DIR}" \
+  --pwd "${BUNDLE_DIR}" \
+  "${IMAGE}" \
+  /opt/conda/bin/Rscript "${BUNDLE_DIR}/benchmark_reviewer_validation.R" \
+  --backend-group=cpu \
+  --base-dir="${BASE_DIR}" \
+  --data-root="${DATA_ROOT}" \
+  --out-dir="${OUT_DIR}" \
+  --input-dir="${INPUT_ROOT}" \
+  --cache-dir="${CACHE_DIR}" \
+  --datasets=COIL20,USPS,FashionMNIST,FlowRepository_FR-FCM-ZYRM_files,flow18,MNIST,MetRef,mass41,TabulaMuris,Macosko2015_retina,imagenet \
+  --threads-grid=1,4 \
+  --seeds=4,17,42 \
+  --k=30 \
+  --perplexity=30 \
+  --timeout=43200 \
+  --quality-max-distance-ops=200000000 \
+  --force=FALSE
+
+echo "CPU benchmark complete: ${OUT_DIR}"

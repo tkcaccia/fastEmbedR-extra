@@ -1,0 +1,91 @@
+Bootstrap: localimage
+From: /mnt/sata_ssd/fastEmbedR/singularity/fastembedr_cuda_20260731_graph_argument.sif
+
+%files
+    /mnt/sata_ssd/fastEmbedR/singularity/build_20260731_knn_r_packages/nabor_0.5.0.tar.gz /opt/src/nabor_0.5.0.tar.gz
+    /mnt/sata_ssd/fastEmbedR/singularity/build_20260731_knn_r_packages/rnndescent_0.2.0.tar.gz /opt/src/rnndescent_0.2.0.tar.gz
+
+%labels
+    Author tkcaccia
+    Project fastEmbedR
+    KODAMARAPI data-raw-features-graph-precomputed-v2
+    KODAMAGraphAPI reusable-serialized-graph-v2
+    RcppHNSWVersion 0.7.0
+    naborVersion 0.5.0
+    naborSourceSHA256 47938dcc987279281c13abfd667660bf1b3b76af116136a27eb066ee1a4b43da
+    rnndescentVersion 0.2.0
+    rnndescentSourceSHA256 1c6b4d1bc1b4dfb8917aea1161f4d8660f1093350b684eb6908a83113176e34b
+    CUDAArchitectures 75-80-86-89-90-120
+    Description fastEmbedR CUDA benchmark image with KODAMA data/graph API and R nearest-neighbor references
+
+%environment
+    export MAMBA_ROOT_PREFIX=/opt/conda
+    export PATH=/opt/conda/bin:/opt/fit-sne/bin:$PATH
+    export CONDA_PREFIX=/opt/conda
+    export R_LIBS=/opt/conda/lib/R/library
+    export R_LIBS_USER=/opt/conda/lib/R/library
+    export R_LIBS_SITE=/opt/conda/lib/R/library
+    export CUDA_HOME=/usr/local/cuda
+    export KODAMA_HOME=/opt/kodama
+    export LD_LIBRARY_PATH=/opt/rapids/lib:/opt/faiss/lib:/usr/local/cuda/lib64:/opt/conda/lib:/opt/conda/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}
+
+%post
+    set -eux
+    export PATH=/opt/conda/bin:/usr/local/cuda/bin:$PATH
+    export R_LIBS=/opt/conda/lib/R/library
+    export R_LIBS_USER=/opt/conda/lib/R/library
+    export R_LIBS_SITE=/opt/conda/lib/R/library
+    export LD_LIBRARY_PATH=/opt/rapids/lib:/opt/faiss/lib:/usr/local/cuda/lib64:/opt/conda/lib:/opt/conda/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}
+
+    echo "47938dcc987279281c13abfd667660bf1b3b76af116136a27eb066ee1a4b43da  /opt/src/nabor_0.5.0.tar.gz" | sha256sum -c -
+    echo "1c6b4d1bc1b4dfb8917aea1161f4d8660f1093350b684eb6908a83113176e34b  /opt/src/rnndescent_0.2.0.tar.gz" | sha256sum -c -
+
+    R CMD INSTALL /opt/src/nabor_0.5.0.tar.gz
+    R CMD INSTALL /opt/src/rnndescent_0.2.0.tar.gz
+
+    Rscript - <<'EOF_R'
+expected <- c(
+  RcppHNSW = "0.7.0",
+  nabor = "0.5.0",
+  rnndescent = "0.2.0"
+)
+observed <- vapply(
+  names(expected),
+  function(package) as.character(utils::packageVersion(package)),
+  character(1)
+)
+stopifnot(identical(observed, expected))
+
+set.seed(4)
+x <- matrix(stats::rnorm(400L * 8L), nrow = 400L, ncol = 8L)
+nabor_result <- nabor::knn(x, k = 10L)
+stopifnot(
+  identical(dim(nabor_result$nn.idx), c(400L, 10L)),
+  identical(dim(nabor_result$nn.dists), c(400L, 10L)),
+  all(is.finite(nabor_result$nn.dists))
+)
+
+nnd_result <- rnndescent::nnd_knn(
+  x,
+  k = 10L,
+  n_threads = 2L,
+  verbose = FALSE,
+  progress = "dist"
+)
+stopifnot(
+  identical(dim(nnd_result$idx), c(400L, 10L)),
+  identical(dim(nnd_result$dist), c(400L, 10L)),
+  all(is.finite(nnd_result$dist))
+)
+
+matrix_formals <- names(formals(kodamaR::KODAMA.matrix))
+stopifnot(
+  "graph" %in% matrix_formals,
+  !"raw.data" %in% matrix_formals
+)
+cat(
+  paste(names(observed), observed, sep = "="),
+  sep = "\n"
+)
+cat("\nR nearest-neighbor package validation passed\n")
+EOF_R

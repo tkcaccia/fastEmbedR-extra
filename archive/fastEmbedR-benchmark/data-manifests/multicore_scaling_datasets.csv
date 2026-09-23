@@ -1,0 +1,4 @@
+dataset,profile,n,p,k_umap,perplexity,k_tsne,role
+MetRef,small_wide,873,variable,15,15,45,small wide matrix
+MNIST,medium_image,70000,784,30,30,90,medium image matrix
+simulated_1M_2D,million_observation,1000000,2,15,15,45,million-observation stress test

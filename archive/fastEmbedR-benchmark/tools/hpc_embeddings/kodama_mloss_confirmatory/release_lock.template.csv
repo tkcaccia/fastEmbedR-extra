@@ -1,0 +1,2 @@
+release_version,core_tag,core_commit,r_tag,r_commit,python_tag,python_commit,core_archive,core_archive_sha256,r_archive,r_archive_sha256,python_archive,python_archive_sha256,container_path,container_sha256
+v0.1.0-rc1,REQUIRED,REQUIRED,REQUIRED,REQUIRED,REQUIRED,REQUIRED,REQUIRED,REQUIRED,REQUIRED,REQUIRED,REQUIRED,REQUIRED,REQUIRED,REQUIRED

@@ -1,0 +1,115 @@
+Bootstrap: localimage
+From: /mnt/sata_ssd/fastEmbedR/singularity/fastembedr_cuda_20260731_shared_graph.sif
+
+%files
+    /mnt/sata_ssd/fastEmbedR/singularity/build_20260731_shared_graph/kodama_cpp_main_a1da4a5.tar.gz /opt/src/kodama_cpp_main_a1da4a5.tar.gz
+
+%labels
+    Author tkcaccia
+    Project fastEmbedR
+    FastEmbedRBaseCommit ef064f2a13db0b28f257bcb25bd06fd031da6da6
+    FastEmbedRSourceSHA256 e361ec54d0289af66755c882106c9f391dcd9d11e3db67e6435aa67774787ba2
+    KODAMABaseCommit a1da4a54fb28f17e06abc0bee04953910568cb9d
+    KODAMASourceSHA256 ffd3bf1db629fc459f7fa871391fd8c36722a1e0634f1ee780d5c3100c35156d
+    KODAMAGraphAPI reusable-serialized-graph-v1
+    CUDAArchitectures 75-80-86-89-90-120
+    Description fastEmbedR CUDA benchmark image with reusable KODAMA.graph checkpoints
+
+%environment
+    export MAMBA_ROOT_PREFIX=/opt/conda
+    export PATH=/opt/conda/bin:/opt/fit-sne/bin:$PATH
+    export CONDA_PREFIX=/opt/conda
+    export R_LIBS=/opt/conda/lib/R/library
+    export R_LIBS_USER=/opt/conda/lib/R/library
+    export R_LIBS_SITE=/opt/conda/lib/R/library
+    export CUDA_HOME=/usr/local/cuda
+    export FAISS_HOME=/opt/faiss
+    export CUVS_HOME=/opt/rapids
+    export CUGRAPH_HOME=/opt/rapids
+    export KODAMA_HOME=/opt/kodama
+    export FASTEMBEDR_USE_CUDA=1
+    export FASTEMBEDR_USE_CUML=1
+    export FASTEMBEDR_CUDA_ARCH="75 80 86 89 90 120"
+    export LD_LIBRARY_PATH=/opt/rapids/lib:/opt/faiss/lib:/usr/local/cuda/lib64:/opt/conda/lib:/opt/conda/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}
+
+%post
+    set -eux
+    export MAMBA_ROOT_PREFIX=/opt/conda
+    export PATH=/opt/conda/bin:/usr/local/cuda/bin:$PATH
+    export CONDA_PREFIX=/opt/conda
+    export CUDA_HOME=/usr/local/cuda
+    export FAISS_HOME=/opt/faiss
+    export CUVS_HOME=/opt/rapids
+    export CUGRAPH_HOME=/opt/rapids
+    export KODAMA_HOME=/opt/kodama
+    export FASTEMBEDR_USE_CUDA=1
+    export FASTEMBEDR_USE_CUML=1
+    export FASTEMBEDR_CUDA_ARCH="75 80 86 89 90 120"
+    export LD_LIBRARY_PATH=/opt/rapids/lib:/opt/faiss/lib:/usr/local/cuda/lib64:/opt/conda/lib:/opt/conda/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}
+    export CMAKE_PREFIX_PATH=/opt/conda
+    export CC=/opt/conda/bin/x86_64-conda-linux-gnu-cc
+    export CXX=/opt/conda/bin/x86_64-conda-linux-gnu-c++
+    export FC=/opt/conda/bin/x86_64-conda-linux-gnu-gfortran
+    export CUDAHOSTCXX=/opt/conda/bin/x86_64-conda-linux-gnu-c++
+
+    rm -rf /opt/kodama-cpp /opt/kodama
+    mkdir -p /opt/kodama-cpp /opt/kodama /opt/src
+    tar -xzf /opt/src/kodama_cpp_main_a1da4a5.tar.gz -C /opt/kodama-cpp
+
+    cmake -S /opt/kodama-cpp -B /opt/kodama-cpp/build-cuda \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=/opt/kodama \
+      -DCMAKE_CXX_COMPILER=/opt/conda/bin/x86_64-conda-linux-gnu-c++ \
+      -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc \
+      -DCMAKE_CUDA_ARCHITECTURES="75;80;86;89;90;120" \
+      -DKODAMA_ENABLE_CUDA=ON \
+      -DKODAMA_ENABLE_METAL=OFF \
+      -DKODAMA_ENABLE_OPENMP=ON \
+      -DKODAMA_BUILD_TESTS=OFF \
+      -DKODAMA_BUILD_EXAMPLES=OFF
+    cmake --build /opt/kodama-cpp/build-cuda -j4
+    cmake --install /opt/kodama-cpp/build-cuda
+
+    rm -rf /opt/conda/lib/R/library/kodamaR
+    KODAMA_CPP_ROOT=/opt/kodama-cpp \
+    KODAMA_CPP_BUILD_DIR=/opt/kodama-cpp/build-cuda \
+    KODAMA_R_CUDA_LIBS="-lcudart -lcublasLt -lcublas -lcusolver -lcusparse -lcurand -lcufft" \
+    R CMD INSTALL /opt/kodama-cpp/split-repos/kodama-r
+
+    Rscript - <<'EOF_R'
+library(kodamaR)
+library(fastEmbedR)
+stopifnot(
+  "raw.data" %in% names(formals(kodamaR::KODAMA.matrix)),
+  identical(formals(kodamaR::KODAMA.graph)$k, 100L),
+  is.function(fastEmbedR::opentsne),
+  is.function(fastEmbedR::umap)
+)
+set.seed(4)
+centers <- matrix(rnorm(6 * 12, sd = 3), 6, 12)
+truth <- rep(seq_len(6), each = 30)
+x <- centers[truth, ] + matrix(rnorm(length(truth) * 12, sd = 0.35), length(truth), 12)
+graph <- kodamaR::KODAMA.graph(x, k = 20, backend = "cpu", n.cores = 2, seed = 4)
+fit <- kodamaR::KODAMA.matrix(
+  data = x,
+  graph = graph,
+  classifier = "knn",
+  backend = "cpu",
+  M = 1,
+  Tcycle = 2,
+  ncomp = 5,
+  landmarks = 80,
+  splitting = 6,
+  graph.neighbors = 20,
+  knn.k = 10,
+  n.cores = 2,
+  visual.init = TRUE,
+  progress = FALSE
+)
+stopifnot(
+  identical(as.integer(graph$graph_builds), 1L),
+  identical(as.integer(fit$graph_builds), 0L),
+  length(fit$best_labels) == nrow(x)
+)
+cat("Build-time CPU graph reuse validation passed\n")
+EOF_R

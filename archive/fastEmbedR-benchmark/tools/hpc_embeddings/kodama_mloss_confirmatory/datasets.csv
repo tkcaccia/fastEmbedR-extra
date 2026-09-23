@@ -1,0 +1,12 @@
+dataset,relative_path,enabled,representative_mt,representative_ablation,large_landmark
+COIL20,COIL20/COIL20.RData,TRUE,TRUE,TRUE,FALSE
+USPS,USPS/USPS.RData,TRUE,TRUE,TRUE,FALSE
+FashionMNIST,FashionMNIST/FashionMNIST.RData,TRUE,FALSE,TRUE,TRUE
+FlowRepository_FR-FCM-ZYRM_files,FlowRepository_FR-FCM-ZYRM_files/van_unen_FR-FCM-ZYRM.RData,TRUE,FALSE,TRUE,TRUE
+flow18,flow18/flow18.RData,TRUE,TRUE,TRUE,TRUE
+MNIST,MNIST/MNIST.RData,TRUE,TRUE,TRUE,TRUE
+imagenet,imagenet/imagenet.RData,TRUE,FALSE,FALSE,TRUE
+MetRef,MetRef/MetRef.RData,TRUE,TRUE,TRUE,FALSE
+mass41,mass41/mass41.RData,TRUE,FALSE,FALSE,TRUE
+TabulaMuris,TabulaMuris/TabulaMuris.RData,TRUE,FALSE,FALSE,TRUE
+Macosko2015_retina,Macosko2015_retina/Macosko2015_retina.RData,TRUE,FALSE,FALSE,TRUE

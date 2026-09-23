@@ -1,0 +1,69 @@
+Bootstrap: localimage
+From: /mnt/sata_ssd/fastEmbedR/singularity/fastembedr_cuda_faissR_0.99.20_62d3d35_20260806.sif
+
+%files
+    /mnt/sata_ssd/fastEmbedR/singularity/build_20260806_faissR_0.99.21_0903532/faissR-0.99.21-0903532.tar.gz /opt/src/faissR-0.99.21-0903532.tar.gz
+
+%labels
+    Author tkcaccia
+    Project fastEmbedR
+    BuildDate 2026-08-06
+    FaissRVersion 0.99.21
+    FaissRCommit 0903532baf02b340a90921db18edc4deae5ea462
+    FaissRSourceSHA256 b0eadaaa9a304ffe2f04eb19bda3ff122c9bd962310c40a88933c95e66579520
+    CUDAArchitectures 75-80-86-89-90-120
+    Description fastEmbedR CUDA benchmark image with faissR 0.99.21 commit 0903532
+
+%environment
+    export MAMBA_ROOT_PREFIX=/opt/conda
+    export PATH=/opt/conda/bin:/opt/fit-sne/bin:$PATH
+    export CONDA_PREFIX=/opt/conda
+    export R_LIBS=/opt/conda/lib/R/library
+    export R_LIBS_USER=/opt/conda/lib/R/library
+    export R_LIBS_SITE=/opt/conda/lib/R/library
+    export CUDA_HOME=/usr/local/cuda
+    export FAISS_HOME=/opt/faiss
+    export CUVS_HOME=/opt/rapids
+    export KODAMA_HOME=/opt/kodama
+    export LD_LIBRARY_PATH=/opt/rapids/lib:/opt/faiss/lib:/usr/local/cuda/lib64:/opt/conda/lib:/opt/conda/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}
+
+%post
+    set -eux
+    export MAMBA_ROOT_PREFIX=/opt/conda
+    export PATH=/opt/conda/bin:/usr/local/cuda/bin:$PATH
+    export CONDA_PREFIX=/opt/conda
+    export R_LIBS=/opt/conda/lib/R/library
+    export R_LIBS_USER=/opt/conda/lib/R/library
+    export R_LIBS_SITE=/opt/conda/lib/R/library
+    export CUDA_HOME=/usr/local/cuda
+    export FAISS_HOME=/opt/faiss
+    export CUVS_HOME=/opt/rapids
+    export LD_LIBRARY_PATH=/opt/rapids/lib:/opt/faiss/lib:/usr/local/cuda/lib64:/opt/conda/lib:/opt/conda/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}
+
+    echo "b0eadaaa9a304ffe2f04eb19bda3ff122c9bd962310c40a88933c95e66579520  /opt/src/faissR-0.99.21-0903532.tar.gz" | sha256sum -c -
+    rm -rf /opt/conda/lib/R/library/faissR
+    CUDA_HOME=/usr/local/cuda \
+    FAISS_HOME=/opt/faiss \
+    CUVS_HOME=/opt/rapids \
+    FAISSR_USE_CUDA=1 \
+    FAISSR_REQUIRE_CUDA=1 \
+    FAISSR_USE_CUVS=1 \
+    FAISSR_REQUIRE_CUVS=1 \
+    FAISSR_USE_CUGRAPH=0 \
+    FAISSR_CUDA_ARCH="75 80 86 89 90 120" \
+    R CMD INSTALL /opt/src/faissR-0.99.21-0903532.tar.gz
+
+    Rscript - <<'EOF_R'
+stopifnot(identical(as.character(utils::packageVersion("faissR")), "0.99.21"))
+library(faissR)
+stopifnot(isTRUE(faiss_available()))
+set.seed(4)
+x <- matrix(stats::rnorm(500L * 16L), nrow = 500L)
+ans <- nn(x, k = 15L, exclude_self = TRUE, backend = "cpu",
+          method = "exact", metric = "euclidean", n_threads = 2L)
+stopifnot(identical(dim(ans$indices), c(500L, 15L)),
+          identical(dim(ans$distances), c(500L, 15L)),
+          all(is.finite(ans$distances)))
+cat("faissR 0.99.21 commit 0903532 CPU build validation passed\n")
+EOF_R
+

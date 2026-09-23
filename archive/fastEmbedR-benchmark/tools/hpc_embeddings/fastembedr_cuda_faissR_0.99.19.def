@@ -1,0 +1,92 @@
+Bootstrap: localimage
+From: /mnt/sata_ssd/fastEmbedR/singularity/fastembedr_cuda_20260731_kodama_f6cdef8.sif
+
+%files
+    /mnt/sata_ssd/fastEmbedR/singularity/build_20260731_faissR_0.99.19/faissR-0.99.19.tar.gz /opt/src/faissR-0.99.19.tar.gz
+
+%labels
+    Author tkcaccia
+    Project fastEmbedR
+    FaissRVersion 0.99.19
+    FaissRCommit 181735600f89f7d96e5bb5edfb7a48eca4f7466e
+    FaissRSourceSHA256 60d5995f85ff32415ed1dee323df7172818ebdd460186928ef1cf7182403a3d2
+    KODAMACommit f6cdef85794d94619710a35f64462c95a02005e2
+    RcppHNSWVersion 0.7.0
+    naborVersion 0.5.0
+    rnndescentVersion 0.2.0
+    CUDAArchitectures 75-80-86-89-90-120
+    Description fastEmbedR CUDA benchmark image with faissR 0.99.19 and updated KODAMA
+
+%environment
+    export MAMBA_ROOT_PREFIX=/opt/conda
+    export PATH=/opt/conda/bin:/opt/fit-sne/bin:$PATH
+    export CONDA_PREFIX=/opt/conda
+    export R_LIBS=/opt/conda/lib/R/library
+    export R_LIBS_USER=/opt/conda/lib/R/library
+    export R_LIBS_SITE=/opt/conda/lib/R/library
+    export CUDA_HOME=/usr/local/cuda
+    export FAISS_HOME=/opt/faiss
+    export CUVS_HOME=/opt/rapids
+    export KODAMA_HOME=/opt/kodama
+    export LD_LIBRARY_PATH=/opt/rapids/lib:/opt/faiss/lib:/usr/local/cuda/lib64:/opt/conda/lib:/opt/conda/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}
+
+%post
+    set -eux
+    export MAMBA_ROOT_PREFIX=/opt/conda
+    export PATH=/opt/conda/bin:/usr/local/cuda/bin:$PATH
+    export CONDA_PREFIX=/opt/conda
+    export R_LIBS=/opt/conda/lib/R/library
+    export R_LIBS_USER=/opt/conda/lib/R/library
+    export R_LIBS_SITE=/opt/conda/lib/R/library
+    export CUDA_HOME=/usr/local/cuda
+    export FAISS_HOME=/opt/faiss
+    export CUVS_HOME=/opt/rapids
+    export LD_LIBRARY_PATH=/opt/rapids/lib:/opt/faiss/lib:/usr/local/cuda/lib64:/opt/conda/lib:/opt/conda/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}
+
+    echo "60d5995f85ff32415ed1dee323df7172818ebdd460186928ef1cf7182403a3d2  /opt/src/faissR-0.99.19.tar.gz" | sha256sum -c -
+
+    rm -rf /opt/conda/lib/R/library/faissR
+    CUDA_HOME=/usr/local/cuda \
+    FAISS_HOME=/opt/faiss \
+    CUVS_HOME=/opt/rapids \
+    FAISSR_USE_CUDA=1 \
+    FAISSR_REQUIRE_CUDA=1 \
+    FAISSR_USE_CUVS=1 \
+    FAISSR_REQUIRE_CUVS=1 \
+    FAISSR_CUDA_ARCH="75 80 86 89 90 120" \
+    R CMD INSTALL /opt/src/faissR-0.99.19.tar.gz
+
+    Rscript - <<'EOF_R'
+stopifnot(
+  identical(as.character(utils::packageVersion("faissR")), "0.99.19"),
+  identical(as.character(utils::packageVersion("RcppHNSW")), "0.7.0"),
+  identical(as.character(utils::packageVersion("nabor")), "0.5.0"),
+  identical(as.character(utils::packageVersion("rnndescent")), "0.2.0")
+)
+
+library(faissR)
+stopifnot(isTRUE(faiss_available()))
+set.seed(4)
+x <- matrix(stats::rnorm(500L * 16L), nrow = 500L, ncol = 16L)
+cpu <- nn(
+  x,
+  k = 15L,
+  exclude_self = TRUE,
+  backend = "cpu",
+  method = "exact",
+  metric = "euclidean",
+  n_threads = 2L
+)
+stopifnot(
+  identical(dim(cpu$indices), c(500L, 15L)),
+  identical(dim(cpu$distances), c(500L, 15L)),
+  all(is.finite(cpu$distances))
+)
+
+library(fastEmbedR)
+stopifnot(is.function(fastEmbedR::umap), is.function(fastEmbedR::opentsne))
+library(kodamaR)
+matrix_formals <- names(formals(KODAMA.matrix))
+stopifnot("data" %in% matrix_formals, "graph" %in% matrix_formals)
+cat("faissR 0.99.19 CPU and dependent-package validation passed\n")
+EOF_R

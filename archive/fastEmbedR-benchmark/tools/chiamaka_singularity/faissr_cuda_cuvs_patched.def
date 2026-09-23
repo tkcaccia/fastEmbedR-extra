@@ -1,0 +1,181 @@
+Bootstrap: docker
+From: mambaorg/micromamba:2.3.3
+
+%files
+    patched_libs/libcuvs.so /opt/rapids/lib/libcuvs.so
+    patched_libs/libcuvs_c.so /opt/rapids/lib/libcuvs_c.so
+
+%labels
+    Author tkcaccia
+    Project faissR
+    Description R + FAISS/cuVS + CUDA container using patched cuVS NN-descent libraries
+
+%environment
+    export MAMBA_ROOT_PREFIX=/opt/conda
+    export PATH=/opt/conda/bin:/opt/fit-sne/bin:$PATH
+    export CONDA_PREFIX=/opt/conda
+    export R_LIBS=/opt/conda/lib/R/library
+    export R_LIBS_USER=/opt/conda/lib/R/library
+    export R_LIBS_SITE=/opt/conda/lib/R/library
+    export CUDA_HOME=/usr/local/cuda
+    export FAISS_HOME=/opt/faiss
+    export CUVS_HOME=/opt/rapids
+    export FAISSR_USE_FAISS=1
+    export FAISSR_USE_CUDA=1
+    export FAISSR_USE_CUVS=1
+    export FAISSR_USE_CUGRAPH=0
+    export FASTEMBEDR_USE_CUDA=1
+    export LD_LIBRARY_PATH=/opt/rapids/lib:/opt/faiss/lib:/usr/local/cuda/lib64:/opt/conda/lib:/opt/conda/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}
+    export CPATH=/opt/faiss/include:/opt/rapids/include:/opt/conda/include:/opt/conda/targets/x86_64-linux/include:${CPATH:-}
+    export LIBRARY_PATH=/opt/rapids/lib:/opt/faiss/lib:/usr/local/cuda/lib64:/opt/conda/lib:/opt/conda/targets/x86_64-linux/lib:${LIBRARY_PATH:-}
+    export PKG_CPPFLAGS="-I/opt/faiss/include -I/opt/rapids/include -I/opt/conda/include -I/opt/conda/targets/x86_64-linux/include ${PKG_CPPFLAGS:-}"
+    export PKG_LIBS="-L/opt/rapids/lib -L/opt/faiss/lib -L/usr/local/cuda/lib64 -L/opt/conda/lib -L/opt/conda/targets/x86_64-linux/lib ${PKG_LIBS:-}"
+    export CUDAHOSTCXX=/opt/conda/bin/g++
+    export OMP_NUM_THREADS=${OMP_NUM_THREADS:-4}
+    export OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS:-4}
+    export MKL_NUM_THREADS=${MKL_NUM_THREADS:-4}
+
+%post
+    set -eux
+    export MAMBA_ROOT_PREFIX=/opt/conda
+    export PATH=/opt/conda/bin:$PATH
+
+    micromamba install -y -n base \
+      -c rapidsai -c pytorch -c nvidia -c conda-forge \
+      cuda-version=13.2 \
+      cuda-nvcc \
+      cuda-cudart-dev \
+      cuda-nvrtc \
+      libcufft \
+      libcufft-dev \
+      faiss-gpu-cuvs=1.14.3 \
+      libcuvs=26.06 \
+      libcuvs-headers=26.06 \
+      librmm=26.06 \
+      libraft-headers=26.06 \
+      r-base \
+      r-remotes \
+      r-rcpp \
+      r-jsonlite \
+      r-data.table \
+      r-codetools \
+      r-matrix \
+      r-igraph \
+      r-leidenbase \
+      r-ggplot2 \
+      r-uwot \
+      r-rtsne \
+      r-umap \
+      r-tsne \
+      r-rcppannoy \
+      r-irlba \
+      r-rspectra \
+      r-fnn \
+      r-rann \
+      r-r.utils \
+      r-devtools \
+      git \
+      make \
+      cmake \
+      pkg-config \
+      fftw \
+      gcc_linux-64 \
+      gxx_linux-64 \
+      gfortran_linux-64
+
+    micromamba clean -a -y
+
+    export CONDA_PREFIX=/opt/conda
+    mkdir -p /usr/local /opt/faiss/lib /opt/faiss/include /opt/rapids/lib /opt/rapids/include /opt/src /opt/fit-sne/bin
+    ln -sfn /opt/conda /usr/local/cuda
+    ln -sfn /opt/conda/include/faiss /opt/faiss/include/faiss
+    ln -sfn /opt/conda/include/cuvs /opt/rapids/include/cuvs
+    ln -sfn /opt/conda/include/raft /opt/rapids/include/raft
+    ln -sfn /opt/conda/include/rmm /opt/rapids/include/rmm
+    ln -sf /opt/conda/lib/libfaiss* /opt/faiss/lib/ || true
+
+    test -s /opt/rapids/lib/libcuvs.so
+    test -s /opt/rapids/lib/libcuvs_c.so
+
+    export CUDA_HOME=/usr/local/cuda
+    export FAISS_HOME=/opt/faiss
+    export CUVS_HOME=/opt/rapids
+    export FAISSR_USE_FAISS=1
+    export FAISSR_USE_CUDA=1
+    export FAISSR_USE_CUVS=1
+    export FAISSR_USE_CUGRAPH=0
+    export FASTEMBEDR_USE_CUDA=1
+    export LD_LIBRARY_PATH=/opt/rapids/lib:/opt/faiss/lib:/usr/local/cuda/lib64:/opt/conda/lib:/opt/conda/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}
+    export CPATH=/opt/faiss/include:/opt/rapids/include:/opt/conda/include:/opt/conda/targets/x86_64-linux/include:${CPATH:-}
+    export LIBRARY_PATH=/opt/rapids/lib:/opt/faiss/lib:/usr/local/cuda/lib64:/opt/conda/lib:/opt/conda/targets/x86_64-linux/lib:${LIBRARY_PATH:-}
+    export PKG_CPPFLAGS="-I/opt/faiss/include -I/opt/rapids/include -I/opt/conda/include -I/opt/conda/targets/x86_64-linux/include ${PKG_CPPFLAGS:-}"
+    export PKG_LIBS="-L/opt/rapids/lib -L/opt/faiss/lib -L/usr/local/cuda/lib64 -L/opt/conda/lib -L/opt/conda/targets/x86_64-linux/lib ${PKG_LIBS:-}"
+    export CC=x86_64-conda-linux-gnu-cc
+    export CXX=x86_64-conda-linux-gnu-c++
+    export FC=x86_64-conda-linux-gnu-gfortran
+    ln -sf /opt/conda/bin/x86_64-conda-linux-gnu-cc /opt/conda/bin/gcc
+    ln -sf /opt/conda/bin/x86_64-conda-linux-gnu-c++ /opt/conda/bin/g++
+    ln -sf /opt/conda/bin/x86_64-conda-linux-gnu-gfortran /opt/conda/bin/gfortran
+    export CUDAHOSTCXX=/opt/conda/bin/g++
+
+    cat > /opt/conda/lib/R/etc/Rprofile.site <<'RSITE'
+.libPaths('/opt/conda/lib/R/library')
+RSITE
+
+    Rscript -e "options(repos = c(CRAN = 'https://cloud.r-project.org')); install.packages(c('remotes', 'BiocManager', 'float'), Ncpus = 4)"
+    Rscript -e "options(repos = c(CRAN = 'https://cloud.r-project.org')); install.packages(c('uwot', 'umap', 'Rtsne', 'tsne', 'FNN', 'RANN', 'RcppAnnoy', 'RcppHNSW', 'Rnanoflann', 'codetools', 'ggplot2', 'data.table', 'jsonlite'), Ncpus = 4)"
+    Rscript -e "BiocManager::install('BiocNeighbors', ask = FALSE, update = FALSE, Ncpus = 4)"
+
+    git clone --depth 1 https://github.com/KlugerLab/FIt-SNE /opt/fit-sne-src
+    cd /opt/fit-sne-src
+    x86_64-conda-linux-gnu-c++ -std=c++11 -O3 \
+      -I/opt/conda/include \
+      src/sptree.cpp src/tsne.cpp src/nbodyfft.cpp \
+      -o bin/fast_tsne \
+      -L/opt/conda/lib -pthread -lfftw3 -lm -Wno-address-of-packed-member
+    cp /opt/fit-sne-src/bin/fast_tsne /opt/fit-sne/bin/fast_tsne
+    cp /opt/fit-sne-src/fast_tsne.R /opt/fit-sne/bin/fast_tsne.R
+
+    git clone https://github.com/tkcaccia/faissR.git /opt/faissR
+    CUDA_HOME=/usr/local/cuda \
+    FAISS_HOME=/opt/faiss \
+    CUVS_HOME=/opt/rapids \
+    FAISSR_USE_CUDA=1 \
+    FAISSR_USE_CUVS=1 \
+    FAISSR_USE_CUGRAPH=0 \
+    R CMD INSTALL /opt/faissR
+
+    Rscript -e "remotes::install_github('tkcaccia/fastPLS', upgrade = 'never', dependencies = TRUE)"
+    Rscript -e "remotes::install_github('tkcaccia/fastEmbedR', upgrade = 'never', dependencies = TRUE)"
+
+    Rscript - <<'EOF_R'
+.libPaths('/opt/conda/lib/R/library')
+library(faissR)
+print(backend_info())
+stopifnot(cuvs_available())
+set.seed(1)
+x <- matrix(runif(1440 * 16384), nrow = 1440)
+ans <- nn(x, k = 10, backend = "cuda", method = "nndescent",
+          metric = "euclidean", exclude_self = TRUE)
+print(dim(ans$indices))
+print(attr(ans, "backend"))
+stopifnot(identical(dim(ans$indices), c(1440L, 10L)))
+EOF_R
+
+%runscript
+    exec "$@"
+
+%test
+    Rscript - <<'EOF_R'
+.libPaths('/opt/conda/lib/R/library')
+library(faissR)
+print(backend_info())
+stopifnot(cuvs_available())
+set.seed(1)
+x <- matrix(runif(1440 * 16384), nrow = 1440)
+ans <- nn(x, k = 10, backend = "cuda", method = "nndescent",
+          metric = "euclidean", exclude_self = TRUE)
+print(dim(ans$indices))
+print(attr(ans, "backend"))
+stopifnot(identical(dim(ans$indices), c(1440L, 10L)))
+EOF_R

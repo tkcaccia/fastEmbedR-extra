@@ -1,0 +1,90 @@
+Bootstrap: localimage
+From: /mnt/sata_ssd/fastEmbedR/singularity/fastembedr_cuda_20260731_final.sif
+
+%files
+    /mnt/sata_ssd/fastEmbedR/singularity/build_20260731_graph_argument/kodama.R /opt/kodama-cpp/split-repos/kodama-r/R/kodama.R
+    /mnt/sata_ssd/fastEmbedR/singularity/build_20260731_graph_argument/kodama_matrix.Rd /opt/kodama-cpp/split-repos/kodama-r/man/kodama_matrix.Rd
+    /mnt/sata_ssd/fastEmbedR/singularity/build_20260731_graph_argument/kodama-r_README.md /opt/kodama-cpp/split-repos/kodama-r/README.md
+
+%labels
+    Author tkcaccia
+    Project fastEmbedR
+    FastEmbedRBaseCommit ef064f2a13db0b28f257bcb25bd06fd031da6da6
+    KODAMABaseCommit a1da4a54fb28f17e06abc0bee04953910568cb9d
+    KODAMARAPI data-raw-features-graph-precomputed-v2
+    KODAMARSourceSHA256 7346de8466b9a3d329b3ceb9b36f0702099a9b8358fd14da6f37377a82772dd2
+    KODAMAGraphAPI reusable-serialized-graph-v2
+    CUDAArchitectures 75-80-86-89-90-120
+    Description fastEmbedR CUDA benchmark image with KODAMA.matrix data/graph API
+
+%environment
+    export MAMBA_ROOT_PREFIX=/opt/conda
+    export PATH=/opt/conda/bin:/opt/fit-sne/bin:$PATH
+    export CONDA_PREFIX=/opt/conda
+    export R_LIBS=/opt/conda/lib/R/library
+    export R_LIBS_USER=/opt/conda/lib/R/library
+    export R_LIBS_SITE=/opt/conda/lib/R/library
+    export CUDA_HOME=/usr/local/cuda
+    export KODAMA_HOME=/opt/kodama
+    export LD_LIBRARY_PATH=/opt/rapids/lib:/opt/faiss/lib:/usr/local/cuda/lib64:/opt/conda/lib:/opt/conda/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}
+
+%post
+    set -eux
+    export MAMBA_ROOT_PREFIX=/opt/conda
+    export PATH=/opt/conda/bin:/usr/local/cuda/bin:$PATH
+    export CONDA_PREFIX=/opt/conda
+    export CUDA_HOME=/usr/local/cuda
+    export KODAMA_HOME=/opt/kodama
+    export R_LIBS=/opt/conda/lib/R/library
+    export R_LIBS_USER=/opt/conda/lib/R/library
+    export R_LIBS_SITE=/opt/conda/lib/R/library
+    export LD_LIBRARY_PATH=/opt/rapids/lib:/opt/faiss/lib:/usr/local/cuda/lib64:/opt/conda/lib:/opt/conda/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}
+
+    echo "7346de8466b9a3d329b3ceb9b36f0702099a9b8358fd14da6f37377a82772dd2  /opt/kodama-cpp/split-repos/kodama-r/R/kodama.R" | sha256sum -c -
+
+    rm -rf /opt/conda/lib/R/library/kodamaR
+    KODAMA_CPP_ROOT=/opt/kodama-cpp \
+    KODAMA_CPP_BUILD_DIR=/opt/kodama-cpp/build-cuda \
+    KODAMA_R_CUDA_LIBS="-lcudart -lcublasLt -lcublas -lcusolver -lcusparse -lcurand -lcufft" \
+    R CMD INSTALL /opt/kodama-cpp/split-repos/kodama-r
+
+    Rscript - <<'EOF_R'
+library(kodamaR)
+matrix_formals <- names(formals(kodamaR::KODAMA.matrix))
+stopifnot(
+  "graph" %in% matrix_formals,
+  !"raw.data" %in% matrix_formals,
+  identical(formals(kodamaR::KODAMA.graph)$k, 100L)
+)
+
+set.seed(4)
+centers <- matrix(rnorm(6 * 12, sd = 3), 6, 12)
+truth <- rep(seq_len(6), each = 30)
+x <- centers[truth, ] +
+  matrix(rnorm(length(truth) * 12, sd = 0.35), length(truth), 12)
+graph <- kodamaR::KODAMA.graph(
+  data = x, k = 20L, backend = "cpu", n.cores = 2L, seed = 4L
+)
+fit <- kodamaR::KODAMA.matrix(
+  data = x,
+  graph = graph,
+  classifier = "knn",
+  backend = "cpu",
+  M = 1L,
+  Tcycle = 2L,
+  ncomp = 5L,
+  landmarks = 80L,
+  splitting = 6L,
+  graph.neighbors = 20L,
+  knn.k = 10L,
+  n.cores = 2L,
+  visual.init = TRUE,
+  progress = FALSE
+)
+stopifnot(
+  identical(as.integer(graph$graph_builds), 1L),
+  identical(as.integer(fit$graph_builds), 0L),
+  length(fit$best_labels) == nrow(x)
+)
+cat("Build-time KODAMA.matrix(data, graph) CPU validation passed\n")
+EOF_R

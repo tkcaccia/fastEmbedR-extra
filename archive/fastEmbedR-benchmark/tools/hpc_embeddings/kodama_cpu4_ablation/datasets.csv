@@ -1,0 +1,13 @@
+dataset,representation,relative_path,enabled
+COIL20,native,COIL20/COIL20.RData,TRUE
+FashionMNIST,native,FashionMNIST/FashionMNIST.RData,TRUE
+MNIST,native,MNIST/MNIST.RData,TRUE
+Macosko2015_retina,pca50,Macosko2015_retina/Macosko2015_retina.RData,TRUE
+MetRef,native,MetRef/MetRef.RData,TRUE
+TabulaMuris,pca50,TabulaMuris/TabulaMuris.RData,TRUE
+USPS,native,USPS/USPS.RData,TRUE
+flow18,native,flow18/flow18.RData,TRUE
+imagenet,raw,imagenet/imagenet.RData,TRUE
+imagenet,pca50,imagenet/imagenet.RData,TRUE
+mass41,native,mass41/mass41.RData,TRUE
+FlowRepository,native,FlowRepository_FR-FCM-ZYRM_files/van_unen_FR-FCM-ZYRM.RData,TRUE
