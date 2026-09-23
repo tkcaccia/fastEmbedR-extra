@@ -24,6 +24,9 @@ RELEASE_LOCK="${BUNDLE_DIR}/release_lock.env"
 # shellcheck disable=SC1090
 source "${RELEASE_LOCK}"
 
+: "${FASTEMBEDR_RELEASE_TAG:?Set FASTEMBEDR_RELEASE_TAG in release_lock.env}"
+: "${FASTEMBEDR_RESULT_DOI:?Set FASTEMBEDR_RESULT_DOI in release_lock.env}"
+
 [[ -f "${IMAGE}" ]] || { echo "Missing image: ${IMAGE}" >&2; exit 1; }
 [[ -d "${SOURCE_DIR}/.git" ]] || {
   echo "Missing current source checkout: ${SOURCE_DIR}" >&2
@@ -94,6 +97,7 @@ package_tarball="${BUNDLE_DIR}/fastEmbedR_${FASTEMBEDR_RELEASE_VERSION}.tar.gz"
 package_tarball_sha256="$(sha256sum "${package_tarball}" | awk '{print $1}')"
 
 cat > "${BUNDLE_DIR}/validated_release_identity.env" <<EOF
+FASTEMBEDR_RELEASE_TAG=${FASTEMBEDR_RELEASE_TAG}
 FASTEMBEDR_RELEASE_VERSION=${FASTEMBEDR_RELEASE_VERSION}
 FASTEMBEDR_RELEASE_COMMIT=${FASTEMBEDR_RELEASE_COMMIT}
 FASTEMBEDR_RELEASE_LABEL=${FASTEMBEDR_RELEASE_LABEL}
@@ -102,6 +106,7 @@ FASTEMBEDR_PACKAGE_TARBALL_SHA256=${package_tarball_sha256}
 FASTEMBEDR_DLL_SHA256=${dll_sha256}
 FASTEMBEDR_IMAGE_SHA256=${image_sha256}
 FASTEMBEDR_BENCHMARK_COMMIT=${benchmark_commit}
+FASTEMBEDR_RESULT_DOI=${FASTEMBEDR_RESULT_DOI}
 EOF
 
 touch "${BUNDLE_DIR}/INSTALL_OK"

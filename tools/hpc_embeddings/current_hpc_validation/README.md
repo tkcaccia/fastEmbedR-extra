@@ -1,22 +1,25 @@
-# fastEmbedR 0.99.7 release validation
+# fastEmbedR release validation
 
 This workflow reruns the principal runtime and correctness benchmark against
-one immutable fastEmbedR source tree. It does not relabel historical 0.99.0
-results as 0.99.7 results.
+one immutable fastEmbedR source tree. It never relabels results from another
+source identity as evidence for the reviewed release.
 
 The release lock pins:
 
-- fastEmbedR version `0.99.7`;
-- source commit `a74ce04633efe324c8137498320816a55b9fff61`;
+- reviewed source tag and package version;
+- full source commit;
 - a clean package checkout;
 - source-archive and package-tarball SHA-256 values;
 - the installed `fastEmbedR` shared-library SHA-256;
 - the CUDA image SHA-256; and
-- the benchmark repository commit.
+- the benchmark repository commit; and
+- the permanent result-archive DOI.
 
 Every R worker rechecks the installed package version and shared-library hash.
 Successful fastEmbedR rows record requested and observed backends. The final
-gate rejects mixed identities and any backend mismatch.
+gate rejects mixed identities and any backend mismatch. Successful comparator
+rows must also have an exact R/Python package version, FIt-SNE Git commit, or
+FIt-SNE executable SHA-256 in `comparator_identity.csv`.
 
 ## Synchronize without submitting jobs
 
@@ -53,13 +56,13 @@ The submission order is:
 
 Results are written beneath a new
 `/scratch/firenze/NN/fastEmbedR-results/current_<timestamp>` directory. A run
-validates 0.99.7 only when `release_identity_validation.csv` exists and reports
-`identity_validated`.
+validates the release only when `release_identity_validation.csv` exists and
+reports `identity_validated`.
 
-The benchmark includes complete matrix-input and precomputed-KNN openTSNE and
+The benchmark includes complete matrix-input and precomputed-KNN t-SNE and
 fuzzy/binary UMAP routes, reference R/Python methods, three seeds, total
 runtime, memory, trustworthiness, neighborhood preservation, label accuracy,
 t-SNE KL divergence, affinity/graph agreement, stability, and backend
-agreement. Historical tables must remain labeled 0.99.0 until this rerun is
-complete and the generated manuscript tables are rebuilt from the locked
+agreement. It also archives deterministic quality-sample row identifiers and
+their SHA-256 values. Manuscript tables must be rebuilt only from the locked
 result directory.

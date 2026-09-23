@@ -26,6 +26,9 @@ the computational claims auditable.
 
 - `tools/hpc_embeddings/`: publication CPU/CUDA/Metal drivers, isolated
   workers, Slurm launchers, quality metrics, and backend agreement tests.
+- `tools/multicore_scaling/`: the 1/2/4/8/16-worker strong-scaling release
+  gate, stage-level timers, peak-memory records, BLAS interaction checks, and
+  an exclusive-node Slurm launcher.
 - `tools/benchmark_*.R`: focused timing, accuracy, approximation, and scaling
   experiments.
 - `tools/reproducibility/`: lightweight environment specification.
@@ -92,4 +95,3 @@ boundaries and must remain in separate columns.
 Benchmark code and documentation in this repository are MIT licensed unless a
 file states otherwise. Dataset licenses are independent and are not granted by
 this repository. Third-party software remains under its own license.
-

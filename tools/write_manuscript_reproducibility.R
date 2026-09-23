@@ -42,9 +42,104 @@ backend_capture <- function() {
     return("fastEmbedR not installed")
   }
   paste(
-    capture.output(print(try(fastEmbedR:::backend_info(), silent = TRUE))),
+    capture.output(print(try(
+      fastEmbedR::fastEmbedR_capabilities(), silent = TRUE
+    ))),
     collapse = "\n"
   )
+}
+
+python_versions <- function(python) {
+  packages <- c("openTSNE", "umap-learn", "cuml")
+  if (!nzchar(python)) return(setNames(rep(NA_character_, 3L), packages))
+  code <- paste(
+    "import importlib, importlib.metadata as m",
+    "items=[('openTSNE','openTSNE',['openTSNE']),",
+    "       ('umap-learn','umap',['umap-learn']),",
+    "       ('cuml','cuml',['cuml','cuml-cu12','cuml-cu13'])]",
+    "for label,module,dists in items:",
+    "  v='NA'",
+    "  for d in dists:",
+    "    try: v=m.version(d); break",
+    "    except m.PackageNotFoundError: pass",
+    "  if v=='NA':",
+    "    try: v=str(getattr(importlib.import_module(module),'__version__','NA'))",
+    "    except Exception: pass",
+    "  print(label+'='+v)", sep = "\n"
+  )
+  output <- tryCatch(
+    system2(python, c("-c", shQuote(code)), stdout = TRUE, stderr = FALSE),
+    error = function(...) character()
+  )
+  values <- setNames(rep(NA_character_, length(packages)), packages)
+  for (line in output) {
+    fields <- strsplit(line, "=", fixed = TRUE)[[1L]]
+    if (length(fields) >= 2L && fields[[1L]] %in% packages) {
+      values[[fields[[1L]]]] <- paste(fields[-1L], collapse = "=")
+    }
+  }
+  values
+}
+
+sha256_file <- function(path) {
+  if (!nzchar(path) || !file.exists(path)) return(NA_character_)
+  command <- Sys.which("sha256sum")
+  arguments <- path
+  if (!nzchar(command)) {
+    command <- Sys.which("shasum")
+    arguments <- c("-a", "256", path)
+  }
+  if (!nzchar(command)) return(NA_character_)
+  output <- system2(command, arguments, stdout = TRUE, stderr = FALSE)
+  status <- attr(output, "status")
+  if ((!is.null(status) && status != 0L) || !length(output)) {
+    return(NA_character_)
+  }
+  strsplit(trimws(output[[1L]]), "[[:space:]]+")[[1L]][[1L]]
+}
+
+fitsne_identity <- function() {
+  executable_candidates <- c(
+    Sys.getenv("FAST_TSNE_BIN", unset = ""),
+    "/opt/fit-sne/bin/fast_tsne",
+    "/mnt/sata_ssd/FIt-SNE/bin/fast_tsne"
+  )
+  executable <- executable_candidates[
+    nzchar(executable_candidates) & file.exists(executable_candidates)
+  ]
+  executable <- if (length(executable)) executable[[1L]] else ""
+  source_dirs <- c(
+    "/opt/fit-sne-src", "/opt/fit-sne", "/opt/FIt-SNE",
+    "/mnt/sata_ssd/FIt-SNE"
+  )
+  commit <- NA_character_
+  for (source_dir in source_dirs) {
+    if (!dir.exists(file.path(source_dir, ".git"))) next
+    value <- tryCatch(
+      suppressWarnings(system2(
+        "git", c("-C", source_dir, "rev-parse", "HEAD"),
+        stdout = TRUE, stderr = FALSE
+      )),
+      error = function(...) character()
+    )
+    if (length(value) && grepl("^[0-9a-f]{40}$", value[[1L]])) {
+      commit <- value[[1L]]
+      break
+    }
+  }
+  checksum <- sha256_file(executable)
+  list(
+    value = if (!is.na(commit)) commit else if (!is.na(checksum)) {
+      paste0("sha256:", checksum)
+    } else NA_character_,
+    type = if (!is.na(commit)) "Git commit" else "Executable SHA-256",
+    executable = executable,
+    sha256 = checksum
+  )
+}
+
+repr <- function(x) {
+  paste0("[", paste(sprintf("'%s'", x), collapse = ","), "]")
 }
 
 r_config <- function(key) {
@@ -194,15 +289,35 @@ k <- as.integer(args$k %||% 30L)
 perplexity <- as.numeric(args$perplexity %||% 15)
 threads_cpu <- as.integer(args$threads %||% 12L)
 timeout <- as.integer(args$timeout %||% 10800L)
+python <- Sys.getenv("RETICULATE_PYTHON", unset = Sys.which("python"))
+python_packages <- python_versions(python)
+fitsne <- fitsne_identity()
+release_identity <- list(
+  package_tag = Sys.getenv("FASTEMBEDR_RELEASE_TAG", unset = NA_character_),
+  package_commit = Sys.getenv(
+    "FASTEMBEDR_RELEASE_COMMIT", unset = NA_character_
+  ),
+  source_archive_sha256 = Sys.getenv(
+    "FASTEMBEDR_SOURCE_ARCHIVE_SHA256", unset = NA_character_
+  ),
+  benchmark_commit = Sys.getenv(
+    "FASTEMBEDR_BENCHMARK_COMMIT", unset = git_value(c("rev-parse", "HEAD"))
+  ),
+  container_sha256 = Sys.getenv(
+    "FASTEMBEDR_IMAGE_SHA256", unset = NA_character_
+  ),
+  result_archive_doi = Sys.getenv(
+    "FASTEMBEDR_RESULT_DOI", unset = NA_character_
+  )
+)
 
 manifest <- list(
   generated_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z"),
   repository = "https://github.com/tkcaccia/fastEmbedR",
-  git_commit = git_value(c("rev-parse", "HEAD")),
+  git_commit = release_identity$benchmark_commit,
   git_describe = git_value(c("describe", "--tags", "--always", "--dirty")),
   git_status_short = git_value(c("status", "--short")),
-  manuscript_release_tag = Sys.getenv("FASTEMBEDR_MANUSCRIPT_TAG", unset = "v0.1.0-manuscript"),
-  archival_snapshot = Sys.getenv("FASTEMBEDR_ZENODO_DOI", unset = "Zenodo DOI to be minted from the manuscript release tag before submission"),
+  release_identity = release_identity,
   random_seed = seed,
   benchmark_parameters = list(k = k, perplexity = perplexity, cpu_threads = threads_cpu, timeout_seconds = timeout),
   benchmark_commands = benchmark_commands(seed, k, perplexity, threads_cpu, timeout),
@@ -230,6 +345,14 @@ manifest <- list(
     umap = pkg_version("umap"),
     jsonlite = pkg_version("jsonlite")
   ),
+  comparators = list(
+    fitsne_identity = fitsne$value,
+    fitsne_identity_type = fitsne$type,
+    fitsne_executable = fitsne$executable,
+    fitsne_executable_sha256 = fitsne$sha256,
+    python_executable = python,
+    python_packages = as.list(python_packages)
+  ),
   backends = list(
     fastEmbedR_backend_info = backend_capture(),
     cuda = cuda_probe()
@@ -244,8 +367,39 @@ manifest <- list(
   )
 )
 
+comparator_identity <- data.frame(
+  comparator = c(
+    "fastEmbedR", "Rtsne", "FIt-SNE", "uwot", "R umap",
+    "Python openTSNE", "Python umap-learn", "RAPIDS cuML"
+  ),
+  version_or_commit = c(
+    pkg_version("fastEmbedR"), pkg_version("Rtsne"), fitsne$value,
+    pkg_version("uwot"), pkg_version("umap"),
+    python_packages[["openTSNE"]], python_packages[["umap-learn"]],
+    python_packages[["cuml"]]
+  ),
+  identity_type = c(
+    "R package version", "R package version", fitsne$type,
+    "R package version", "R package version", "Python package version",
+    "Python package version", "Python package version"
+  ),
+  artifact_path = c(
+    rep(NA_character_, 2L), fitsne$executable,
+    rep(NA_character_, 2L), rep(python, 3L)
+  ),
+  artifact_sha256 = c(
+    rep(NA_character_, 2L), fitsne$sha256,
+    rep(NA_character_, 5L)
+  ),
+  stringsAsFactors = FALSE
+)
+
 writeLines(manifest$r$session_info, file.path(out_dir, "sessionInfo.txt"))
 write_text_list(manifest, file.path(out_dir, "reproducibility_manifest.txt"))
+utils::write.csv(
+  comparator_identity, file.path(out_dir, "comparator_identity.csv"),
+  row.names = FALSE, na = "not_available"
+)
 if (requireNamespace("jsonlite", quietly = TRUE)) {
   jsonlite::write_json(manifest, file.path(out_dir, "reproducibility_manifest.json"), auto_unbox = TRUE, pretty = TRUE)
 }

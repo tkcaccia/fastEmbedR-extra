@@ -148,17 +148,21 @@ set_threads <- function(value) {
 set_threads(threads)
 
 sha256_file <- function(path) {
-  if (!file.exists(path)) stop("Cannot hash missing file: ", path, call. = FALSE)
+  if (!file.exists(path)) {
+    stop("Cannot hash missing file: ", path, call. = FALSE)
+  }
   command <- Sys.which("sha256sum")
   arguments <- path
   if (!nzchar(command)) {
     command <- Sys.which("shasum")
     arguments <- c("-a", "256", path)
   }
-  if (!nzchar(command)) stop("No SHA-256 utility is available.", call. = FALSE)
+  if (!nzchar(command)) {
+    stop("No SHA-256 utility is available.", call. = FALSE)
+  }
   output <- system2(command, arguments, stdout = TRUE, stderr = TRUE)
   status <- attr(output, "status") %||% 0L
-  if (!identical(as.integer(status), 0L) || !length(output)) {
+  if (as.integer(status) != 0L || !length(output)) {
     stop("SHA-256 calculation failed for ", path, call. = FALSE)
   }
   strsplit(trimws(output[[1L]]), "[[:space:]]+")[[1L]][[1L]]
@@ -166,6 +170,7 @@ sha256_file <- function(path) {
 
 release_identity <- function() {
   list(
+    tag = Sys.getenv("FASTEMBEDR_RELEASE_TAG", unset = ""),
     version = Sys.getenv("FASTEMBEDR_RELEASE_VERSION", unset = ""),
     commit = Sys.getenv("FASTEMBEDR_RELEASE_COMMIT", unset = ""),
     source_archive_sha256 = Sys.getenv(
@@ -176,40 +181,67 @@ release_identity <- function() {
     ),
     dll_sha256 = Sys.getenv("FASTEMBEDR_DLL_SHA256", unset = ""),
     image_sha256 = Sys.getenv("FASTEMBEDR_IMAGE_SHA256", unset = ""),
-    benchmark_commit = Sys.getenv("FASTEMBEDR_BENCHMARK_COMMIT", unset = "")
+    benchmark_commit = Sys.getenv(
+      "FASTEMBEDR_BENCHMARK_COMMIT", unset = ""
+    ),
+    result_archive_doi = Sys.getenv("FASTEMBEDR_RESULT_DOI", unset = "")
   )
 }
 
 assert_release_identity <- function() {
-  if (!as_bool(Sys.getenv("FASTEMBEDR_ENFORCE_RELEASE_LOCK", unset = "FALSE"))) {
-    return(invisible(release_identity()))
-  }
   identity <- release_identity()
+  enforce <- as_bool(Sys.getenv(
+    "FASTEMBEDR_ENFORCE_RELEASE_LOCK", unset = "FALSE"
+  ))
+  if (!enforce) return(invisible(identity))
   missing <- names(identity)[!nzchar(unlist(identity, use.names = FALSE))]
   if (length(missing)) {
-    stop("Incomplete release lock: ", paste(missing, collapse = ", "), call. = FALSE)
-  }
-  if (!requireNamespace("fastEmbedR", quietly = TRUE)) {
-    stop("The release-locked fastEmbedR installation is unavailable.", call. = FALSE)
+    stop("Incomplete release lock: ", paste(missing, collapse = ", "),
+         call. = FALSE)
   }
   installed <- as.character(utils::packageVersion("fastEmbedR"))
   if (!identical(installed, identity$version)) {
-    stop(
-      "Installed fastEmbedR version ", installed,
-      " does not match release lock ", identity$version, ".", call. = FALSE
-    )
+    stop("Installed fastEmbedR version does not match the release lock.",
+         call. = FALSE)
   }
   dll <- system.file(
-    "libs", paste0("fastEmbedR", .Platform$dynlib.ext), package = "fastEmbedR"
+    "libs", paste0("fastEmbedR", .Platform$dynlib.ext),
+    package = "fastEmbedR"
   )
-  observed_dll_sha256 <- sha256_file(dll)
-  if (!identical(observed_dll_sha256, identity$dll_sha256)) {
-    stop("Installed fastEmbedR binary does not match the release lock.", call. = FALSE)
+  if (!identical(sha256_file(dll), identity$dll_sha256)) {
+    stop("Installed fastEmbedR binary does not match the release lock.",
+         call. = FALSE)
   }
   invisible(identity)
 }
 
 locked_release <- assert_release_identity()
+
+normalize_backend_name <- function(x) {
+  x <- tolower(as.character(x %||% ""))
+  if (!length(x) || !nzchar(x[[1L]])) return(NA_character_)
+  x <- x[[1L]]
+  if (grepl("cuda|cuvs|raft", x)) return("cuda")
+  if (grepl("metal|mps", x)) return("metal")
+  if (grepl("cpu|hnsw|exact|ivf", x)) return("cpu")
+  x
+}
+
+observed_embedding_backend <- function(layout, requested) {
+  config <- attr(layout, "fastEmbedR_config", exact = TRUE)
+  candidates <- c(
+    if (is.list(config)) config$optimizer_backend else NULL,
+    if (is.list(config)) config$backend else NULL,
+    attr(layout, "backend", exact = TRUE)
+  )
+  candidates <- candidates[!is.na(candidates) & nzchar(candidates)]
+  observed <- if (length(candidates)) {
+    normalize_backend_name(candidates[[1L]])
+  } else {
+    normalize_backend_name(requested)
+  }
+  observed
+}
 
 log_file <- file.path(out_dir, "benchmark.log")
 log_msg <- function(...) {
@@ -403,6 +435,20 @@ cache_paths <- function(dataset, backend = NULL) {
       dataset_cache_dir,
       sprintf("%s_validation_n%d_seed4.rds", stem, validation_sample_n)
     ),
+    quality_sample = file.path(
+      dataset_cache_dir,
+      sprintf(
+        "%s_quality_sample_cap%d_seed%d.rds",
+        stem, quality_sample_n, seeds[[1L]] + 101L
+      )
+    ),
+    quality_sample_csv = file.path(
+      dataset_cache_dir,
+      sprintf(
+        "%s_quality_sample_cap%d_seed%d_rows.csv",
+        stem, quality_sample_n, seeds[[1L]] + 101L
+      )
+    ),
     manifest = file.path(dataset_cache_dir, manifest_name)
   )
 }
@@ -554,7 +600,7 @@ landmark_baseline_method <- function(method) {
   if (!method_is_landmark(method)) return(NA_character_)
   backend <- method_backend(method)
   if (method_is_tsne(method)) {
-    sprintf("fastEmbedR_opentsne_%s_full", backend)
+    sprintf("fastEmbedR_tsne_%s_full", backend)
   } else {
     sprintf("fastEmbedR_umap_%s_binary_full", backend)
   }
@@ -589,7 +635,7 @@ method_scope <- function(method) {
 default_methods <- function(group) {
   cpu <- c(
     "fastEmbedR_pca_cpu", "irlba_pca",
-    "fastEmbedR_opentsne_cpu_full", "fastEmbedR_opentsne_cpu_knn",
+    "fastEmbedR_tsne_cpu_full", "fastEmbedR_tsne_cpu_knn",
     "Rtsne_full", "Rtsne_neighbors", "KlugerLab_FItSNE",
     "fastEmbedR_umap_cpu_fuzzy_full", "fastEmbedR_umap_cpu_fuzzy_knn",
     "fastEmbedR_umap_cpu_binary_full", "fastEmbedR_umap_cpu_binary_knn",
@@ -598,13 +644,13 @@ default_methods <- function(group) {
   )
   metal <- c(
     "fastEmbedR_pca_metal",
-    "fastEmbedR_opentsne_metal_full", "fastEmbedR_opentsne_metal_knn",
+    "fastEmbedR_tsne_metal_full", "fastEmbedR_tsne_metal_knn",
     "fastEmbedR_umap_metal_fuzzy_full", "fastEmbedR_umap_metal_fuzzy_knn",
     "fastEmbedR_umap_metal_binary_full", "fastEmbedR_umap_metal_binary_knn"
   )
   cuda <- c(
     "fastEmbedR_pca_cuda",
-    "fastEmbedR_opentsne_cuda_full", "fastEmbedR_opentsne_cuda_knn",
+    "fastEmbedR_tsne_cuda_full", "fastEmbedR_tsne_cuda_knn",
     "fastEmbedR_umap_cuda_fuzzy_full", "fastEmbedR_umap_cuda_fuzzy_knn",
     "fastEmbedR_umap_cuda_binary_full", "fastEmbedR_umap_cuda_binary_knn",
     "rapids_cuml_tsne_full", "rapids_cuml_umap_full"
@@ -629,24 +675,6 @@ method_is_umap <- function(method) identical(method_family(method), "UMAP")
 method_threads <- function(method, requested) {
   if (method_backend(method) %in% c("cuda", "metal")) return(NA_integer_)
   as.integer(requested)
-}
-
-observed_fit_backend <- function(fit, requested) {
-  config <- attr(fit, "fastEmbedR_config", exact = TRUE)
-  candidates <- c(
-    if (is.list(config)) config$optimizer_backend %||% config$backend else NULL,
-    if (is.list(fit)) fit$backend %||% fit$parameters$backend else NULL,
-    attr(fit, "backend", exact = TRUE),
-    requested
-  )
-  candidates <- as.character(candidates)
-  candidates <- candidates[!is.na(candidates) & nzchar(candidates)]
-  observed <- if (length(candidates)) candidates[[1L]] else NA_character_
-  if (is.na(observed)) return(observed)
-  if (grepl("^cpu", observed, ignore.case = TRUE)) return("cpu")
-  if (grepl("metal", observed, ignore.case = TRUE)) return("metal")
-  if (grepl("cuda|cuvs|raft", observed, ignore.case = TRUE)) return("cuda")
-  observed
 }
 
 parameter_record <- function(method, requested_threads) {
@@ -849,10 +877,10 @@ precompute_dataset <- function(dataset, validation_backends) {
       pca_fit <- fastEmbedR::pca(
         x, ncomp = 2L, center = TRUE, scale = FALSE,
         backend = shared_cache_backend, n.cores = threads,
-        seed = seeds[[1L]], opentsne_init = TRUE
+        seed = seeds[[1L]], tsne_init = TRUE
       )
     })[["elapsed"]]
-    pca_init <- publication_layout_matrix(pca_fit$opentsne_init)
+    pca_init <- publication_layout_matrix(pca_fit$tsne_init)
     publish_rds_once(
       pca_init, paths$pca_init, compress = FALSE, overwrite = force
     )
@@ -860,7 +888,10 @@ precompute_dataset <- function(dataset, validation_backends) {
   }
 
   if (force || !file.exists(paths$validation)) {
-    rows <- publication_sample_rows(n, validation_sample_n, seeds[[1L]] + 1009L)
+    rows <- publication_sample_rows(
+      n, validation_sample_n, seeds[[1L]] + 1009L,
+      labels = data$labels
+    )
     x_sample <- as_double_matrix(x[rows, , drop = FALSE])
     exact <- publication_exact_knn(x_sample, min(k, nrow(x_sample) - 1L))
     validation <- list(
@@ -873,6 +904,50 @@ precompute_dataset <- function(dataset, validation_backends) {
     publish_rds_once(
       validation, paths$validation, compress = FALSE, overwrite = force
     )
+  }
+
+  if (force || !file.exists(paths$quality_sample)) {
+    p <- ncol(x)
+    budget_n <- floor(sqrt(2 * quality_max_distance_ops / max(1, p)))
+    effective_quality_n <- max(
+      min(n, 52L),
+      min(n, quality_sample_n, max(1L, as.integer(budget_n)))
+    )
+    quality_sample <- list(
+      rows = publication_sample_rows(
+        n, effective_quality_n, seeds[[1L]] + 101L,
+        labels = data$labels
+      ),
+      seed = seeds[[1L]] + 101L,
+      requested_n = quality_sample_n,
+      effective_n = effective_quality_n,
+      stratified = !is.null(data$labels),
+      dataset = dataset_alias(dataset)
+    )
+    publish_rds_once(
+      quality_sample, paths$quality_sample,
+      compress = FALSE, overwrite = force
+    )
+  }
+  quality_sample <- readRDS(paths$quality_sample)
+  if (force || !file.exists(paths$quality_sample_csv)) {
+    sample_rows <- data.frame(
+      dataset = dataset_alias(dataset),
+      quality_sample_seed = as.integer(quality_sample$seed),
+      row_id = as.integer(quality_sample$rows)
+    )
+    if (force) {
+      utils::write.csv(
+        sample_rows, paths$quality_sample_csv, row.names = FALSE
+      )
+    } else {
+      publish_input_once(
+        paths$quality_sample_csv,
+        writer = function(temporary) {
+          utils::write.csv(sample_rows, temporary, row.names = FALSE)
+        }
+      )
+    }
   }
 
   validation <- readRDS(paths$validation)
@@ -1265,62 +1340,62 @@ run_method <- function(method, dataset_data) {
       fastEmbedR_pca_cpu = fastEmbedR::pca(
         x_fast, ncomp = pca_ncomp, center = TRUE, scale = FALSE,
         backend = "cpu", n.cores = threads, seed = seed,
-        opentsne_init = TRUE
+        tsne_init = TRUE
       ),
       fastEmbedR_pca_metal = fastEmbedR::pca(
         x_fast, ncomp = pca_ncomp, center = TRUE, scale = FALSE,
-        backend = "metal", seed = seed, opentsne_init = TRUE
+        backend = "metal", seed = seed, tsne_init = TRUE
       ),
       fastEmbedR_pca_cuda = fastEmbedR::pca(
         x_fast, ncomp = pca_ncomp, center = TRUE, scale = FALSE,
-        backend = "cuda", seed = seed, opentsne_init = TRUE
+        backend = "cuda", seed = seed, tsne_init = TRUE
       ),
       irlba_pca = {
         if (is.null(x_standard)) stop("Standard R data are required for irlba.", call. = FALSE)
         if (!requireNamespace("irlba", quietly = TRUE)) stop("irlba is not installed.", call. = FALSE)
         irlba::prcomp_irlba(x_standard, n = pca_ncomp, center = TRUE, scale. = FALSE)
       },
-      fastEmbedR_opentsne_cpu_full = fastEmbedR::opentsne(
+      fastEmbedR_tsne_cpu_full = fastEmbedR::tsne(
         x_fast, perplexity = perplexity, backend = "cpu", n.cores = threads,
         seed = seed, record_costs = FALSE
       ),
-      fastEmbedR_opentsne_metal_full = fastEmbedR::opentsne(
+      fastEmbedR_tsne_metal_full = fastEmbedR::tsne(
         x_fast, perplexity = perplexity, backend = "metal", n.cores = threads,
         seed = seed, record_costs = FALSE
       ),
-      fastEmbedR_opentsne_cuda_full = fastEmbedR::opentsne(
+      fastEmbedR_tsne_cuda_full = fastEmbedR::tsne(
         x_fast, perplexity = perplexity, backend = "cuda", n.cores = threads,
         seed = seed, record_costs = FALSE
       ),
-      fastEmbedR_opentsne_cpu_landmark = fastEmbedR::landmark_tsne(
+      fastEmbedR_tsne_cpu_landmark = fastEmbedR::landmark_tsne(
         x_fast, landmarks = landmark_fraction, n_neighbors = k,
         perplexity = perplexity, standardize = FALSE, backend = "cpu",
         n.cores = threads, seed = seed, keep_knn = FALSE,
         verbose = FALSE
       ),
-      fastEmbedR_opentsne_metal_landmark = fastEmbedR::landmark_tsne(
+      fastEmbedR_tsne_metal_landmark = fastEmbedR::landmark_tsne(
         x_fast, landmarks = landmark_fraction, n_neighbors = k,
         perplexity = perplexity, standardize = FALSE, backend = "metal",
         n.cores = threads, seed = seed, keep_knn = FALSE,
         verbose = FALSE
       ),
-      fastEmbedR_opentsne_cuda_landmark = fastEmbedR::landmark_tsne(
+      fastEmbedR_tsne_cuda_landmark = fastEmbedR::landmark_tsne(
         x_fast, landmarks = landmark_fraction, n_neighbors = k,
         perplexity = perplexity, standardize = FALSE, backend = "cuda",
         n.cores = threads, seed = seed, keep_knn = FALSE,
         verbose = FALSE
       ),
-      fastEmbedR_opentsne_cpu_knn = fastEmbedR::opentsne_knn(
+      fastEmbedR_tsne_cpu_knn = fastEmbedR::tsne_knn(
         shared_knn_fast, n_neighbors = ceiling(perplexity), perplexity = perplexity,
         Y_init = pca_init_fast, backend = "cpu", n.cores = threads,
         seed = seed, record_costs = FALSE
       ),
-      fastEmbedR_opentsne_metal_knn = fastEmbedR::opentsne_knn(
+      fastEmbedR_tsne_metal_knn = fastEmbedR::tsne_knn(
         shared_knn_fast, n_neighbors = ceiling(perplexity), perplexity = perplexity,
         Y_init = pca_init_fast, backend = "metal", n.cores = threads,
         seed = seed, record_costs = FALSE
       ),
-      fastEmbedR_opentsne_cuda_knn = fastEmbedR::opentsne_knn(
+      fastEmbedR_tsne_cuda_knn = fastEmbedR::tsne_knn(
         shared_knn_fast, n_neighbors = ceiling(perplexity), perplexity = perplexity,
         Y_init = pca_init_fast, backend = "cuda", n.cores = threads,
         seed = seed, record_costs = FALSE
@@ -1531,19 +1606,33 @@ score_embedding <- function(dataset_data, layout, family, dataset) {
     trustworthiness = NA_real_, knn_preservation_15 = NA_real_,
     knn_preservation_30 = NA_real_, knn_preservation_50 = NA_real_,
     silhouette = NA_real_, label_knn_accuracy = NA_real_,
-    tsne_kl = NA_real_, quality_sample_n = NA_integer_
+    tsne_kl = NA_real_, quality_sample_n = NA_integer_,
+    quality_sample_seed = NA_integer_, quality_sample_file = NA_character_,
+    quality_sample_rows_file = NA_character_,
+    quality_sample_sha256 = NA_character_
   )
   if (identical(family, "PCA")) return(empty)
   n <- nrow(layout)
   source_data <- dataset_data$standard$data %||% dataset_data$float$data
-  p <- ncol(source_data)
-  budget_n <- floor(sqrt(2 * quality_max_distance_ops / max(1, p)))
-  min_metric_n <- min(n, 52L)
-  effective_quality_n <- max(
-    min_metric_n,
-    min(n, quality_sample_n, max(1L, as.integer(budget_n)))
-  )
-  rows <- publication_sample_rows(n, effective_quality_n, seed + 101L)
+  quality_path <- cache_paths(dataset)$quality_sample
+  quality_sample <- if (file.exists(quality_path)) {
+    readRDS(quality_path)
+  } else {
+    p <- ncol(source_data)
+    budget_n <- floor(sqrt(2 * quality_max_distance_ops / max(1, p)))
+    effective_quality_n <- max(
+      min(n, 52L),
+      min(n, quality_sample_n, max(1L, as.integer(budget_n)))
+    )
+    list(
+      rows = publication_sample_rows(
+        n, effective_quality_n, seeds[[1L]] + 101L,
+        labels = dataset_data$labels
+      ),
+      seed = seeds[[1L]] + 101L
+    )
+  }
+  rows <- as.integer(quality_sample$rows)
   x_sample <- as_double_matrix(source_data[rows, , drop = FALSE])
   labels <- dataset_data$labels
   label_sample <- if (is.null(labels)) NULL else labels[rows]
@@ -1551,9 +1640,9 @@ score_embedding <- function(dataset_data, layout, family, dataset) {
     fastEmbedR::evaluate_embedding(
       x_sample, layout[rows, , drop = FALSE], labels = label_sample,
       k = c(15L, 30L, 50L),
-      sample_size_for_global_metrics = min(2000L, length(rows)),
-      sample_size_for_local_metrics = min(2000L, length(rows)),
-      seed = seed, n.cores = threads, dataset = dataset
+      sample_size_for_global_metrics = length(rows),
+      sample_size_for_local_metrics = length(rows),
+      seed = quality_sample$seed, n.cores = threads, dataset = dataset
     ),
     error = function(e) NULL
   )
@@ -1570,6 +1659,17 @@ score_embedding <- function(dataset_data, layout, family, dataset) {
     )
   }
   empty$quality_sample_n <- length(rows)
+  empty$quality_sample_seed <- as.integer(quality_sample$seed)
+  empty$quality_sample_file <- normalizePath(
+    quality_path, winslash = "/", mustWork = FALSE
+  )
+  quality_rows_path <- cache_paths(dataset)$quality_sample_csv
+  empty$quality_sample_rows_file <- normalizePath(
+    quality_rows_path, winslash = "/", mustWork = FALSE
+  )
+  if (file.exists(quality_rows_path)) {
+    empty$quality_sample_sha256 <- sha256_file(quality_rows_path)
+  }
   if (identical(family, "t-SNE")) {
     validation <- readRDS(cache_paths(dataset)$validation)
     affinity <- publication_sparse_affinities(
@@ -1581,19 +1681,21 @@ score_embedding <- function(dataset_data, layout, family, dataset) {
 }
 
 worker_result_template <- function(dataset, method, status = "failed", error = NA_character_) {
+  requested_backend <- method_backend(method)
   data.frame(
     dataset = dataset_alias(dataset), method = method,
-    family = method_family(method), backend = method_backend(method),
-    requested_backend = method_backend(method), actual_backend = NA_character_,
-    fastEmbedR_version = locked_release$version %||% NA_character_,
-    fastEmbedR_commit = locked_release$commit %||% NA_character_,
-    fastEmbedR_source_archive_sha256 =
-      locked_release$source_archive_sha256 %||% NA_character_,
+    family = method_family(method), backend = requested_backend,
+    requested_backend = requested_backend, actual_backend = NA_character_,
+    fastEmbedR_release_tag = locked_release$tag,
+    fastEmbedR_version = locked_release$version,
+    fastEmbedR_commit = locked_release$commit,
+    fastEmbedR_source_archive_sha256 = locked_release$source_archive_sha256,
     fastEmbedR_package_tarball_sha256 =
-      locked_release$package_tarball_sha256 %||% NA_character_,
-    fastEmbedR_dll_sha256 = locked_release$dll_sha256 %||% NA_character_,
-    fastEmbedR_image_sha256 = locked_release$image_sha256 %||% NA_character_,
-    benchmark_commit = locked_release$benchmark_commit %||% NA_character_,
+      locked_release$package_tarball_sha256,
+    fastEmbedR_dll_sha256 = locked_release$dll_sha256,
+    fastEmbedR_image_sha256 = locked_release$image_sha256,
+    benchmark_commit = locked_release$benchmark_commit,
+    result_archive_doi = locked_release$result_archive_doi,
     timing_scope = method_scope(method), seed = seed,
     requested_threads = threads, effective_threads = method_threads(method, threads),
     status = status, error = error,
@@ -1620,7 +1722,10 @@ worker_result_template <- function(dataset, method, status = "failed", error = N
     kodama_core_peak_gpu_delta_mb = NA_real_,
     kodama_visualization_peak_gpu_delta_mb = NA_real_,
     kodama_core_cache_file = NA_character_, kodama_core_reused = NA,
-    quality_sample_n = NA_integer_, layout_file = NA_character_,
+    quality_sample_n = NA_integer_, quality_sample_seed = NA_integer_,
+    quality_sample_file = NA_character_,
+    quality_sample_rows_file = NA_character_,
+    quality_sample_sha256 = NA_character_, layout_file = NA_character_,
     plot_file = NA_character_, stringsAsFactors = FALSE
   )
 }
@@ -1674,12 +1779,15 @@ worker_main <- function() {
   )
   scores <- score_embedding(data, layout, method_family(method), dataset)
   row <- worker_result_template(dataset, method, status = "success", error = NA_character_)
-  row$actual_backend <- observed_fit_backend(result$fit, row$requested_backend)
+  row$actual_backend <- observed_embedding_backend(
+    layout, row$requested_backend[[1L]]
+  )
   if (startsWith(method, "fastEmbedR") &&
       !identical(row$actual_backend[[1L]], row$requested_backend[[1L]])) {
     stop(
-      "Backend mismatch for ", method, ": requested ", row$requested_backend[[1L]],
-      ", observed ", row$actual_backend[[1L]], ".", call. = FALSE
+      "Requested backend ", row$requested_backend[[1L]],
+      " but the result reports ", row$actual_backend[[1L]], ".",
+      call. = FALSE
     )
   }
   row$n <- nrow(layout)
@@ -2232,10 +2340,10 @@ backend_validation_table <- function(validation_backends) {
       affinity <- publication_edge_agreement(reference_affinity, candidate_affinity)
       for (graph_mode in c("fuzzy", "binary")) {
         reference_graph <- publication_umap_edges(
-          reference_knn, graph_mode = graph_mode, n.cores = max(threads_grid)
+          reference_knn, graph_mode = graph_mode, n_threads = max(threads_grid)
         )
         candidate_graph <- publication_umap_edges(
-          candidate, graph_mode = graph_mode, n.cores = max(threads_grid)
+          candidate, graph_mode = graph_mode, n_threads = max(threads_grid)
         )
         graph <- publication_edge_agreement(reference_graph, candidate_graph)
         rows[[length(rows) + 1L]] <- data.frame(
@@ -2273,13 +2381,13 @@ reference_graph_validation_table <- function() {
     dst <- cbind(0, knn$distances)
     for (graph_mode in c("fuzzy", "binary")) {
       fast_graph <- publication_umap_edges(
-        knn, graph_mode = graph_mode, n.cores = max(threads_grid)
+        knn, graph_mode = graph_mode, n_threads = max(threads_grid)
       )
       uwot_graph <- tryCatch(
         uwot::similarity_graph(
           X = NULL, n_neighbors = ncol(knn$indices),
           nn_method = list(idx = idx, dist = dst),
-          n.cores = max(threads_grid),
+          n_threads = max(threads_grid),
           binary_edge_weights = identical(graph_mode, "binary"),
           verbose = FALSE
         ),
@@ -2348,7 +2456,17 @@ pca_agreement_table <- function(runs) {
 
 write_reproducibility <- function() {
   writeLines(capture.output(utils::sessionInfo()), file.path(out_dir, "sessionInfo.txt"))
-  git_commit <- locked_release$benchmark_commit %||% NA_character_
+  git_commit <- locked_release$benchmark_commit
+  if (!nzchar(git_commit)) {
+    git_commit <- tryCatch(
+      trimws(suppressWarnings(system2(
+        "git", c("-C", dirname(script_dir), "rev-parse", "HEAD"),
+        stdout = TRUE, stderr = FALSE
+      ))),
+      error = function(e) NA_character_
+    )
+  }
+  if (!length(git_commit) || !nzchar(git_commit[[1L]])) git_commit <- NA_character_
   nvidia <- tryCatch(
     system2("nvidia-smi", c("--query-gpu=name,driver_version,memory.total,compute_cap", "--format=csv,noheader"), stdout = TRUE, stderr = TRUE),
     error = function(e) NA_character_
@@ -2362,6 +2480,124 @@ write_reproducibility <- function() {
       as.character(utils::packageVersion(package))
     } else NA_character_
   }, character(1))
+  package_paths <- vapply(package_names, function(package) {
+    if (requireNamespace(package, quietly = TRUE)) {
+      find.package(package)
+    } else NA_character_
+  }, character(1))
+  python <- Sys.getenv("RETICULATE_PYTHON", unset = Sys.which("python"))
+  python_packages <- if (nzchar(python)) tryCatch(
+    system2(
+      python,
+      c(
+        "-c",
+        shQuote(paste0(
+          "import importlib, importlib.metadata as m\n",
+          "items=[('openTSNE','openTSNE',['openTSNE']),",
+          "('umap-learn','umap',['umap-learn']),",
+          "('cuml','cuml',['cuml','cuml-cu12','cuml-cu13'])]\n",
+          "for label,module,dists in items:\n",
+          "  v='NA'\n",
+          "  for d in dists:\n",
+          "    try: v=m.version(d); break\n",
+          "    except m.PackageNotFoundError: pass\n",
+          "  if v=='NA':\n",
+          "    try: v=str(getattr(importlib.import_module(module),'__version__','NA'))\n",
+          "    except Exception: pass\n",
+          "  print('python_package_'+label+'='+v)\n"
+        ))
+      ),
+      stdout = TRUE, stderr = TRUE
+    ),
+    error = function(e) paste0("python_versions_error=", conditionMessage(e))
+  ) else "python_versions_error=python executable unavailable"
+  fitsne_executable <- find_fitsne()
+  fitsne_sha256 <- if (nzchar(fitsne_executable)) {
+    sha256_file(fitsne_executable)
+  } else {
+    NA_character_
+  }
+  fitsne_commit <- NA_character_
+  fitsne_source_dirs <- c(
+    "/opt/fit-sne-src", "/opt/fit-sne", "/opt/FIt-SNE",
+    "/mnt/sata_ssd/FIt-SNE"
+  )
+  for (source_dir in fitsne_source_dirs) {
+    if (!dir.exists(file.path(source_dir, ".git"))) next
+    value <- tryCatch(
+      suppressWarnings(system2(
+        "git", c("-C", source_dir, "rev-parse", "HEAD"),
+        stdout = TRUE, stderr = FALSE
+      )),
+      error = function(e) character()
+    )
+    if (length(value) && grepl("^[0-9a-f]{40}$", value[[1L]])) {
+      fitsne_commit <- value[[1L]]
+      break
+    }
+  }
+  fitsne_identity <- if (!is.na(fitsne_commit)) {
+    fitsne_commit
+  } else if (!is.na(fitsne_sha256)) {
+    paste0("sha256:", fitsne_sha256)
+  } else {
+    NA_character_
+  }
+  fitsne_identity_type <- if (!is.na(fitsne_commit)) {
+    "Git commit"
+  } else {
+    "Executable SHA-256"
+  }
+  python_values <- setNames(
+    rep(NA_character_, 3L), c("openTSNE", "umap-learn", "cuml")
+  )
+  for (line in python_packages) {
+    fields <- strsplit(line, "=", fixed = TRUE)[[1L]]
+    if (length(fields) < 2L) next
+    name <- sub("^python_package_", "", fields[[1L]])
+    if (name %in% names(python_values)) {
+      python_values[[name]] <- paste(fields[-1L], collapse = "=")
+    }
+  }
+  comparator_identity <- data.frame(
+    comparator = c(
+      "fastEmbedR", "Rtsne", "FIt-SNE", "uwot", "R umap",
+      "Python openTSNE", "Python umap-learn", "RAPIDS cuML"
+    ),
+    version_or_commit = c(
+      versions[["fastEmbedR"]], versions[["Rtsne"]],
+      fitsne_identity, versions[["uwot"]], versions[["umap"]],
+      python_values[["openTSNE"]], python_values[["umap-learn"]],
+      python_values[["cuml"]]
+    ),
+    identity_type = c(
+      "R package version", "R package version", fitsne_identity_type,
+      "R package version", "R package version", "Python package version",
+      "Python package version", "Python package version"
+    ),
+    artifact_path = c(
+      package_paths[["fastEmbedR"]], package_paths[["Rtsne"]],
+      fitsne_executable, package_paths[["uwot"]], package_paths[["umap"]],
+      python, python, python
+    ),
+    artifact_sha256 = c(
+      rep(NA_character_, 2L), fitsne_sha256,
+      rep(NA_character_, 5L)
+    ),
+    stringsAsFactors = FALSE
+  )
+  utils::write.csv(
+    comparator_identity, file.path(out_dir, "comparator_identity.csv"),
+    row.names = FALSE, na = "not_available"
+  )
+  cpu_model <- tryCatch(
+    system2("lscpu", stdout = TRUE, stderr = TRUE),
+    error = function(e) NA_character_
+  )
+  memory_state <- tryCatch(
+    readLines("/proc/meminfo", n = 5L, warn = FALSE),
+    error = function(e) NA_character_
+  )
   fastembedr_dll <- tryCatch(
     system.file("libs", paste0("fastEmbedR", .Platform$dynlib.ext),
                 package = "fastEmbedR"),
@@ -2375,13 +2611,6 @@ write_reproducibility <- function() {
   lines <- c(
     paste0("generated_at=", format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z")),
     paste0("git_commit=", git_commit),
-    paste0("release_version=", locked_release$version %||% NA_character_),
-    paste0("release_commit=", locked_release$commit %||% NA_character_),
-    paste0("release_source_archive_sha256=", locked_release$source_archive_sha256 %||% NA_character_),
-    paste0("release_package_tarball_sha256=", locked_release$package_tarball_sha256 %||% NA_character_),
-    paste0("release_dll_sha256=", locked_release$dll_sha256 %||% NA_character_),
-    paste0("release_image_sha256=", locked_release$image_sha256 %||% NA_character_),
-    paste0("benchmark_commit=", locked_release$benchmark_commit %||% NA_character_),
     paste0("container_image_path=", Sys.getenv(
       "FASTEMBEDR_IMAGE_PATH", unset = NA_character_
     )),
@@ -2432,7 +2661,16 @@ write_reproducibility <- function() {
     paste0("R=", R.version.string),
     paste0("platform=", R.version$platform),
     paste0("nvidia=", paste(nvidia, collapse = " | ")),
-    paste0("package_", names(versions), "=", versions)
+    paste0("package_", names(versions), "=", versions),
+    paste0("release_", names(locked_release), "=", locked_release),
+    paste0("fitsne_commit=", paste(fitsne_commit, collapse = " | ")),
+    python_packages,
+    paste0("slurm_job_id=", Sys.getenv("SLURM_JOB_ID", unset = "NA")),
+    paste0("slurm_cpus_per_task=", Sys.getenv("SLURM_CPUS_PER_TASK", unset = "NA")),
+    paste0("slurm_job_num_nodes=", Sys.getenv("SLURM_JOB_NUM_NODES", unset = "NA")),
+    paste0("slurm_exclusive=", Sys.getenv("SLURM_EXCLUSIVE", unset = "not_recorded")),
+    paste0("cpu_state=", paste(cpu_model, collapse = " | ")),
+    paste0("memory_state=", paste(memory_state, collapse = " | "))
   )
   writeLines(lines, file.path(out_dir, "reproducibility_manifest.txt"))
   writeLines(paste(commandArgs(FALSE), collapse = " "), file.path(out_dir, "benchmark_command.txt"))
