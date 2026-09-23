@@ -14,6 +14,7 @@ or large replicate-level result archives.
 | `benchmarks/macos/` | Native macOS CPU and Metal launchers |
 | `benchmarks/linux/` | Linux CPU and CUDA launchers, including Slurm and Apptainer/Singularity setup |
 | `benchmarks/shared/` | Platform-independent measurement engine and quality metrics |
+| `benchmarks/legacy/fastEmbedR-benchmark/` | Complete migrated source and history of the former standalone benchmark repository |
 | `analysis/` | Raw-result aggregation and deterministic table/figure builders |
 | `results/aggregate/` | Compact machine-readable benchmark summaries |
 | `results/figures/` | Figures generated from the aggregate CSV files |
@@ -25,6 +26,15 @@ or large replicate-level result archives.
 The macOS and Linux workflows are intentionally distinct. They share the R
 measurement engine but do not share launchers, hardware assumptions, thread
 configuration, accelerator checks, or output roots.
+
+## Integrated benchmark repository
+
+The former `tkcaccia/fastEmbedR-benchmark` repository was merged here on
+2026-09-23. Its complete source tree, including release-validation,
+multicore-scaling, dataset-manifest, and historical publication workflows, is
+preserved under `benchmarks/legacy/fastEmbedR-benchmark/`. The merge retains
+the original Git history. New benchmark development belongs in this
+repository; the standalone repository has been retired.
 
 ## macOS benchmark
 

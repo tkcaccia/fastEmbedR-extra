@@ -1,4 +1,11 @@
-# fastEmbedR benchmark
+# Migrated fastEmbedR benchmark suite
+
+This directory contains the complete source tree migrated from the former
+`tkcaccia/fastEmbedR-benchmark` repository on 2026-09-23. Its Git history is
+retained by the merge into
+[`tkcaccia/fastEmbedR-extra`](https://github.com/tkcaccia/fastEmbedR-extra).
+The active JSS validation campaign is maintained at
+[`benchmarks/linux/jss-review-validation/`](../../linux/jss-review-validation/).
 
 Reproducible benchmark and validation workflows for
 [`fastEmbedR`](https://github.com/tkcaccia/fastEmbedR).
@@ -13,7 +20,8 @@ container images, or large result archives.
 
 - Package source and user documentation:
   [`tkcaccia/fastEmbedR`](https://github.com/tkcaccia/fastEmbedR)
-- Benchmark protocols and reproducibility code: this repository
+- Benchmark protocols and reproducibility code:
+  [`tkcaccia/fastEmbedR-extra`](https://github.com/tkcaccia/fastEmbedR-extra)
 - Raw data: obtained by each user from the original provider under that
   provider's license and access conditions
 - Manuscript source and journal deliverables: maintained outside both GitHub
