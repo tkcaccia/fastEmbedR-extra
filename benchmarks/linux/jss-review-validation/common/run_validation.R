@@ -1285,7 +1285,7 @@ run_pca_validation <- function() {
     rows <- stratified_rows(loaded$labels, nrow(loaded$data), cap, 1701L)
     x <- as_float_matrix(loaded$data[rows, , drop = FALSE])
     requested_rank <- as_int(arg_value("rank"), 2L)
-    rank <- min(requested_rank, nrow(x) - 1L, ncol(x))
+    rank <- valid_randomized_pca_rank(x, requested_rank)
     warm <- x[seq_len(min(2000L, nrow(x))), , drop = FALSE]
     invisible(fastEmbedR::pca(
         warm, ncomp = min(rank, nrow(warm) - 1L), backend = backend,
@@ -1342,9 +1342,27 @@ run_pca_validation <- function() {
         singular_values = fit$singular_values,
         backend = backend, threads = threads, rank = rank, rows = rows
     ), file.path(out, "pca_fit_summary.rds"), compress = FALSE)
-    write_status("pca", dataset, backend, "success",
+    status_backend <- paste0(
+        backend, "_", threads, "t_rank", requested_rank
+    )
+    write_status("pca", dataset, status_backend, "success",
         threads = threads, rank = rank
     )
+}
+
+valid_randomized_pca_rank <- function(x, requested_rank) {
+    rank <- min(
+        as.integer(requested_rank),
+        nrow(x) - 1L,
+        ncol(x) - 1L
+    )
+    if (!is.finite(rank) || rank < 1L) {
+        stop(
+            "PCA requires at least two observations and two variables.",
+            call. = FALSE
+        )
+    }
+    rank
 }
 
 pca_accuracy_sample_size <- function(n, p) {
@@ -1468,7 +1486,7 @@ run_pca_accuracy <- function() {
     rows <- stratified_rows(loaded$labels, nrow(loaded$data), sample_n, 1701L)
     x <- as_float_matrix(loaded$data[rows, , drop = FALSE])
     requested_rank <- as_int(arg_value("rank"), 2L)
-    rank <- min(requested_rank, nrow(x) - 1L, ncol(x))
+    rank <- valid_randomized_pca_rank(x, requested_rank)
     reference_sec <- system.time({
         reference <- dense_pca_reference(x, rank)
     })[["elapsed"]]
@@ -1522,7 +1540,10 @@ run_pca_accuracy <- function() {
         reference = reference,
         irlba = if (is.null(irlba_fit)) NULL else irlba_fit$fit
     ), file.path(out, "pca_accuracy_summary.rds"), compress = FALSE)
-    write_status("pca_accuracy", dataset, backend, "success",
+    status_backend <- paste0(
+        backend, "_", threads, "t_rank", requested_rank
+    )
+    write_status("pca_accuracy", dataset, status_backend, "success",
         threads = threads, rank = rank, sample_n = nrow(x)
     )
 }
@@ -2241,13 +2262,15 @@ aggregate_pca_agreement <- function(root) {
     rows <- list()
     registry <- dataset_registry(data_root)
     for (name in registry$dataset) {
-        for (rank in c(2, 50)) {
+        for (requested_rank in c(2, 50)) {
             cpu_path <- file.path(
-                root, "pca", name, paste0("cpu_12t_rank", rank),
+                root, "pca", name,
+                paste0("cpu_12t_rank", requested_rank),
                 "pca_fit_summary.rds"
             )
             cuda_path <- file.path(
-                root, "pca", name, paste0("cuda_4t_rank", rank),
+                root, "pca", name,
+                paste0("cuda_4t_rank", requested_rank),
                 "pca_fit_summary.rds"
             )
             if (!file.exists(cpu_path) || !file.exists(cuda_path)) next
@@ -2258,7 +2281,8 @@ aggregate_pca_agreement <- function(root) {
                 cpu$score_sample, cuda$score_sample
             )
             rows[[length(rows) + 1L]] <- data.frame(
-                dataset = name, rank = rank,
+                dataset = name, requested_rank = requested_rank,
+                rank = cpu$rank,
                 procrustes_correlation = procrustes_correlation(
                     cpu$score_sample, cuda$score_sample
                 ),
@@ -2270,7 +2294,7 @@ aggregate_pca_agreement <- function(root) {
     if (length(rows)) do.call(rbind, rows) else data.frame()
 }
 
-pca_backend_pair_row <- function(name, rank, reference_backend,
+pca_backend_pair_row <- function(name, requested_rank, reference_backend,
                                  candidate_backend, reference, candidate) {
     score_angles <- principal_angle_summary(
         reference$fastembedr$scores, candidate$fastembedr$scores
@@ -2279,7 +2303,8 @@ pca_backend_pair_row <- function(name, rank, reference_backend,
         reference$fastembedr$loadings, candidate$fastembedr$loadings
     )
     data.frame(
-        dataset = name, rank = rank,
+        dataset = name, requested_rank = requested_rank,
+        rank = reference$rank,
         reference_backend = reference_backend,
         candidate_backend = candidate_backend,
         score_procrustes = procrustes_correlation(
@@ -2311,12 +2336,12 @@ aggregate_pca_accuracy_agreement <- function(root) {
     backends <- c("cpu", "metal", "cuda")
     pairs <- list(c("cpu", "cuda"), c("cpu", "metal"), c("metal", "cuda"))
     for (name in registry$dataset) {
-        for (rank in c(2L, 50L)) {
+        for (requested_rank in c(2L, 50L)) {
             summaries <- list()
             for (used_backend in backends) {
                 path <- file.path(
                     root, "pca_accuracy", name,
-                    paste0(used_backend, "_4t_rank", rank),
+                    paste0(used_backend, "_4t_rank", requested_rank),
                     "pca_accuracy_summary.rds"
                 )
                 if (file.exists(path)) summaries[[used_backend]] <- readRDS(path)
@@ -2327,7 +2352,7 @@ aggregate_pca_accuracy_agreement <- function(root) {
                 candidate <- summaries[[pair[[2L]]]]
                 if (!identical(reference$rows, candidate$rows)) next
                 rows[[length(rows) + 1L]] <- pca_backend_pair_row(
-                    name, rank, pair[[1L]], pair[[2L]],
+                    name, requested_rank, pair[[1L]], pair[[2L]],
                     reference, candidate
                 )
             }
@@ -2359,7 +2384,17 @@ if (!mode %in% names(dispatch)) stop("Unknown mode: ", mode)
 tryCatch(
     dispatch[[mode]](),
     error = function(error) {
-        write_status(mode, dataset, backend, "failed", conditionMessage(error))
+        status_backend <- backend
+        if (mode %in% c("pca", "pca_accuracy")) {
+            requested_rank <- as_int(arg_value("rank"), 2L)
+            status_backend <- paste0(
+                backend, "_", threads, "t_rank", requested_rank
+            )
+        }
+        write_status(
+            mode, dataset, status_backend, "failed",
+            conditionMessage(error)
+        )
         message("ERROR: ", conditionMessage(error))
         quit(status = 1L)
     }

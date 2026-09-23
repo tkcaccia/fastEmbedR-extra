@@ -3,9 +3,9 @@
 #SBATCH --partition=l40s
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=2
+#SBATCH --cpus-per-task=4
 #SBATCH --gres=gpu:l40s:1
-#SBATCH --mem=64G
+#SBATCH --mem=128G
 #SBATCH --time=48:00:00
 #SBATCH --array=0-10%5
 #SBATCH --job-name=feR_JSS_rq_g

@@ -18,6 +18,8 @@ CONTROLLER="$SUITE/slurm/run_complete_campaign_controller_cpu1.sh"
 cd "$BASE_DIR"
 mkdir -p "$JSS_CAMPAIGN_DIR" "$INPUT_ROOT" "$OUTPUT_ROOT" benchmark_logs
 
+bash "$SUITE/common/validate_slurm_resources.sh" "$SUITE"
+
 (
   cd "$SUITE"
   sha256sum -c FILES.sha256

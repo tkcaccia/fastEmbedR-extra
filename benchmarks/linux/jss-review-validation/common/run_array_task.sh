@@ -57,6 +57,7 @@ THREAD_COUNT=4
 EXTRA=()
 case "$MODE" in
   preflight)
+    THREAD_COUNT=1
     ;;
   precompute|affinity|knn_observed|knn_sensitivity)
     DATASET="${DATASETS[$TASK_ID]}"

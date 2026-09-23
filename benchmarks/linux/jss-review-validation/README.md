@@ -61,8 +61,11 @@ embedding is unavailable. There is no CPU fallback.
    `cpus-per-task` request. The 32 GB memory request avoids converting a small
    thread-count experiment into a large CPU allocation under memory-per-CPU
    accounting.
-7. `pca`: tests PCA ranks 2 and 50 on every dataset. CPU uses 1, 4, and 12
-   threads; CUDA uses its native backend. `irlba` is timed only as an
+7. `pca`: requests PCA ranks 2 and 50 on every dataset. A requested rank is
+   reduced to `min(rank, n - 1, p - 1)` when necessary because randomized
+   singular value decomposition requires a rank strictly below both matrix
+   dimensions. CPU uses 1, 4, and 12 threads; CUDA uses its native backend.
+   `irlba` is timed only as an
    approximate performance comparator, never as an exact reference.
    `pca_accuracy` is a separate, untimed-for-headline-evidence experiment on
    fixed tractable subsets. It compares CPU, Metal, and CUDA scores, loadings,
@@ -137,9 +140,12 @@ mass41, Tabula Muris, and Macosko2015 retina.
   arrays for each worker count. Their 32 GB request is supported by the
   measured peaks from the preliminary campaign and avoids memory-driven CPU
   inflation on clusters that account memory per CPU. Each worker refuses to
-  start if its requested R thread count exceeds `SLURM_CPUS_PER_TASK`.
-- CUDA launchers request one L40S GPU, one Slurm task, two host CPUs, and 64 GB
-  of host memory. Their array throttle is five, matching the validated
+  start if its requested R thread count exceeds `SLURM_CPUS_PER_TASK`. The
+  complete observed-recall worker requests 128 GB because the full ImageNet
+  reference calculation exceeded 32 GB.
+- CUDA launchers request one L40S GPU, one Slurm task, four host CPUs, and 64 GB
+  of host memory. The complete observed-recall worker requests 128 GB. Their
+  array throttle is five, matching the validated
   `l40sfree` per-user QOS ceiling of five L40S GPUs; Slurm may run fewer tasks
   when physical GPUs or shared-account resources are unavailable.
 
@@ -167,7 +173,9 @@ records the submission graph, and `final_audit.txt` is `PASS` only when all
 worker jobs and required aggregate outputs succeed. No manual waiting or
 polling is required. The launcher verifies `FILES.sha256`, copies that source
 manifest into the campaign directory, and records its own SHA-256 so a campaign
-cannot silently mix launcher revisions. Do not launch `submit_all.sh` on an
+cannot silently mix launcher revisions. It also checks that each Slurm worker
+reserves at least the host CPUs required by its R thread setting. Do not launch
+`submit_all.sh` on an
 account with a small queued-job limit.
 
 First inspect the scripts, image, and expected version. Then run:
