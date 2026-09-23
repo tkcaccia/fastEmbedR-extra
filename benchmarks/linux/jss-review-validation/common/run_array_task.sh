@@ -167,6 +167,10 @@ case "$MODE" in
     THREAD_COUNT=4
     EXTRA+=("--rank=$RANK")
     ;;
+  clustering_precompute|clustering)
+    DATASET="${DATASETS[$TASK_ID]}"
+    THREAD_COUNT="${CLUSTERING_THREADS:-4}"
+    ;;
   aggregate)
     THREAD_COUNT=1
     ;;

@@ -616,17 +616,56 @@ sha256_file <- function(path) {
     strsplit(output[[1L]], "[[:space:]]+")[[1L]][[1L]]
 }
 
+fastembedr_native_flag <- function(name) {
+    fun <- get0(name, envir = asNamespace("fastEmbedR"), inherits = FALSE)
+    if (is.null(fun)) return(FALSE)
+    tryCatch(isTRUE(fun()), error = function(error) FALSE)
+}
+
+backend_component_status <- function(backend) {
+    backend <- match.arg(backend, c("cpu", "cuda", "metal"))
+    suffix <- switch(backend, cpu = NULL, cuda = "cuda", metal = "metal")
+    if (is.null(suffix)) {
+        return(data.frame(
+            backend = backend, knn_available = TRUE,
+            embedding_available = TRUE, clustering_available = TRUE
+        ))
+    }
+    data.frame(
+        backend = backend,
+        knn_available = fastembedr_native_flag(paste0(
+            "native_", suffix, "_knn_available_cpp"
+        )),
+        embedding_available = fastembedr_native_flag(paste0(
+            "embedding_", suffix, "_available_cpp"
+        )),
+        clustering_available = fastembedr_native_flag(paste0(
+            "graph_clustering_", suffix, "_available_cpp"
+        ))
+    )
+}
+
 assert_backend <- function(backend) {
-    capabilities <- fastEmbedR::fastEmbedR_capabilities()
-    row <- capabilities[capabilities$backend == backend, , drop = FALSE]
-    usable <- nrow(row) == 1L && isTRUE(row$knn_available[[1L]]) &&
-        isTRUE(row$embedding_available[[1L]])
+    status <- backend_component_status(backend)
+    usable <- isTRUE(status$knn_available[[1L]]) &&
+        isTRUE(status$embedding_available[[1L]])
     if (!usable) {
         stop(backend, " was requested but its KNN and embedding components ",
             "are not both available; no fallback is allowed.", call. = FALSE
         )
     }
-    invisible(capabilities)
+    invisible(status)
+}
+
+assert_clustering_backend <- function(backend) {
+    status <- backend_component_status(backend)
+    if (!isTRUE(status$clustering_available[[1L]])) {
+        stop(
+            backend, " clustering is unavailable; no fallback is allowed.",
+            call. = FALSE
+        )
+    }
+    invisible(status)
 }
 
 assert_layout_backend <- function(layout, backend) {

@@ -102,9 +102,24 @@ case "$JSS_STAGE" in
       "$SUITE/slurm/run_pca_accuracy_cpu4.sh" '0-21%22'
     ;;
   pca_accuracy_cuda)
-    NEXT_STAGE=knn_sensitivity
+    NEXT_STAGE=clustering_precompute
     add_worker pca_accuracy_cuda \
       "$SUITE/slurm/run_pca_accuracy_cuda.sh" '0-21%5'
+    ;;
+  clustering_precompute)
+    NEXT_STAGE=clustering_cpu
+    add_worker clustering_precompute \
+      "$SUITE/slurm/run_clustering_precompute_cpu4.sh" '0-10%11'
+    ;;
+  clustering_cpu)
+    NEXT_STAGE=clustering_cuda
+    add_worker clustering_cpu \
+      "$SUITE/slurm/run_clustering_cpu4.sh" '0-10%11'
+    ;;
+  clustering_cuda)
+    NEXT_STAGE=knn_sensitivity
+    add_worker clustering_cuda \
+      "$SUITE/slurm/run_clustering_cuda.sh" '0-10%4'
     ;;
   knn_sensitivity)
     NEXT_STAGE=components

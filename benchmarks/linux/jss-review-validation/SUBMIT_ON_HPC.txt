@@ -1,6 +1,10 @@
 cd /scratch/firenze/NN
 
-# The CPU and CUDA preflights must already have passed.
+# Submit fresh strict preflights after synchronizing this suite. They execute
+# real UMAP, PCA, and Leiden work and validate the revised public API.
+bash benchmark_scripts/fastembedr_jss_review_validation/submit_preflight.sh
+
+# Wait until the two preflight jobs leave squeue, then verify their evidence.
 bash benchmark_scripts/fastembedr_jss_review_validation/verify_preflight.sh
 
 # Start the complete campaign. One controller submits bounded waves and
@@ -50,6 +54,22 @@ sbatch --dependency="afterok:$CPU_PREFLIGHT_JOB" \
   benchmark_scripts/fastembedr_jss_review_validation/slurm/run_pca_accuracy_cpu4.sh
 sbatch --dependency="afterok:$CUDA_PREFLIGHT_JOB" \
   benchmark_scripts/fastembedr_jss_review_validation/slurm/run_pca_accuracy_cuda.sh
+
+# Optional focused clustering validation. Graph construction runs once per
+# dataset. CPU Louvain, Leiden, and Walktrap run before CUDA Louvain and Leiden
+# so CUDA membership agreement can use the completed CPU reference files.
+CPU_PREFLIGHT_JOB=$(sbatch --parsable \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_preflight_cpu.sh)
+CUDA_PREFLIGHT_JOB=$(sbatch --parsable \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_preflight_cuda.sh)
+GRAPH_JOB=$(sbatch --parsable \
+  --dependency="afterok:$CPU_PREFLIGHT_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_clustering_precompute_cpu4.sh)
+CPU_CLUSTER_JOB=$(sbatch --parsable \
+  --dependency="afterok:$GRAPH_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_clustering_cpu4.sh)
+sbatch --dependency="afterok:$CPU_CLUSTER_JOB:$CUDA_PREFLIGHT_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_clustering_cuda.sh
 
 # Do not submit run_backend_quality_cpu4.sh and run_backend_quality_cuda.sh
 # together on accounts with a small QOS submission limit. Those diagnostic

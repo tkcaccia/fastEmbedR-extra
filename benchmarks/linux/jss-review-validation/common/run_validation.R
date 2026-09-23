@@ -13,6 +13,7 @@ script_file <- sub("^--file=", "", commandArgs(FALSE)[
 ][[1L]])
 script_dir <- dirname(normalizePath(script_file, mustWork = TRUE))
 source(file.path(script_dir, "common.R"))
+source(file.path(script_dir, "pca_clustering_validation.R"))
 
 suppressPackageStartupMessages(library(fastEmbedR))
 if (!requireNamespace("float", quietly = TRUE)) {
@@ -92,17 +93,22 @@ require_expected_version <- function() {
 
 run_preflight <- function() {
     require_expected_version()
+    exports <- validate_public_api()
     assert_backend(backend)
     out <- file.path(output_root, "identity", backend)
     dir.create(out, recursive = TRUE, showWarnings = FALSE)
     write_csv_atomic(package_identity(image), file.path(out, "identity.csv"))
-    capture.output(
-        print(fastEmbedR::fastEmbedR_capabilities()),
-        file = file.path(out, "capabilities.txt")
+    writeLines(sort(exports), file.path(out, "namespace_exports.txt"))
+    write_csv_atomic(
+        backend_component_status(backend),
+        file.path(out, "compiled_components.csv")
     )
     capture.output(sessionInfo(), file = file.path(out, "sessionInfo.txt"))
     python <- Sys.getenv("FASTEMBEDR_PYTHON", "/opt/conda/bin/python")
     if (backend == "cpu") {
+        if (!requireNamespace("igraph", quietly = TRUE)) {
+            stop("The igraph reference package is missing.", call. = FALSE)
+        }
         if (!file.exists(python)) {
             stop("Missing Python runtime: ", python, call. = FALSE)
         }
@@ -122,7 +128,7 @@ run_preflight <- function() {
         }
     }
     set.seed(4L)
-    smoke_x <- matrix(runif(512L * 16L), nrow = 512L)
+    smoke_x <- as_float_matrix(matrix(runif(512L * 16L), nrow = 512L))
     smoke_fit <- fastEmbedR::umap(
         smoke_x, n_neighbors = 15L, backend = backend,
         n.cores = threads, seed = 4L, graph_mode = "fuzzy"
@@ -142,6 +148,20 @@ run_preflight <- function() {
         finite = all(is.finite(smoke_layout)),
         stringsAsFactors = FALSE
     ), file.path(out, "backend_smoke.csv"))
+    component_smoke <- rbind(
+        data.frame(
+            component = "umap", requested_backend = backend,
+            observed_backend = observed_backend,
+            finite = all(is.finite(smoke_layout)),
+            detail = paste(nrow(smoke_layout), ncol(smoke_layout), sep = "x"),
+            stringsAsFactors = FALSE
+        ),
+        pca_preflight_row(smoke_x, backend, threads),
+        clustering_preflight_row(backend)
+    )
+    write_csv_atomic(
+        component_smoke, file.path(out, "component_smoke.csv")
+    )
     if (backend == "cuda") {
         system2("nvidia-smi", stdout = file.path(out, "nvidia-smi.txt"),
             stderr = TRUE
@@ -844,6 +864,22 @@ reference_query_metrics <- function(reference_x, query_x,
     )
 }
 
+fit_projection_reference <- function(method, x, seed) {
+    landmarks <- seq_len(nrow(x))
+    if (identical(method, "tsne")) {
+        return(fastEmbedR::tsne(
+            x, perplexity = perplexity, landmarks = landmarks,
+            metric = "euclidean", seed = seed, backend = backend,
+            n.cores = threads
+        ))
+    }
+    fastEmbedR::umap(
+        x, n_neighbors = 30L, landmarks = landmarks,
+        metric = "euclidean", seed = seed, backend = backend,
+        n.cores = threads, graph_mode = "fuzzy"
+    )
+}
+
 run_transform <- function() {
     require_expected_version()
     assert_backend(backend)
@@ -868,16 +904,14 @@ run_transform <- function() {
         query <- x[query_rows, , drop = FALSE]
         train_labels <- if (is.null(labels)) NULL else labels[train_rows]
         query_labels <- if (is.null(labels)) NULL else labels[query_rows]
-        selection <- seq_len(nrow(train))
         fit_time <- system.time({
-            model <- fastEmbedR::fit_landmark_model(
-                train, selection, method = method,
-                n_neighbors = if (method == "umap") 30L else NULL,
-                perplexity = if (method == "tsne") perplexity else NULL,
-                metric = "euclidean", seed = seed, backend = backend,
-                n.cores = threads, graph_mode = "fuzzy"
-            )
+            reference_fit <- fit_projection_reference(method, train, seed)
         })[["elapsed"]]
+        model <- reference_fit$model
+        if (!inherits(model, "fastEmbedR_landmark_model")) {
+            stop("The reference fit did not return a landmark model.")
+        }
+        assert_layout_backend(reference_fit, backend)
         reference_before <- layout_matrix(model$fit)
         transform_time <- system.time({
             projected <- fastEmbedR::project_landmark_model(
@@ -888,6 +922,7 @@ run_transform <- function() {
             )
         })[["elapsed"]]
         projected_layout <- layout_matrix(projected)
+        assert_layout_backend(projected, backend)
         reference_after <- layout_matrix(model$fit)
         displacement <- max(abs(reference_after - reference_before))
         joint_time <- system.time({
@@ -1008,21 +1043,24 @@ run_full_embedding <- function(method, x, seed) {
 }
 
 fit_reconstruction_model <- function(method, x, selection, seed) {
-    fastEmbedR::fit_landmark_model(
-        x, selection, method = method,
-        n_neighbors = if (method == "umap") 30L else NULL,
-        perplexity = if (method == "tsne") perplexity else NULL,
+    if (identical(method, "tsne")) {
+        return(fastEmbedR::tsne(
+            x, perplexity = perplexity, landmarks = selection,
+            metric = "euclidean", seed = seed, backend = backend,
+            n.cores = threads
+        ))
+    }
+    fastEmbedR::umap(
+        x, n_neighbors = 30L, landmarks = selection,
         metric = "euclidean", seed = seed, backend = backend,
         n.cores = threads, graph_mode = "fuzzy"
     )
 }
 
-project_reconstruction_model <- function(model, x) {
-    fastEmbedR::project_landmark_model(
-        model, x, n.cores = threads, transform_k = 30L,
-        refinement_epochs = 50L, transform_perplexity = 5,
-        transform_iter = 250L
-    )
+landmark_timing_value <- function(fit, name) {
+    metrics <- fit$metrics
+    if (!name %in% names(metrics)) return(NA_real_)
+    as.numeric(metrics[[name]][[1L]])
 }
 
 landmark_evaluation_sizes <- function(x) {
@@ -1133,13 +1171,16 @@ run_landmark_reconstruction <- function() {
             x, landmarks = landmark_fraction, seed = seed,
             n.cores = threads
         )
-        fit_sec <- system.time({
-            model <- fit_reconstruction_model(method, x, selection, seed)
+        landmark_sec <- system.time({
+            reconstructed <- fit_reconstruction_model(
+                method, x, selection$indices, seed
+            )
         })[["elapsed"]]
+        model <- reconstructed$model
+        if (!inherits(model, "fastEmbedR_landmark_model")) {
+            stop("Landmark embedding did not return its fitted model.")
+        }
         reference_before <- layout_matrix(model$fit)
-        transform_sec <- system.time({
-            reconstructed <- project_reconstruction_model(model, x)
-        })[["elapsed"]]
         layout <- layout_matrix(reconstructed)
         assert_layout_backend(reconstructed, backend)
         reference_after <- layout_matrix(model$fit)
@@ -1173,9 +1214,22 @@ run_landmark_reconstruction <- function() {
             n_landmarks = length(selection$indices),
             n_projected = length(selection$query_indices),
             landmark_fraction = length(selection$indices) / nrow(x),
-            reference_fit_sec = fit_sec,
-            reconstruction_sec = transform_sec,
-            landmark_total_sec = fit_sec + transform_sec,
+            reference_fit_sec = landmark_timing_value(
+                reconstructed, "reference_embedding_elapsed"
+            ),
+            reconstruction_sec = if (method == "tsne") {
+                landmark_timing_value(reconstructed, "transform_elapsed") +
+                    landmark_timing_value(
+                        reconstructed, "landmark_projection_knn_elapsed"
+                    )
+            } else {
+                landmark_timing_value(
+                    reconstructed, "landmark_projection_knn_elapsed"
+                ) + landmark_timing_value(
+                    reconstructed, "landmark_refinement_elapsed"
+                )
+            },
+            landmark_total_sec = landmark_sec,
             full_embedding_sec = full_sec,
             reference_max_displacement = reference_displacement,
             projected_full_procrustes = quality$procrustes,
@@ -2102,6 +2156,19 @@ run_aggregate <- function() {
     pca_accuracy_files <- csv_files[
         basename(csv_files) == "pca_accuracy.csv"
     ]
+    pca_timing_files <- csv_files[
+        basename(csv_files) == "timing.csv" &
+            grepl("/pca/", csv_files, fixed = TRUE)
+    ]
+    if (length(pca_timing_files)) {
+        pca_timing <- bind_rows_union(lapply(
+            pca_timing_files, utils::read.csv,
+            stringsAsFactors = FALSE
+        ))
+        write_csv_atomic(
+            pca_timing, file.path(out, "pca_timing_all.csv")
+        )
+    }
     if (length(pca_accuracy_files)) {
         pca_accuracy <- bind_rows_union(lapply(
             pca_accuracy_files, utils::read.csv,
@@ -2150,6 +2217,31 @@ run_aggregate <- function() {
         write_csv_atomic(
             pca_accuracy_agreement,
             file.path(out, "pca_accuracy_backend_agreement.csv")
+        )
+    }
+    clustering_files <- csv_files[
+        basename(csv_files) == "clustering.csv"
+    ]
+    if (length(clustering_files)) {
+        clustering <- bind_rows_union(lapply(
+            clustering_files, utils::read.csv,
+            stringsAsFactors = FALSE
+        ))
+        write_csv_atomic(
+            clustering, file.path(out, "clustering_validation_all.csv")
+        )
+    }
+    clustering_input_files <- csv_files[
+        basename(csv_files) == "clustering_precompute.csv"
+    ]
+    if (length(clustering_input_files)) {
+        clustering_inputs <- bind_rows_union(lapply(
+            clustering_input_files, utils::read.csv,
+            stringsAsFactors = FALSE
+        ))
+        write_csv_atomic(
+            clustering_inputs,
+            file.path(out, "clustering_precompute_all.csv")
         )
     }
     longrun_agreement <- aggregate_longrun_agreement(output_root)
@@ -2375,6 +2467,8 @@ dispatch <- list(
     scaling = run_scaling,
     pca = run_pca_validation,
     pca_accuracy = run_pca_accuracy,
+    clustering_precompute = run_clustering_precompute,
+    clustering = run_clustering_validation,
     knn_observed = run_observed_knn_accuracy,
     knn_sensitivity = run_knn_sensitivity,
     aggregate = run_aggregate

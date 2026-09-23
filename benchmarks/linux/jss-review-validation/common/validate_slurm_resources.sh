@@ -18,13 +18,14 @@ check_cpus() {
 }
 
 check_cpus "$SUITE/slurm/run_preflight_cpu.sh" 1
-check_cpus "$SUITE/slurm/run_preflight_cuda.sh" 1
-
-while IFS= read -r script; do
-  check_cpus "$script" 4
-done < <(
-  grep -l 'run_array_task[.]sh.*cuda' "$SUITE"/slurm/*cuda*.sh |
-    grep -v '/run_preflight_cuda[.]sh$'
-)
+for script in "$SUITE"/slurm/*cuda*.sh; do
+  case "$(basename "$script")" in
+    run_preflight_cuda.sh) required=1 ;;
+    run_components_cuda.sh) required=2 ;;
+    run_clustering_cuda.sh) required=3 ;;
+    *) required=4 ;;
+  esac
+  check_cpus "$script" "$required"
+done
 
 echo "Slurm resource contracts: PASS"

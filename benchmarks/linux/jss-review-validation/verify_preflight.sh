@@ -18,6 +18,7 @@ check_backend() {
   local backend="$1"
   local identity="$OUTPUT_ROOT/identity/$backend/identity.csv"
   local smoke="$OUTPUT_ROOT/identity/$backend/backend_smoke.csv"
+  local components="$OUTPUT_ROOT/identity/$backend/component_smoke.csv"
   [[ -s "$identity" ]] || {
     echo "Missing $backend preflight identity: $identity" >&2
     return 1
@@ -26,10 +27,15 @@ check_backend() {
     echo "Missing $backend smoke evidence: $smoke" >&2
     return 1
   }
+  [[ -s "$components" ]] || {
+    echo "Missing $backend component evidence: $components" >&2
+    return 1
+  }
   FASTEMBEDR_EXPECTED_BACKEND="$backend" \
   FASTEMBEDR_EXPECTED_VERSION="$EXPECTED_VERSION" \
   FASTEMBEDR_EXPECTED_IMAGE_SHA="$IMAGE_SHA256" \
   IDENTITY_FILE="$identity" SMOKE_FILE="$smoke" \
+  COMPONENT_FILE="$components" \
   python3 - <<'PY'
 import csv
 import os
@@ -38,6 +44,8 @@ with open(os.environ["IDENTITY_FILE"], newline="") as handle:
     identity = next(csv.DictReader(handle))
 with open(os.environ["SMOKE_FILE"], newline="") as handle:
     smoke = next(csv.DictReader(handle))
+with open(os.environ["COMPONENT_FILE"], newline="") as handle:
+    components = list(csv.DictReader(handle))
 
 backend = os.environ["FASTEMBEDR_EXPECTED_BACKEND"]
 version = os.environ["FASTEMBEDR_EXPECTED_VERSION"]
@@ -60,6 +68,21 @@ if smoke["finite"].lower() != "true":
     raise SystemExit(f"{backend}: smoke layout is not finite")
 if backend == "cuda" and "cuda" not in smoke["knn_backend"].lower():
     raise SystemExit("cuda: KNN metadata does not identify CUDA execution")
+expected = {"umap", "pca", "leiden"}
+observed_components = {row["component"] for row in components}
+if observed_components != expected:
+    raise SystemExit(
+        f"{backend}: component evidence is {observed_components}, "
+        f"expected {expected}"
+    )
+for row in components:
+    observed_backend = row["observed_backend"].lower()
+    if backend not in observed_backend:
+        raise SystemExit(
+            f"{backend}: {row['component']} used {observed_backend!r}"
+        )
+    if row["finite"].lower() != "true":
+        raise SystemExit(f"{backend}: {row['component']} was not finite")
 print(
     f"{backend}: PASS version={version} image={image_sha[:12]} "
     f"optimizer={observed} knn={smoke['knn_backend']}"

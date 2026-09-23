@@ -51,7 +51,10 @@ required = [
     "aggregate/tsne_longrun_all.csv",
     "aggregate/transform_all.csv",
     "aggregate/scaling_summary.csv",
+    "aggregate/pca_timing_all.csv",
     "aggregate/pca_accuracy_vs_dense.csv",
+    "aggregate/clustering_precompute_all.csv",
+    "aggregate/clustering_validation_all.csv",
 ]
 for relative in required:
     path = root / relative

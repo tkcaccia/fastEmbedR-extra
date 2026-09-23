@@ -21,8 +21,10 @@ EXPECTED_VERSION=0.1 bash \
   benchmark_scripts/fastembedr_jss_review_validation/submit_all.sh
 ```
 
-Every CUDA job fails explicitly if either native CUDA KNN or native CUDA
-embedding is unavailable. There is no CPU fallback.
+Every CUDA job fails explicitly when a native component required by that
+experiment is unavailable. The strict preflight executes real CUDA UMAP, PCA,
+and Leiden calculations and verifies their returned backend metadata. There is
+no CPU fallback.
 
 ## Experiments
 
@@ -74,20 +76,30 @@ embedding is unavailable. There is no CPU fallback.
    score- and loading-space agreement between backends. Keeping this work in a
    separate process prevents the dense reference and double-precision copy
    from contaminating PCA runtime or memory measurements.
-8. `knn_observed`: audits the nearest-neighbor search used by each complete
+8. `clustering`: precomputes one shared-nearest-neighbor graph per dataset and
+   reuses it for every method, seed, and backend. CPU Louvain, Leiden, and
+   Walktrap are compared with the corresponding `igraph` implementation.
+   CUDA Louvain and Leiden use the identical graph and are compared with the
+   CPU native memberships. Outputs include runtime, modularity, community
+   count, label adjusted Rand index, reference-membership adjusted Rand index,
+   and the Leiden connected-community diagnostic. Walktrap uses a fixed
+   stratified subset of at most 1,500 rows; Louvain and Leiden use at most
+   10,000 rows. The graph-build time is reported separately and excluded from
+   clustering runtime.
+9. `knn_observed`: audits the nearest-neighbor search used by each complete
    embedding workflow. It runs the public `precompute_knn()` policy on each
    complete benchmark matrix, compares fixed sampled query rows with exact
    neighbors from that full matrix, and reports mean, median, fifth-percentile,
    and minimum recall together with the actual engine, exact/approximate flag,
    target recall, and HNSW or IVF tuning parameters. Search, host-transfer, and
    exact-reference times are diagnostic and excluded from runtime claims.
-9. `knn_sensitivity`: records observed recall@30 on exact 5,000-row references
+10. `knn_sensitivity`: records observed recall@30 on exact 5,000-row references
    at requested recalls 0.90, 0.95, and 0.99. These rows characterize the
    embedding input and are not presented as a separate nearest-neighbor paper.
-10. `component_validation`: runs exact-force, finite-difference, FFT-grid,
+11. `component_validation`: runs exact-force, finite-difference, FFT-grid,
    float32-versus-float64, one-step, trajectory, support-sweep, and
    pathological-input checks from the source-frozen numerical validator.
-11. `tsne_longrun`: directly addresses final-trajectory agreement. Four fixed
+12. `tsne_longrun`: directly addresses final-trajectory agreement. Four fixed
    stratified inputs of at most 2,000 observations are saved with exact compact
    KNN support, compact affinities, source row identifiers, and seed-specific
    PCA initializations. CPU, CUDA, Metal, and Python openTSNE then use those
@@ -104,7 +116,7 @@ embedding is unavailable. There is no CPU fallback.
    runtime claims. A separate timing family performs one excluded warm-up and
    five fixed-seed repetitions for CPU and Python, and ten for CUDA because
    short accelerator runs require more repetition.
-12. `backend_quality`: provides dataset-level CPU, CUDA, and Metal quality
+13. `backend_quality`: provides dataset-level CPU, CUDA, and Metal quality
     evidence for compact-support t-SNE and fuzzy UMAP. `matched_knn` runs reuse
     the identical host KNN object, PCA initialization, sampled observations,
     and seeds across backends. `full_workflow` runs each public backend pipeline
@@ -143,11 +155,13 @@ mass41, Tabula Muris, and Macosko2015 retina.
   start if its requested R thread count exceeds `SLURM_CPUS_PER_TASK`. The
   complete observed-recall worker requests 128 GB because the full ImageNet
   reference calculation exceeded 32 GB.
-- CUDA launchers request one L40S GPU, one Slurm task, four host CPUs, and 64 GB
-  of host memory. The complete observed-recall worker requests 128 GB. Their
-  array throttle is five, matching the validated
-  `l40sfree` per-user QOS ceiling of five L40S GPUs; Slurm may run fewer tasks
-  when physical GPUs or shared-account resources are unavailable.
+- Most CUDA launchers request one L40S GPU, one Slurm task, four host CPUs, and
+  64 GB of host memory. The complete observed-recall worker requests 128 GB.
+  Their array throttle is five, while the current account association allows
+  four L40S GPUs; Slurm enforces the lower limit. Clustering requests three host
+  CPUs and uses an explicit four-task throttle, matching the 12-CPU and
+  four-GPU association limits. Slurm may run fewer tasks when physical GPUs or
+  shared-account resources are unavailable.
 
 ## Submit
 
@@ -210,6 +224,27 @@ To submit one family manually:
 sbatch benchmark_scripts/fastembedr_jss_review_validation/slurm/run_support_cpu4.sh
 sbatch benchmark_scripts/fastembedr_jss_review_validation/slurm/run_support_cuda.sh
 ```
+
+PCA and clustering are included automatically in the complete staged campaign.
+For a focused clustering validation, preserve the graph dependency order:
+
+```bash
+CPU_PREFLIGHT_JOB=$(sbatch --parsable \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_preflight_cpu.sh)
+CUDA_PREFLIGHT_JOB=$(sbatch --parsable \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_preflight_cuda.sh)
+GRAPH_JOB=$(sbatch --parsable \
+  --dependency="afterok:$CPU_PREFLIGHT_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_clustering_precompute_cpu4.sh)
+CPU_CLUSTER_JOB=$(sbatch --parsable \
+  --dependency="afterok:$GRAPH_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_clustering_cpu4.sh)
+sbatch --dependency="afterok:$CPU_CLUSTER_JOB:$CUDA_PREFLIGHT_JOB" \
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_clustering_cuda.sh
+```
+
+This order ensures that every method reuses the same serialized graph and that
+CUDA membership agreement is evaluated against the completed CPU results.
 
 Held-out transformation and landmark reconstruction can be submitted without
 the other experiment families after shared precomputation succeeds:
