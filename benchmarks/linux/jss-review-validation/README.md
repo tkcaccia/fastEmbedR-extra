@@ -93,9 +93,14 @@ no CPU fallback.
    and minimum recall together with the actual engine, exact/approximate flag,
    target recall, and HNSW or IVF tuning parameters. Search, host-transfer, and
    exact-reference times are diagnostic and excluded from runtime claims.
-10. `knn_sensitivity`: records observed recall@30 on exact 5,000-row references
-   at requested recalls 0.90, 0.95, and 0.99. These rows characterize the
-   embedding input and are not presented as a separate nearest-neighbor paper.
+10. `knn_sensitivity`: records observed recall@30 on fixed sampled references.
+   A 0.90, 0.95, and 0.99 target sweep is run only when the sampled CUDA
+   workload actually selects IVF-Flat. Small CUDA workloads use the production
+   exact route once and record recall 1.0; CPU HNSW is also run once because
+   its release policy does not expose a recall-target sweep. Exact-reference
+   recall uses fixed sampled queries rather than a dense all-pairs R matrix.
+   PCA initialization uses the requested backend. Stage progress is printed so
+   KNN, reference, PCA, t-SNE, and UMAP time cannot be confused.
 11. `component_validation`: runs exact-force, finite-difference, FFT-grid,
    float32-versus-float64, one-step, trajectory, support-sweep, and
    pathological-input checks from the source-frozen numerical validator.

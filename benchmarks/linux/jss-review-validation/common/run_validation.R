@@ -80,6 +80,14 @@ write_status <- function(experiment, name, used_backend, status, error = NA,
     ), path)
 }
 
+log_progress <- function(stage, ...) {
+    detail <- paste(..., collapse = " ")
+    cat(
+        sprintf("[%s] %s %s\n", format(Sys.time(), "%FT%T%z"), stage, detail)
+    )
+    flush.console()
+}
+
 require_expected_version <- function() {
     observed <- as.character(utils::packageVersion("fastEmbedR"))
     if (!identical(observed, expected_version)) {
@@ -1710,6 +1718,19 @@ write_observed_knn_accuracy <- function(knn, recall, source_rows, query_rows,
     )
 }
 
+knn_sensitivity_route <- function(used_backend, n) {
+    if (identical(used_backend, "cuda") && n >= 100000L) {
+        return(list(
+            method = "ivf", targets = c(0.90, 0.95, 0.99),
+            target_controlled = TRUE
+        ))
+    }
+    list(
+        method = if (identical(used_backend, "cuda")) "exact" else "hnsw",
+        targets = 0.99, target_controlled = FALSE
+    )
+}
+
 run_knn_sensitivity <- function() {
     require_expected_version()
     assert_backend(backend)
@@ -1727,41 +1748,81 @@ run_knn_sensitivity <- function() {
     )
     x <- as_float_matrix(loaded$data[rows, , drop = FALSE])
     labels <- if (is.null(loaded$labels)) NULL else loaded$labels[rows]
-    exact <- exact_knn_from_distances(exact_distance_matrix(x), 30L)
+    route <- knn_sensitivity_route(backend, nrow(x))
+    query_rows <- stratified_rows(
+        labels, nrow(x), knn_recall_sample_size(nrow(x), ncol(x)), 31337L
+    )
+    log_progress(
+        "knn_sensitivity_start",
+        sprintf(
+            "dataset=%s backend=%s n=%d p=%d method=%s",
+            dataset, backend, nrow(x), ncol(x), route$method
+        )
+    )
+    reference_sec <- 0
+    exact <- NULL
+    if (!identical(route$method, "exact")) {
+        log_progress(
+            "exact_reference_start",
+            sprintf("queries=%d", length(query_rows))
+        )
+        reference_sec <- system.time({
+            exact <- exact_sampled_self_knn(x, query_rows, 30L)
+        })[["elapsed"]]
+        log_progress(
+            "exact_reference_done",
+            sprintf("sec=%.3f", reference_sec)
+        )
+    }
+    log_progress("pca_start", paste0("backend=", backend))
     init <- fastEmbedR::pca(
-        x, ncomp = 2L, backend = "cpu", n.cores = threads,
+        x, ncomp = 2L, backend = backend, n.cores = threads,
         seed = 4L, tsne_init = TRUE
     )$tsne_init
+    log_progress("pca_done")
     quality_rows <- stratified_rows(
         labels, nrow(x), min(2000L, nrow(x)), 2027L
     )
     worker <- getFromNamespace("fastembedr_nn_without_self", "fastEmbedR")
     results <- list()
-    for (target in c(0.90, 0.95, 0.99)) {
-        method <- if (backend == "cuda") "ivf" else "hnsw"
+    for (target in route$targets) {
+        log_progress("knn_start", sprintf("target=%.2f", target))
         elapsed <- system.time({
             observed <- worker(
-                x, k = 30L, backend = backend, method = method,
+                x, k = 30L, backend = backend, method = route$method,
                 metric = "euclidean", output = "double",
                 n_threads = threads, tuning = "auto",
                 target_recall = target, keep_gpu = FALSE
             )
         })[["elapsed"]]
-        recall <- mean(vapply(seq_len(nrow(x)), function(i) {
-            length(intersect(exact$indices[i, ], observed$indices[i, ])) / 30
-        }, numeric(1L)))
+        recall <- if (identical(route$method, "exact")) {
+            1
+        } else {
+            knn_recall_summary(
+                observed$indices[query_rows, , drop = FALSE],
+                exact$indices, 30L
+            )$mean
+        }
+        log_progress(
+            "knn_done",
+            sprintf("sec=%.3f observed_recall=%.6f", elapsed, recall)
+        )
+        log_progress("tsne_start")
         tsne_sec <- system.time({
             tsne_layout <- fastEmbedR::tsne_knn(
                 observed, perplexity = 30, Y_init = init,
                 backend = backend, n.cores = threads, seed = 4L
             )
         })[["elapsed"]]
+        log_progress("tsne_done", sprintf("sec=%.3f", tsne_sec))
+        log_progress("umap_start")
         umap_sec <- system.time({
             umap_layout <- fastEmbedR::umap_knn(
                 observed, backend = backend, n.cores = threads,
                 seed = 4L, graph_mode = "fuzzy"
             )
         })[["elapsed"]]
+        log_progress("umap_done", sprintf("sec=%.3f", umap_sec))
         for (embedding_method in c("tsne", "umap_fuzzy")) {
             layout <- if (embedding_method == "tsne") {
                 tsne_layout
@@ -1777,7 +1838,12 @@ run_knn_sensitivity <- function() {
             if (embedding_method != "tsne") quality$sampled_kl <- NA_real_
             results[[length(results) + 1L]] <- data.frame(
                 dataset = dataset, backend = backend,
-                target_recall = target, observed_recall_at_30 = recall,
+                target_recall = if (route$target_controlled) {
+                    target
+                } else {
+                    NA_real_
+                },
+                observed_recall_at_30 = recall,
                 knn_elapsed_sec = elapsed,
                 embedding_method = embedding_method,
                 embedding_elapsed_sec = if (embedding_method == "tsne") {
@@ -1788,6 +1854,10 @@ run_knn_sensitivity <- function() {
                 quality,
                 engine = attr(observed, "method") %||%
                     observed$method %||% NA,
+                search_method = route$method,
+                target_controlled = route$target_controlled,
+                recall_query_n = length(query_rows),
+                exact_reference_sec_diagnostic = reference_sec,
                 stringsAsFactors = FALSE
             )
         }
@@ -1795,6 +1865,7 @@ run_knn_sensitivity <- function() {
     out <- dataset_output_dir("knn_sensitivity", dataset, backend)
     write_csv_atomic(do.call(rbind, results), file.path(out, "recall.csv"))
     write_status("knn_sensitivity", dataset, backend, "success")
+    log_progress("knn_sensitivity_done", paste0("dataset=", dataset))
 }
 
 run_aggregate <- function() {
