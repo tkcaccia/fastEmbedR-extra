@@ -5,7 +5,7 @@ set -euo pipefail
 MODE="${1:?mode is required}"
 BACKEND="${2:?backend is required}"
 BASE_DIR="${BASE_DIR:-/scratch/firenze/NN}"
-SUITE="$BASE_DIR/benchmark_scripts/fastembedr_jss_review_validation"
+SUITE="${SUITE:-$BASE_DIR/benchmark_scripts/fastembedr_jss_review_validation}"
 IMAGE="${IMAGE:-$BASE_DIR/singularity/fastembedr_cuda.sif}"
 DATA_ROOT="${DATA_ROOT:-$BASE_DIR/Data}"
 INPUT_ROOT="${INPUT_ROOT:-$BASE_DIR/fastEmbedR-input/jss_validation}"
@@ -15,6 +15,8 @@ TASK_ID="${SLURM_ARRAY_TASK_ID:-0}"
 CONTAINER="$(command -v apptainer || command -v singularity || true)"
 
 source "$SUITE/common/container_runtime.sh"
+source "$SUITE/common/campaign_submit.sh"
+campaign_verify_suite_revision
 
 IMAGE_SHA256="${FASTEMBEDR_IMAGE_SHA256:-}"
 if [[ "$MODE" == "preflight" && -z "$IMAGE_SHA256" ]]; then

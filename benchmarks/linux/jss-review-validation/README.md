@@ -191,9 +191,11 @@ records the image and installed fastEmbedR binary checksums, `jobs.tsv`
 records the submission graph, and `final_audit.txt` is `PASS` only when all
 worker jobs and required aggregate outputs succeed. No manual waiting or
 polling is required. The launcher verifies `FILES.sha256`, copies that source
-manifest into the campaign directory, and records its own SHA-256 so a campaign
-cannot silently mix launcher revisions. It also checks that each Slurm worker
-reserves at least the host CPUs required by its R thread setting. Do not launch
+manifest into the campaign directory, and exports its SHA-256 to every worker
+and controller. Each job verifies both the manifest identity and every listed
+file before running, so a campaign cannot silently mix source revisions. It
+also checks that each Slurm worker reserves at least the host CPUs required by
+its R thread setting. Do not launch
 `submit_all.sh` on an
 account with a small queued-job limit.
 

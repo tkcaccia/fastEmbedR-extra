@@ -10,9 +10,35 @@ campaign_require_environment() {
   : "${OUTPUT_ROOT:?OUTPUT_ROOT is required}"
   : "${EXPECTED_VERSION:?EXPECTED_VERSION is required}"
   : "${FASTEMBEDR_IMAGE_SHA256:?FASTEMBEDR_IMAGE_SHA256 is required}"
+  : "${FASTEMBEDR_SUITE_MANIFEST_SHA256:?suite checksum is required}"
   : "${JSS_CAMPAIGN_ID:?JSS_CAMPAIGN_ID is required}"
   : "${JSS_CAMPAIGN_DIR:?JSS_CAMPAIGN_DIR is required}"
   : "${JSS_LEDGER:?JSS_LEDGER is required}"
+}
+
+campaign_verify_suite_revision() {
+  local expected="${FASTEMBEDR_SUITE_MANIFEST_SHA256:-}"
+  local manifest="$SUITE/FILES.sha256"
+  local actual
+  [[ -n "$expected" ]] || return 0
+  if [[ ! -f "$manifest" ]]; then
+    echo "Missing campaign source manifest: $manifest" >&2
+    return 1
+  fi
+  actual="$(sha256sum "$manifest" | awk '{print $1}')"
+  if [[ "$actual" != "$expected" ]]; then
+    echo "Benchmark suite changed after campaign creation." >&2
+    echo "Expected manifest SHA-256: $expected" >&2
+    echo "Current manifest SHA-256:  $actual" >&2
+    return 1
+  fi
+  (
+    cd "$SUITE"
+    sha256sum -c FILES.sha256 >/dev/null
+  ) || {
+    echo "Benchmark suite files do not match FILES.sha256." >&2
+    return 1
+  }
 }
 
 campaign_init_ledger() {
@@ -70,6 +96,8 @@ campaign_submit_job() {
   export_spec+=",INPUT_ROOT=$INPUT_ROOT,OUTPUT_ROOT=$OUTPUT_ROOT"
   export_spec+=",EXPECTED_VERSION=$EXPECTED_VERSION"
   export_spec+=",FASTEMBEDR_IMAGE_SHA256=$FASTEMBEDR_IMAGE_SHA256"
+  export_spec+=",FASTEMBEDR_SUITE_MANIFEST_SHA256="
+  export_spec+="$FASTEMBEDR_SUITE_MANIFEST_SHA256"
   export_spec+=",JSS_CAMPAIGN_ID=$JSS_CAMPAIGN_ID"
   export_spec+=",JSS_CAMPAIGN_DIR=$JSS_CAMPAIGN_DIR"
   export_spec+=",JSS_LEDGER=$JSS_LEDGER"

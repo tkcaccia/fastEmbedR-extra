@@ -9,6 +9,7 @@ INPUT_ROOT="${INPUT_ROOT:?INPUT_ROOT is required}"
 OUTPUT_ROOT="${OUTPUT_ROOT:?OUTPUT_ROOT is required}"
 EXPECTED_VERSION="${EXPECTED_VERSION:-0.1}"
 FASTEMBEDR_IMAGE_SHA256="${FASTEMBEDR_IMAGE_SHA256:?image checksum required}"
+: "${FASTEMBEDR_SUITE_MANIFEST_SHA256:?suite checksum required}"
 JSS_CAMPAIGN_ID="${JSS_CAMPAIGN_ID:?campaign ID required}"
 JSS_CAMPAIGN_DIR="${JSS_CAMPAIGN_DIR:?campaign directory required}"
 JSS_LEDGER="${JSS_LEDGER:?campaign ledger required}"
@@ -17,6 +18,7 @@ CONTROLLER="$SUITE/slurm/run_complete_campaign_controller_cpu1.sh"
 
 source "$SUITE/common/campaign_submit.sh"
 campaign_require_environment
+campaign_verify_suite_revision
 campaign_init_ledger
 
 NEXT_STAGE=""
