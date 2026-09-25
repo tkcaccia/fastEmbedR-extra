@@ -56,7 +56,7 @@ export FASTEMBEDR_IMAGE_SHA256 JSS_CAMPAIGN_ID JSS_CAMPAIGN_DIR JSS_LEDGER
 export FASTEMBEDR_SUITE_MANIFEST_SHA256
 export JSS_RETRY_SECONDS="${JSS_RETRY_SECONDS:-60}"
 export JSS_MAX_SUBMIT_ATTEMPTS="${JSS_MAX_SUBMIT_ATTEMPTS:-720}"
-export JSS_STAGE=shared_inputs
+export JSS_STAGE=comparator_preflight
 
 source "$SUITE/common/campaign_submit.sh"
 campaign_require_environment
@@ -81,7 +81,8 @@ max_submit_attempts=$JSS_MAX_SUBMIT_ATTEMPTS
 EOF
 
 CONTROLLER_JOB="$(campaign_submit_job \
-  controller controller_shared_inputs '' "$CONTROLLER" '' shared_inputs)"
+  controller controller_comparator_preflight '' "$CONTROLLER" '' \
+  comparator_preflight)"
 
 cat <<EOF
 Started staged fastEmbedR JSS campaign.

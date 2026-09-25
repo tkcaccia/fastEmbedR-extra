@@ -9,7 +9,7 @@ FASTEMBEDR_CONDA_PREFIX="${FASTEMBEDR_CONDA_PREFIX:-/opt/conda}"
 FASTEMBEDR_PYTHON="${FASTEMBEDR_PYTHON:-$FASTEMBEDR_CONDA_PREFIX/bin/python}"
 
 FASTEMBEDR_CONTAINER_PATH="${FASTEMBEDR_CONTAINER_PATH:-/usr/bin:/bin:/usr/sbin:/sbin:$FASTEMBEDR_R_PREFIX/bin:$FASTEMBEDR_CONDA_PREFIX/bin}"
-FASTEMBEDR_CONTAINER_LD_LIBRARY_PATH="${FASTEMBEDR_CONTAINER_LD_LIBRARY_PATH:-/.singularity.d/libs:$FASTEMBEDR_R_PREFIX/lib/R/lib:$FASTEMBEDR_R_PREFIX/lib:/opt/rapids/lib:/opt/faiss/lib:$FASTEMBEDR_CONDA_PREFIX/lib:$FASTEMBEDR_CONDA_PREFIX/targets/x86_64-linux/lib:/usr/local/cuda/lib64:/usr/local/cuda/targets/x86_64-linux/lib:/usr/local/cuda/compat}"
+FASTEMBEDR_CONTAINER_LD_LIBRARY_PATH="${FASTEMBEDR_CONTAINER_LD_LIBRARY_PATH:-/.singularity.d/libs:$FASTEMBEDR_R_PREFIX/lib/R/lib:$FASTEMBEDR_R_PREFIX/lib:/opt/rapids/lib:$FASTEMBEDR_CONDA_PREFIX/lib:$FASTEMBEDR_CONDA_PREFIX/targets/x86_64-linux/lib:/usr/local/cuda/lib64:/usr/local/cuda/targets/x86_64-linux/lib:/usr/local/cuda/compat}"
 
 FASTEMBEDR_CONTAINER_BASE_ENV=(
   --env "PATH=$FASTEMBEDR_CONTAINER_PATH"

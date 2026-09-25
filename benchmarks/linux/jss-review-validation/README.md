@@ -133,16 +133,69 @@ no CPU fallback.
     the fixed full-matrix exact reference, so observed recall appears directly
     beside embedding quality. Elapsed values from these quality runs are
     explicitly ineligible for runtime claims.
+14. `workflow_comparators`: runs R CPU and fastEmbedR CUDA workflows alongside
+    direct-Python CPU and direct-Python CUDA fits. R methods include
+    fastEmbedR PCA, t-SNE, and fuzzy UMAP; `irlba`, `Rtsne`, FIt-SNE, `uwot`,
+    and R `umap`. Dense `stats::prcomp()` timing is restricted to COIL-20,
+    USPS, and MetRef because it is an exact reference rather than a scalable
+    workflow competitor. The separate bounded PCA-accuracy experiment retains
+    a dense reference for every dataset and backend. Python methods include
+    randomized scikit-learn PCA, scikit-learn t-SNE, openTSNE, umap-learn, and
+    RAPIDS cuML PCA, t-SNE, and UMAP. One warm-up is excluded before five
+    same-seed repetitions. Comparative t-SNE runs use 250 early-exaggeration
+    and 500 normal iterations, matching cuML's 750 total iterations. The result
+    records median and interquartile timing,
+    fixed-row trustworthiness, Preserve@30, label KNN accuracy, sampled
+    compact-affinity KL for t-SNE, PCA reconstruction error and retained
+    variance, peak host resident set size, and sampled GPU memory. R and
+    direct-Python timing scopes remain distinct; a separate boundary
+    field records their common host-float32-input to host-result contract. Each
+    dataset has
+    one portable float32 input shared by every Python method. The R CPU,
+    fastEmbedR CUDA, Python CPU, and Python CUDA arrays become eligible
+    together; aggregation waits for all four arrays.
+
+The backend-quality experiment is an accuracy diagnostic. Its elapsed value is
+stored as `elapsed_sec_diagnostic`, uses no excluded warm-up, and always has
+`timing_eligible = FALSE`. It cannot enter a speed ratio. Publication timing
+comes only from the workflow-comparator rows with one excluded warm-up, at
+least five same-seed repetitions, a synchronized returned result, and the
+declared iteration contract. The aggregate creates the CUDA t-SNE ratio only
+after matching these fields and the common input/output boundary. The R and
+Python timing scopes remain separately labelled. This ratio is a workflow
+comparison, not an optimizer-only comparison: fastEmbedR uses compact affinity
+support whereas cuML uses its configured 91-neighbor support.
 
 All eleven datasets are included: COIL20, USPS, FashionMNIST,
 FlowRepository_FR-FCM-ZYRM_files, flow18, MNIST, ImageNet features, MetRef,
 mass41, Tabula Muris, and Macosko2015 retina.
 
+## Publication-image comparator contract
+
+The complete campaign begins with executable comparator preflights. The image
+must contain R packages `fastEmbedR`, `float`, `irlba`, `Rtsne`, `uwot`, and
+`umap`; the FIt-SNE R wrapper and executable at `/opt/fit-sne/bin`; and Python
+packages scikit-learn, openTSNE, umap-learn, CuPy, and RAPIDS cuML. The CPU
+preflight runs a finite smoke calculation with every R comparator. The CUDA
+preflight executes both fastEmbedR and cuML PCA, UMAP, and t-SNE on the
+allocated GPU and synchronizes it. Namespace presence alone is not accepted
+as evidence.
+
+GNU `time` is recommended but no longer mandatory. Its absence must not abort
+a scientific calculation; the wrapper records Slurm MaxRSS when available and
+labels the measurement source. Comparator preflight jobs use `afterok`, so a
+missing or nonfunctional implementation stops the campaign before expensive
+input and benchmark waves are submitted.
+
 ## Timing and memory boundaries
 
 - A returned host layout is produced only after the native CUDA implementation
   synchronizes the device, so the elapsed timer includes completed GPU work.
-- `/usr/bin/time -v` records task peak resident set size.
+- GNU `time -v` records task peak resident set size when available. On a
+  heterogeneous Slurm node without GNU `time`, the worker still runs and
+  records `sstat` peak RSS with `measurement_source = slurm_sstat`. If neither
+  source exists, peak RSS is explicitly unavailable rather than aborting the
+  calculation.
 - CUDA jobs sample device memory every 0.2 seconds and retain both the raw GPU
   memory and the increment above the pre-run allocator baseline.
 - The support experiment separates repeated timing at seed 4 from independent
@@ -152,6 +205,10 @@ mass41, Tabula Muris, and Macosko2015 retina.
   seed variation remains in separate quality and stability files.
 - Missing, unavailable, failed, and timed-out Slurm tasks remain explicit in
   status files and scheduler accounting; no zero or artificial bar is created.
+- Comparator peak host memory covers the complete isolated worker, including
+  input loading, the excluded warm-up, repetitions, and quality calculation.
+  It is deliberately not presented as fit-only memory. GPU sampling uses the
+  same baseline-adjusted protocol as the native CUDA experiments.
 - CPU launchers request one Slurm task and set `cpus-per-task` to the worker
   count used by R. Variable-thread scaling and PCA experiments use separate
   arrays for each worker count. Their 32 GB request is supported by the
@@ -173,9 +230,24 @@ mass41, Tabula Muris, and Macosko2015 retina.
 The recommended launcher is a staged, self-submitting Slurm controller. It
 submits one bounded wave at a time, waits through Slurm dependencies rather
 than polling, retries submission-limit errors every 60 seconds, and records
-every job in a campaign-specific `jobs.tsv`. Every wave advances through
-`afterany`, allowing independent calculations and the final audit to record
-partial failures without leaving mutually unsatisfied controller branches.
+every job in a campaign-specific `jobs.tsv`. Comparator preflight advances
+through `afterok`; later waves use `afterany`, allowing independent
+calculations and the final audit to record partial failures without leaving
+mutually unsatisfied controller branches.
+
+After installing a rebuilt image, use the image handoff launcher. It submits
+fresh strict CPU and CUDA package preflights and schedules a small `afterany`
+verification job. The verification job reports either preflight failure and
+starts the staged campaign only when both pass:
+
+```bash
+cd /scratch/firenze/NN
+bash \
+  benchmark_scripts/fastembedr_jss_review_validation/submit_after_new_image.sh
+```
+
+Do not also run the manual preflight and campaign commands below after using
+the handoff launcher; doing so would create duplicate campaigns.
 
 After both preflights pass, start the complete campaign with one command:
 

@@ -1,5 +1,15 @@
 cd /scratch/firenze/NN
 
+# Recommended after replacing singularity/fastembedr_cuda.sif. This submits
+# fresh strict CPU and CUDA preflights. A small afterany verification job then
+# starts the staged campaign only when both preflights pass.
+bash \
+  benchmark_scripts/fastembedr_jss_review_validation/submit_after_new_image.sh
+
+# The following three commands are the manual equivalent. Do not run them
+# after submit_after_new_image.sh, because that would duplicate the preflights
+# and campaign.
+
 # Submit fresh strict preflights after synchronizing this suite. They execute
 # real UMAP, PCA, and Leiden work and validate the revised public API.
 bash benchmark_scripts/fastembedr_jss_review_validation/submit_preflight.sh

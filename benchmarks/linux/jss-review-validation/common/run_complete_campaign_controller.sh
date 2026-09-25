@@ -33,11 +33,23 @@ add_worker() {
 }
 
 case "$JSS_STAGE" in
+  comparator_preflight)
+    NEXT_STAGE=shared_inputs
+    add_worker comparator_preflight_cpu \
+      "$SUITE/slurm/run_comparator_preflight_cpu.sh"
+    add_worker comparator_preflight_cuda \
+      "$SUITE/slurm/run_comparator_preflight_cuda.sh"
+    ;;
   shared_inputs)
-    NEXT_STAGE=affinity_scaling
+    NEXT_STAGE=comparator_inputs
     add_worker precompute "$SUITE/slurm/run_precompute_cpu12.sh" '0-10%11'
     add_worker longrun_inputs \
       "$SUITE/slurm/run_tsne_longrun_precompute_cpu12.sh" '0-3%4'
+    ;;
+  comparator_inputs)
+    NEXT_STAGE=affinity_scaling
+    add_worker comparator_inputs \
+      "$SUITE/slurm/run_comparator_inputs_cpu12.sh" '0-10%11'
     ;;
   affinity_scaling)
     NEXT_STAGE=support_cpu
@@ -185,11 +197,22 @@ case "$JSS_STAGE" in
       "$SUITE/slurm/run_tsne_longrun_python_cpu4.sh" '0-31%32'
     ;;
   timing)
-    NEXT_STAGE=aggregate
+    NEXT_STAGE=comparators_r_cuda
     add_worker timing_cpu "$SUITE/slurm/run_tsne_timing_cpu4.sh" '0-3%4'
     add_worker timing_cuda "$SUITE/slurm/run_tsne_timing_cuda.sh" '0-3%4'
     add_worker timing_python \
       "$SUITE/slurm/run_tsne_timing_python_cpu4.sh" '0-3%4'
+    ;;
+  comparators_r_cuda)
+    NEXT_STAGE=aggregate
+    add_worker comparators_r \
+      "$SUITE/slurm/run_comparators_r_cpu4.sh" '0-101%40'
+    add_worker comparators_r_cuda \
+      "$SUITE/slurm/run_comparators_r_cuda.sh" '0-32%2'
+    add_worker comparators_python_cuda \
+      "$SUITE/slurm/run_comparators_python_cuda.sh" '0-32%2'
+    add_worker comparators_python_cpu \
+      "$SUITE/slurm/run_comparators_python_cpu4.sh" '0-43%40'
     ;;
   aggregate)
     NEXT_STAGE=final_audit
@@ -212,7 +235,11 @@ for index in "${!WORKER_LABELS[@]}"; do
     "${WORKER_SCRIPTS[$index]}" "${WORKER_ARRAYS[$index]}")")
 done
 
-DEPENDENCY="$(campaign_afterany_dependency "${WORKER_IDS[@]}")"
+if [[ "$JSS_STAGE" == comparator_preflight ]]; then
+  DEPENDENCY="afterok:$(IFS=:; echo "${WORKER_IDS[*]}")"
+else
+  DEPENDENCY="$(campaign_afterany_dependency "${WORKER_IDS[@]}")"
+fi
 NEXT_JOB="$(campaign_submit_job \
   controller "controller_$NEXT_STAGE" "$DEPENDENCY" \
   "$CONTROLLER" '' "$NEXT_STAGE")"

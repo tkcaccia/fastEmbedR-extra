@@ -55,6 +55,9 @@ required = [
     "aggregate/pca_accuracy_vs_dense.csv",
     "aggregate/clustering_precompute_all.csv",
     "aggregate/clustering_validation_all.csv",
+    "aggregate/workflow_comparators_all.csv",
+    "aggregate/workflow_comparators_timing_eligible.csv",
+    "aggregate/cuda_tsne_workflow_speed_ratio.csv",
 ]
 for relative in required:
     path = root / relative
@@ -76,6 +79,39 @@ for path in root.rglob("*.csv"):
                     )
     except Exception as exc:
         problems.append(f"unreadable status file {path}: {exc}")
+
+ratio_path = root / "aggregate/cuda_tsne_workflow_speed_ratio.csv"
+if ratio_path.is_file():
+    with ratio_path.open(newline="") as handle:
+        ratios = list(csv.DictReader(handle))
+    if len(ratios) != 11:
+        problems.append(
+            "CUDA t-SNE workflow ratios require 11 paired datasets; "
+            f"observed {len(ratios)}"
+        )
+    for row in ratios:
+        if row.get("total_iterations") != "750":
+            problems.append("CUDA t-SNE ratio has a non-750 iteration budget")
+        for field in ("timing_reps_fastembedr", "timing_reps_cuml"):
+            if int(row.get(field, "0")) < 5:
+                problems.append("CUDA t-SNE ratio has insufficient repetitions")
+        for field in ("warmup_count_fastembedr", "warmup_count_cuml"):
+            if int(row.get(field, "0")) < 1:
+                problems.append("CUDA t-SNE ratio lacks an excluded warm-up")
+        if row.get("comparison_type") != (
+            "workflow_level_not_optimizer_matched"
+        ):
+            problems.append("CUDA t-SNE ratio has an invalid comparison type")
+
+quality_path = root / "aggregate/backend_quality_raw.csv"
+if quality_path.is_file():
+    with quality_path.open(newline="") as handle:
+        quality_rows = list(csv.DictReader(handle))
+    for row in quality_rows:
+        if row.get("timing_eligible", "").lower() == "true":
+            problems.append("A quality diagnostic was marked timing eligible")
+        if row.get("method") == "tsne" and row.get("total_iterations") != "750":
+            problems.append("A t-SNE quality diagnostic did not use 750 iterations")
 
 report = campaign / "output_audit.txt"
 report.write_text(

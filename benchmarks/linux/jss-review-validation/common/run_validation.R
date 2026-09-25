@@ -19,6 +19,7 @@ suppressPackageStartupMessages(library(fastEmbedR))
 if (!requireNamespace("float", quietly = TRUE)) {
     stop("The float package is required by this validation suite.")
 }
+suppressPackageStartupMessages(library(float))
 
 mode <- arg_value("mode", "preflight")
 base_dir <- normalizePath(
@@ -47,6 +48,19 @@ expected_version <- arg_value("expected-version", "0.1")
 longrun_n <- as_int(arg_value("longrun-n"), 2000L)
 grid_size <- as_int(arg_value("grid-size"), 256L)
 normal_iterations <- as_int(arg_value("normal-iterations"), 750L)
+comparison_tsne_early <- as_int(
+    arg_value("comparison-tsne-early-iterations"), 250L
+)
+comparison_tsne_total <- as_int(
+    arg_value("comparison-tsne-total-iterations"), 750L
+)
+comparison_tsne_normal <- comparison_tsne_total - comparison_tsne_early
+if (comparison_tsne_early < 0L || comparison_tsne_normal < 1L) {
+    stop(
+        "The comparison t-SNE iteration budget must include at least one ",
+        "normal iteration.", call. = FALSE
+    )
+}
 run_seed <- as_int(arg_value("run-seed"), 42L)
 quality_boundary <- arg_value("quality-boundary", "matched_knn")
 landmark_fraction <- as_num(arg_value("landmark-fraction"), 0.2)
@@ -688,8 +702,8 @@ run_matched_quality_fit <- function(method, shared, seed) {
             Y_init = shared$init, seed = seed,
             backend = backend, n.cores = threads,
             learning_rate = max(nrow(knn$indices) / 12, 200),
-            early_exaggeration_iter = 250L,
-            early_exaggeration = 12, n_iter = 750L,
+            early_exaggeration_iter = comparison_tsne_early,
+            early_exaggeration = 12, n_iter = comparison_tsne_normal,
             exaggeration = 1, initial_momentum = 0.8,
             final_momentum = 0.8, max_step_norm = 5,
             negative_gradient_method = "fft",
@@ -710,8 +724,8 @@ run_workflow_quality_fit <- function(method, x, shared, seed) {
             backend = backend, n.cores = threads,
             keep_knn = TRUE,
             learning_rate = max(nrow(x) / 12, 200),
-            early_exaggeration_iter = 250L,
-            early_exaggeration = 12, n_iter = 750L,
+            early_exaggeration_iter = comparison_tsne_early,
+            early_exaggeration = 12, n_iter = comparison_tsne_normal,
             exaggeration = 1, initial_momentum = 0.8,
             final_momentum = 0.8, max_step_norm = 5,
             negative_gradient_method = "fft",
@@ -825,7 +839,26 @@ run_backend_quality <- function() {
             NA_real_
         },
         elapsed_sec_diagnostic = fit_time,
+        timing_scope = "quality_diagnostic_single_run",
         timing_eligible = FALSE,
+        warmup_count = 0L,
+        timing_reps = 1L,
+        early_iterations = if (method == "tsne") {
+            comparison_tsne_early
+        } else {
+            NA_integer_
+        },
+        normal_iterations = if (method == "tsne") {
+            comparison_tsne_normal
+        } else {
+            NA_integer_
+        },
+        total_iterations = if (method == "tsne") {
+            comparison_tsne_total
+        } else {
+            NA_integer_
+        },
+        comparison_contract = "quality_only_not_for_speed_ratios",
         final_recorded_kl = if (method == "tsne") {
             final_recorded_kl(fit)
         } else {
@@ -1868,6 +1901,101 @@ run_knn_sensitivity <- function() {
     log_progress("knn_sensitivity_done", paste0("dataset=", dataset))
 }
 
+comparator_path_info <- function(path) {
+    normalized <- gsub("\\\\", "/", path)
+    marker <- "/workflow_comparators/"
+    if (!grepl(marker, normalized, fixed = TRUE)) {
+        return(data.frame(
+            comparator_mode = NA_character_, dataset = NA_character_,
+            method = NA_character_, stringsAsFactors = FALSE
+        ))
+    }
+    tail <- sub(paste0("^.*", marker), "", normalized)
+    pieces <- strsplit(tail, "/", fixed = TRUE)[[1L]]
+    piece <- function(index) {
+        if (length(pieces) >= index) pieces[[index]] else NA_character_
+    }
+    data.frame(
+        comparator_mode = piece(1L),
+        dataset = piece(2L),
+        method = piece(3L),
+        stringsAsFactors = FALSE
+    )
+}
+
+safe_max <- function(x) {
+    x <- x[is.finite(x)]
+    if (length(x)) max(x) else NA_real_
+}
+
+workflow_timing_eligibility <- function(x) {
+    required <- c(
+        "timing_eligible", "timing_reps", "warmup_count",
+        "warmup_excluded", "output_materialized_on_host_before_timer",
+        "timing_scope", "timing_boundary", "comparison_contract"
+    )
+    if (!all(required %in% names(x))) return(rep(FALSE, nrow(x)))
+    eligible <- as.logical(x$timing_eligible) & x$timing_reps >= 5L &
+        x$warmup_count >= 1L & as.logical(x$warmup_excluded) &
+        as.logical(x$output_materialized_on_host_before_timer)
+    eligible[is.na(eligible)] <- FALSE
+    eligible
+}
+
+cuda_tsne_workflow_ratios <- function(x) {
+    required <- c(
+        "family", "backend", "method", "total_iterations",
+        "device_synchronized", "elapsed_median_sec"
+    )
+    if (!all(required %in% names(x))) return(data.frame())
+    eligible <- workflow_timing_eligibility(x)
+    eligible <- eligible & x$family == "tsne" & x$backend == "cuda"
+    eligible <- eligible & x$total_iterations == 750L
+    eligible <- eligible & x$comparison_contract ==
+        "workflow_750_total_iterations"
+    eligible <- eligible & x$timing_boundary ==
+        "host_float32_to_host_result"
+    eligible <- eligible & as.logical(x$device_synchronized)
+    eligible[is.na(eligible)] <- FALSE
+    selected <- x[eligible, , drop = FALSE]
+    fast <- selected[
+        selected$method == "fastembedr_tsne" &
+            selected$timing_scope == "R_public_fit", , drop = FALSE
+    ]
+    cuml <- selected[
+        selected$method == "cuml_tsne" &
+            selected$timing_scope == "direct_Python_fit", , drop = FALSE
+    ]
+    keys <- c(
+        "dataset", "seed", "total_iterations", "timing_boundary",
+        "comparison_contract"
+    )
+    paired <- merge(fast, cuml, by = keys, suffixes = c("_fast", "_cuml"))
+    if (!nrow(paired)) return(data.frame())
+    data.frame(
+        dataset = paired$dataset,
+        seed = paired$seed,
+        total_iterations = paired$total_iterations,
+        timing_reps_fastembedr = paired$timing_reps_fast,
+        timing_reps_cuml = paired$timing_reps_cuml,
+        warmup_count_fastembedr = paired$warmup_count_fast,
+        warmup_count_cuml = paired$warmup_count_cuml,
+        fastembedr_median_sec = paired$elapsed_median_sec_fast,
+        cuml_median_sec = paired$elapsed_median_sec_cuml,
+        fastembedr_speedup_over_cuml =
+            paired$elapsed_median_sec_cuml /
+            paired$elapsed_median_sec_fast,
+        fastembedr_timing_scope = paired$timing_scope_fast,
+        cuml_timing_scope = paired$timing_scope_cuml,
+        timing_boundary = paired$timing_boundary,
+        comparison_type = "workflow_level_not_optimizer_matched",
+        fastembedr_support = "compact_k_equals_perplexity",
+        cuml_support = "standard_n_neighbors_91",
+        optimizer_matched = FALSE,
+        stringsAsFactors = FALSE
+    )
+}
+
 run_aggregate <- function() {
     csv_files <- list.files(
         output_root, pattern = "[.]csv$", recursive = TRUE,
@@ -2014,6 +2142,11 @@ run_aggregate <- function() {
                 backend = x$backend[[1L]], boundary = x$boundary[[1L]],
                 n = x$n[[1L]], p = x$p[[1L]],
                 successful_seeds = nrow(x),
+                timing_scope = x$timing_scope[[1L]],
+                timing_eligible = all(as.logical(x$timing_eligible)),
+                early_iterations = x$early_iterations[[1L]],
+                normal_iterations = x$normal_iterations[[1L]],
+                total_iterations = x$total_iterations[[1L]],
                 trustworthiness_median = trust[["median"]],
                 trustworthiness_q1 = trust[["q1"]],
                 trustworthiness_q3 = trust[["q3"]],
@@ -2155,6 +2288,7 @@ run_aggregate <- function() {
             file.path(out, "scaling_summary.csv")
         )
     }
+    memory <- data.frame()
     measurement_files <- list.files(
         file.path(output_root, "measurement"), pattern = "[.]time[.]txt$",
         recursive = TRUE, full.names = TRUE
@@ -2162,6 +2296,28 @@ run_aggregate <- function() {
     if (length(measurement_files)) {
         memory <- do.call(rbind, lapply(measurement_files, function(path) {
             lines <- readLines(path, warn = FALSE)
+            parse_rss_kb <- function(value) {
+                value <- trimws(value)
+                if (!nzchar(value) || identical(value, "NA")) {
+                    return(NA_real_)
+                }
+                suffix <- toupper(sub("^[0-9.]+", "", value))
+                number <- suppressWarnings(as.numeric(
+                    sub("[^0-9.].*$", "", value)
+                ))
+                multiplier <- if (suffix %in% c("", "K")) {
+                    1
+                } else {
+                    switch(suffix, "M" = 1024,
+                    "G" = 1024^2, "T" = 1024^3,
+                    NA_real_
+                    )
+                }
+                if (is.na(number) || is.na(multiplier)) {
+                    return(NA_real_)
+                }
+                number * multiplier
+            }
             field <- function(label) {
                 hit <- lines[grepl(label, lines, fixed = TRUE)]
                 if (!length(hit)) return(NA_real_)
@@ -2181,15 +2337,37 @@ run_aggregate <- function() {
                 }
                 NA_real_
             }
-            data.frame(
+            wall_clock <- field("Wall clock seconds")
+            if (is.na(wall_clock)) wall_clock <- elapsed_field()
+            max_rss <- field("Maximum resident set size")
+            if (is.na(max_rss)) {
+                hit <- lines[grepl(
+                    "Slurm maximum resident set size", lines, fixed = TRUE
+                )]
+                if (length(hit)) {
+                    max_rss <- parse_rss_kb(
+                        sub("^[^:]+:", "", hit[[1L]])
+                    )
+                }
+            }
+            source <- lines[grepl(
+                "Measurement source", lines, fixed = TRUE
+            )]
+            cbind(data.frame(
                 path = path,
-                wall_clock_sec = elapsed_field(),
-                max_rss_kb = field("Maximum resident set size"),
+                wall_clock_sec = wall_clock,
+                max_rss_kb = max_rss,
+                measurement_source = if (length(source)) {
+                    trimws(sub("^[^:]+:", "", source[[1L]]))
+                } else {
+                    "gnu_time_legacy"
+                },
                 stringsAsFactors = FALSE
-            )
+            ), comparator_path_info(path))
         }))
         write_csv_atomic(memory, file.path(out, "task_memory.csv"))
     }
+    gpu <- data.frame()
     gpu_files <- list.files(
         file.path(output_root, "measurement"),
         pattern = "[.]gpu_memory[.]csv$", recursive = TRUE,
@@ -2198,7 +2376,7 @@ run_aggregate <- function() {
     if (length(gpu_files)) {
         gpu <- do.call(rbind, lapply(gpu_files, function(path) {
             x <- utils::read.csv(path, stringsAsFactors = FALSE)
-            data.frame(
+            cbind(data.frame(
                 path = path,
                 baseline_mib = if (nrow(x)) x$baseline_mib[[1L]] else NA,
                 peak_used_mib = if (nrow(x)) max(x$memory_used_mib) else NA,
@@ -2208,9 +2386,56 @@ run_aggregate <- function() {
                     NA
                 },
                 stringsAsFactors = FALSE
-            )
+            ), comparator_path_info(path))
         }))
         write_csv_atomic(gpu, file.path(out, "task_gpu_memory.csv"))
+    }
+    comparator_files <- csv_files[
+        basename(csv_files) == "result.csv" &
+            grepl("/workflow_comparators/", csv_files, fixed = TRUE)
+    ]
+    if (length(comparator_files)) {
+        comparators <- bind_rows_union(lapply(comparator_files, function(path) {
+            cbind(
+                utils::read.csv(path, stringsAsFactors = FALSE),
+                comparator_path_info(path)["comparator_mode"]
+            )
+        }))
+        keys <- c("comparator_mode", "dataset", "method")
+        if (nrow(memory)) {
+            host <- stats::aggregate(
+                memory[c("wall_clock_sec", "max_rss_kb")],
+                memory[keys], safe_max
+            )
+            names(host)[names(host) == "wall_clock_sec"] <-
+                "task_wall_clock_sec"
+            comparators <- merge(comparators, host, by = keys, all.x = TRUE)
+        }
+        if (nrow(gpu)) {
+            device <- stats::aggregate(
+                gpu[c("baseline_mib", "peak_used_mib",
+                    "peak_incremental_mib")],
+                gpu[keys], safe_max
+            )
+            comparators <- merge(comparators, device, by = keys, all.x = TRUE)
+        }
+        write_csv_atomic(
+            comparators, file.path(out, "workflow_comparators_all.csv")
+        )
+        eligible <- comparators[
+            workflow_timing_eligibility(comparators), , drop = FALSE
+        ]
+        write_csv_atomic(
+            eligible,
+            file.path(out, "workflow_comparators_timing_eligible.csv")
+        )
+        cuda_ratio <- cuda_tsne_workflow_ratios(comparators)
+        if (nrow(cuda_ratio)) {
+            write_csv_atomic(
+                cuda_ratio,
+                file.path(out, "cuda_tsne_workflow_speed_ratio.csv")
+            )
+        }
     }
     agreement <- aggregate_support_agreement(output_root)
     if (nrow(agreement)) {

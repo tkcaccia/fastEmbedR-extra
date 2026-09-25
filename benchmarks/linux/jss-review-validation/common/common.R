@@ -136,6 +136,13 @@ layout_matrix <- function(x) {
     x
 }
 
+embedding_result_matrix <- function(x, field = NULL) {
+    if (!is.null(field) && is.list(x) && !is.null(x[[field]])) {
+        x <- x[[field]]
+    }
+    layout_matrix(x)
+}
+
 label_colors <- function(labels, alpha = 0.75) {
     if (is.null(labels)) return(grDevices::adjustcolor("#2B6CB0", alpha))
     factor_labels <- as.factor(labels)
