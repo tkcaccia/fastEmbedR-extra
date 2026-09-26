@@ -128,6 +128,13 @@ Direct-Python fit time, Python process-wall time, R-mediated total-call time,
 and R public-function total-call time remain separate fields. They must not be
 silently merged into one timing boundary.
 
+Comparator outputs also retain a machine-readable parameter contract. It
+distinguishes layout initialization from PCA feature preprocessing and labels
+exact-coordinate, same-policy, and unmatched initialization comparisons.
+Learning rate, exaggeration, momentum, affinity support, UMAP epochs, minimum
+distance, spread, repulsion, negative sampling, metric, precision, and thread
+control remain visible beside runtime and quality.
+
 ## Results and data policy
 
 The files in `results/` are compact derived summaries and publication figures.

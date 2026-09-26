@@ -70,12 +70,15 @@ export R_LIBS_USER="${R_LIBRARY}${R_LIBS_USER:+:${R_LIBS_USER}}"
 
 Rscript -e '
   library(fastEmbedR)
-  capabilities <- fastEmbedR_capabilities()
-  print(capabilities)
-  metal <- capabilities[
-    capabilities$backend == "metal", c("knn_available", "embedding_available")
-  ]
-  stopifnot(nrow(metal) == 1L, all(unlist(metal), na.rm = FALSE))
+  library(float)
+  set.seed(4)
+  x <- fl(matrix(rnorm(256 * 8), nrow = 256))
+  knn <- precompute_knn(x, k = 15, backend = "metal", n.cores = 2)
+  fit <- umap(x, n_neighbors = 15, backend = "metal", n.cores = 2)
+  stopifnot(grepl("metal", attr(knn, "backend"), fixed = TRUE))
+  stopifnot(grepl("metal", fit$parameters$backend, fixed = TRUE))
+  stopifnot(all(is.finite(as.matrix(fit))))
+  writeLines("Strict Metal smoke: PASS")
 ' > "${OUT_DIR}/capabilities.log" 2>&1
 
 export OMP_NUM_THREADS=4

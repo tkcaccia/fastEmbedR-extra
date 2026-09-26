@@ -34,6 +34,23 @@ assert_matrix <- function(value, rows, columns = 2L, field = NULL) {
     invisible(value)
 }
 
+verify_output_contract <- function(layout) {
+    directory <- tempfile("fastembedr-output-")
+    dir.create(directory)
+    on.exit(unlink(directory, recursive = TRUE), add = TRUE)
+    rows <- seq_len(nrow(layout))
+    labels <- rep(c("A", "B"), length.out = nrow(layout))
+    artifacts <- write_embedding_artifacts(
+        layout, labels, rows, directory
+    )
+    output <- utils::read.csv(artifacts[["csv"]])
+    stopifnot(
+        nrow(output) == nrow(layout),
+        identical(output$source_row, rows),
+        file.info(artifacts[["plot"]])$size > 0L
+    )
+}
+
 set.seed(4L)
 x <- matrix(stats::rnorm(256L * 8L), nrow = 256L)
 rank <- 2L
@@ -56,6 +73,7 @@ if (backend == "cuda") {
     )
     assert_matrix(umap_fit, nrow(x))
     assert_layout_backend(umap_fit, "cuda")
+    verify_output_contract(embedding_result_matrix(umap_fit))
     writeLines("R CUDA comparator smoke: PASS")
     quit(save = "no", status = 0L)
 }
@@ -68,10 +86,14 @@ assert_matrix(Rtsne::Rtsne(
 ), nrow(x), field = "Y")
 
 fitsne_environment <- new.env(parent = globalenv())
-sys.source("/opt/fit-sne/bin/fast_tsne.R", envir = fitsne_environment)
+sys.source(
+    "/opt/fit-sne/bin/fast_tsne.R", envir = fitsne_environment,
+    chdir = TRUE
+)
 assert_matrix(fitsne_environment$fftRtsne(
     x, perplexity = 5, max_iter = 10L, stop_early_exag_iter = 2L,
-    mom_switch_iter = 2L, rand_seed = 4L, nthreads = 2L,
+    mom_switch_iter = 2L, initialization = "pca", rand_seed = 4L,
+    nthreads = 2L,
     fast_tsne_path = "/opt/fit-sne/bin/fast_tsne"
 ), nrow(x))
 
@@ -84,6 +106,7 @@ config$n_neighbors <- 15L
 config$n_components <- 2L
 config$metric <- "euclidean"
 config$input <- "data"
+config$init <- "spectral"
 config$n_epochs <- 10L
 config$random_state <- 4L
 config$verbose <- FALSE
@@ -91,6 +114,7 @@ assert_matrix(
     umap::umap(x, config = config, method = "naive"),
     nrow(x), field = "layout"
 )
+verify_output_contract(x[, 1:2, drop = FALSE])
 
 versions <- vapply(
     packages, function(package) as.character(utils::packageVersion(package)),

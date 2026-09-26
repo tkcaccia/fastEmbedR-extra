@@ -150,20 +150,103 @@ label_colors <- function(labels, alpha = 0.75) {
     grDevices::adjustcolor(palette[as.integer(factor_labels)], alpha)
 }
 
+clean_plot_labels <- function(labels) {
+    if (is.null(labels)) return(NULL)
+    labels <- trimws(as.character(labels))
+    missing <- is.na(labels) | !nzchar(labels) |
+        tolower(labels) %in% c("na", "nan", "none", "null")
+    labels[missing] <- NA_character_
+    if (all(missing)) NULL else labels
+}
+
 point_size <- function(n) {
     if (n < 1000L) 0.8 else if (n < 10000L) 0.4 else 0.2
 }
 
-plot_layout_dots <- function(layout, labels, path) {
+draw_layout_dots <- function(layout, labels = NULL) {
     layout <- layout_matrix(layout)
-    grDevices::png(path, width = 1800, height = 1500, res = 200)
-    on.exit(grDevices::dev.off(), add = TRUE)
+    if (ncol(layout) < 2L || any(!is.finite(layout[, 1:2, drop = FALSE]))) {
+        stop("Plot coordinates must be finite and two-dimensional.",
+            call. = FALSE
+        )
+    }
+    labels <- clean_plot_labels(labels)
     graphics::par(mar = rep(0.1, 4L))
     graphics::plot(
         layout[, 1L], layout[, 2L], pch = 16,
         cex = point_size(nrow(layout)), col = label_colors(labels),
         axes = FALSE, ann = FALSE, frame.plot = FALSE
     )
+}
+
+plot_layout_dots <- function(layout, labels, path) {
+    grDevices::png(path, width = 1800, height = 1500, res = 200)
+    on.exit(grDevices::dev.off(), add = TRUE)
+    draw_layout_dots(layout, labels)
+}
+
+embedding_output_table <- function(layout, labels = NULL,
+                                   source_rows = NULL) {
+    layout <- layout_matrix(layout)
+    if (ncol(layout) < 2L) {
+        stop("An output needs at least two dimensions.", call. = FALSE)
+    }
+    n <- nrow(layout)
+    if (is.null(labels)) labels <- rep.int(NA_character_, n)
+    if (is.null(source_rows)) source_rows <- seq_len(n)
+    if (length(labels) != n || length(source_rows) != n) {
+        stop("Output metadata must have one value per row.", call. = FALSE)
+    }
+    data.frame(
+        benchmark_row = seq_len(n), source_row = source_rows,
+        label = as.character(labels), dimension_1 = layout[, 1L],
+        dimension_2 = layout[, 2L], stringsAsFactors = FALSE
+    )
+}
+
+plot_embedding_csv <- function(input, output) {
+    data <- read_embedding_csv(input)
+    plot_layout_dots(data$layout, data$labels, output)
+    invisible(output)
+}
+
+draw_embedding_csv <- function(input) {
+    data <- read_embedding_csv(input)
+    draw_layout_dots(data$layout, data$labels)
+    invisible(input)
+}
+
+read_embedding_csv <- function(input) {
+    table <- utils::read.csv(
+        input, stringsAsFactors = FALSE, check.names = FALSE
+    )
+    required <- c(
+        "benchmark_row", "source_row", "label",
+        "dimension_1", "dimension_2"
+    )
+    if (!all(required %in% names(table))) {
+        stop("Embedding CSV does not satisfy the output contract.",
+            call. = FALSE
+        )
+    }
+    if (!nrow(table) || anyDuplicated(table$benchmark_row) ||
+            anyDuplicated(table$source_row)) {
+        stop("Embedding CSV row identifiers are invalid.", call. = FALSE)
+    }
+    layout <- as.matrix(table[c("dimension_1", "dimension_2")])
+    storage.mode(layout) <- "double"
+    list(layout = layout, labels = clean_plot_labels(table$label))
+}
+
+write_embedding_artifacts <- function(layout, labels, source_rows,
+                                      directory) {
+    csv <- file.path(directory, "embedding.csv")
+    png <- file.path(directory, "embedding.png")
+    write_csv_atomic(
+        embedding_output_table(layout, labels, source_rows), csv
+    )
+    plot_embedding_csv(csv, png)
+    invisible(c(csv = csv, plot = png))
 }
 
 plot_transformed_queries <- function(reference, query, query_labels, path) {

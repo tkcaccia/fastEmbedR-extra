@@ -63,7 +63,8 @@ main <- function() {
         as.character(shared$labels)
     }
     write_csv_atomic(data.frame(
-        row = seq_len(nrow(x)), label = labels,
+        row = seq_len(nrow(x)), source_row = shared$rows,
+        label = labels,
         quality_sample = seq_len(nrow(x)) %in% shared$quality_rows
     ), file.path(directory, "rows_labels.csv"))
     affinity <- prepare_quality_affinity(

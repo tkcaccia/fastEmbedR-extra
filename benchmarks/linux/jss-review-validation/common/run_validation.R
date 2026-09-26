@@ -1988,6 +1988,11 @@ cuda_tsne_workflow_ratios <- function(x) {
         fastembedr_timing_scope = paired$timing_scope_fast,
         cuml_timing_scope = paired$timing_scope_cuml,
         timing_boundary = paired$timing_boundary,
+        fastembedr_initialization =
+            paired$initialization_requested_fast,
+        cuml_initialization = paired$initialization_requested_cuml,
+        initialization_match =
+            "same_policy_not_same_coordinates",
         comparison_type = "workflow_level_not_optimizer_matched",
         fastembedr_support = "compact_k_equals_perplexity",
         cuml_support = "standard_n_neighbors_91",
@@ -2421,6 +2426,27 @@ run_aggregate <- function() {
         }
         write_csv_atomic(
             comparators, file.path(out, "workflow_comparators_all.csv")
+        )
+        parameter_columns <- c(
+            "comparator_mode", "dataset", "family", "method", "language",
+            "backend", "metric", "perplexity", "n_neighbors",
+            "initialization_requested", "initialization_role",
+            "initialization_match", "shared_initial_coordinates",
+            "initial_coordinates_sha256", "pca_preprocessing",
+            "iterations_policy", "early_iterations", "normal_iterations",
+            "total_iterations", "learning_rate_policy",
+            "learning_rate_value", "early_exaggeration",
+            "late_exaggeration", "initial_momentum", "final_momentum",
+            "affinity_support", "optimizer", "epochs_policy",
+            "epochs_value", "min_dist_policy", "min_dist_value",
+            "spread", "repulsion_strength", "negative_sample_rate",
+            "knn_boundary", "input_precision", "thread_control", "threads"
+        )
+        parameter_columns <- intersect(parameter_columns, names(comparators))
+        parameters <- unique(comparators[, parameter_columns, drop = FALSE])
+        write_csv_atomic(
+            parameters,
+            file.path(out, "workflow_comparator_parameters.csv")
         )
         eligible <- comparators[
             workflow_timing_eligibility(comparators), , drop = FALSE

@@ -67,60 +67,44 @@ method_version <- function(name) {
     as.character(utils::packageVersion(package))
 }
 
-method_parameters <- function(name, family) {
-    input_precision <- if (startsWith(name, "fastembedr")) {
-        "float32"
-    } else {
-        "double"
+umap_epoch_policy <- function(n) {
+    if (n < 10000L) 500L else 200L
+}
+
+method_parameters <- function(name, family, fit, n) {
+    contract <- utils::read.csv(
+        file.path(script_dir, "workflow_parameter_contract.csv"),
+        stringsAsFactors = FALSE, na.strings = character()
+    )
+    row <- contract[contract$method == name, , drop = FALSE]
+    if (nrow(row) != 1L || row$family != family) {
+        stop("Missing parameter contract for ", name, call. = FALSE)
     }
-    initialization <- switch(
+    row$learning_rate_value <- switch(
         name,
-        fastembedr_tsne = "package_pca",
-        rtsne = "package_pca",
-        fitsne = "package_pca",
-        fastembedr_umap = "spectral",
-        uwot = "spectral",
-        uwot_fast_sgd = "spectral",
-        r_umap = "package_default",
-        "not_applicable"
+        fastembedr_tsne = max(n / 12, 200),
+        rtsne = 200,
+        fitsne = max(n / 12, 200),
+        fastembedr_umap = fit$parameters$learning_rate %||% 1,
+        uwot = 1,
+        uwot_fast_sgd = 1,
+        r_umap = 1,
+        NA_real_
     )
-    iterations <- switch(
+    row$epochs_value <- switch(
         name,
-        fastembedr_tsne = "250_early+500_normal=750_total",
-        rtsne = "750_total",
-        fitsne = "750_total",
-        fastembedr_umap = "package_policy",
-        uwot = "package_default",
-        uwot_fast_sgd = "package_default",
-        r_umap = "package_default",
-        "not_applicable"
+        fastembedr_umap = fit$parameters$epochs %||% umap_epoch_policy(n),
+        uwot = umap_epoch_policy(n),
+        uwot_fast_sgd = umap_epoch_policy(n),
+        r_umap = 200L,
+        NA_integer_
     )
-    thread_control <- switch(
-        name,
-        fastembedr_pca = "n.cores",
-        fastembedr_tsne = "n.cores",
-        fastembedr_umap = "n.cores",
-        rtsne = "num_threads",
-        fitsne = "nthreads",
-        uwot = "n_threads_and_n_sgd_threads",
-        uwot_fast_sgd = "n_threads_and_n_sgd_threads",
-        "BLAS_and_process_environment"
-    )
-    data.frame(
-        metric = if (family == "pca") NA_character_ else "euclidean",
-        perplexity = if (family == "tsne") 30 else NA_real_,
-        n_neighbors = if (family == "umap") 30L else NA_integer_,
-        iterations_policy = iterations,
-        initialization = initialization,
-        knn_boundary = if (family == "pca") {
-            "not_applicable"
-        } else {
-            "internal_to_public_call"
-        },
-        input_precision = input_precision,
-        thread_control = thread_control,
-        stringsAsFactors = FALSE
-    )
+    row$min_dist_value <- if (name == "fastembedr_umap") {
+        fit$parameters$min_dist %||% 0.01
+    } else if (family == "umap") {
+        as.numeric(row$min_dist_policy)
+    } else NA_real_
+    row[setdiff(names(row), c("method", "family"))]
 }
 
 load_benchmark_data <- function() {
@@ -139,7 +123,10 @@ load_fitsne <- function() {
         stop("FIt-SNE wrapper or executable is unavailable.", call. = FALSE)
     }
     environment <- new.env(parent = globalenv())
-    sys.source(wrapper, envir = environment)
+    sys.source(wrapper, envir = environment, chdir = TRUE)
+    if (!is.function(environment$fftRtsne)) {
+        stop("FIt-SNE wrapper does not define fftRtsne().", call. = FALSE)
+    }
     list(fun = environment$fftRtsne, executable = executable)
 }
 
@@ -175,13 +162,20 @@ fit_tsne <- function(name, x, perplexity) {
     if (name == "rtsne") {
         return(Rtsne::Rtsne(
             x, dims = 2L, perplexity = perplexity, pca = TRUE,
+            initial_dims = 50L, Y_init = NULL,
             theta = 0.5, max_iter = 750L, num_threads = threads,
-            check_duplicates = FALSE, verbose = FALSE
+            stop_lying_iter = 250L, mom_switch_iter = 250L,
+            momentum = 0.5, final_momentum = 0.8, eta = 200,
+            exaggeration_factor = 12, check_duplicates = FALSE,
+            verbose = FALSE
         ))
     }
     fitsne <- load_fitsne()
     fitsne$fun(
         x, dims = 2L, perplexity = perplexity, max_iter = 750L,
+        initialization = "pca", stop_early_exag_iter = 250L,
+        exaggeration_factor = 12, learning_rate = "auto",
+        momentum = 0.5, final_momentum = 0.8,
         rand_seed = seed, nthreads = threads,
         fast_tsne_path = fitsne$executable
     )
@@ -198,6 +192,10 @@ fit_umap <- function(name, x, neighbors) {
         fast <- identical(name, "uwot_fast_sgd")
         return(uwot::umap(
             x, n_neighbors = neighbors, init = "spectral",
+            metric = "euclidean", n_epochs = umap_epoch_policy(nrow(x)),
+            alpha = 1,
+            min_dist = 0.01, spread = 1, repulsion_strength = 1,
+            negative_sample_rate = 5,
             n_threads = threads,
             n_sgd_threads = if (fast) threads else 1L,
             fast_sgd = fast, seed = seed, verbose = FALSE
@@ -208,12 +206,18 @@ fit_umap <- function(name, x, neighbors) {
     config$n_components <- 2L
     config$metric <- "euclidean"
     config$input <- "data"
+    config$init <- "spectral"
+    config$min_dist <- 0.1
+    config$spread <- 1
+    config$learning_rate <- 1
+    config$negative_sample_rate <- 5L
     config$random_state <- as.integer(seed)
     config$verbose <- FALSE
     umap::umap(x, config = config, method = "naive")
 }
 
 fit_once <- function(name, x, perplexity, neighbors, rank) {
+    set.seed(seed)
     family <- method_family(name)
     switch(
         family,
@@ -340,7 +344,8 @@ write_outputs <- function(fit, elapsed, benchmark) {
         elapsed_q3_sec = unname(stats::quantile(elapsed, 0.75)),
         threads = threads, implementation_version = method_version(method),
         stringsAsFactors = FALSE
-    ), method_parameters(method, family), quality, extra)
+    ), method_parameters(method, family, fit, nrow(benchmark$double)),
+    quality, extra)
     write_csv_atomic(result, file.path(out, "result.csv"))
     write_csv_atomic(data.frame(
         dataset = dataset, method = method, backend = result_backend,
@@ -360,6 +365,12 @@ write_outputs <- function(fit, elapsed, benchmark) {
         source_row = benchmark$shared$rows[rows],
         x = layout[rows, 1L], y = layout[rows, 2L]
     ), file.path(out, "quality_layout.csv"))
+    write_csv_atomic(
+        embedding_output_table(
+            layout, benchmark$shared$labels, benchmark$shared$rows
+        ),
+        file.path(out, "embedding.csv")
+    )
     write_csv_atomic(status_row(
         "workflow_comparator", dataset, comparator_mode, "success",
         method = method

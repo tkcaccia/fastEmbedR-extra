@@ -149,9 +149,19 @@ no CPU fallback.
     compact-affinity KL for t-SNE, PCA reconstruction error and retained
     variance, peak host resident set size, and sampled GPU memory. R and
     direct-Python timing scopes remain distinct; a separate boundary
-    field records their common host-float32-input to host-result contract. Each
-    dataset has
-    one portable float32 input shared by every Python method. The R CPU,
+    field records their common host-float32-input to host-result contract.
+    Every result also records initialization, whether methods share exact
+    initial coordinates or only the same PCA/spectral policy, PCA
+    preprocessing, learning-rate policy, exaggeration, momentum, affinity
+    support, optimizer, UMAP epochs, minimum distance, spread, repulsion, and
+    negative-sample rate. PCA layout initialization is requested explicitly
+    for fastEmbedR, FIt-SNE, Python openTSNE, scikit-learn, and cuML t-SNE.
+    `Rtsne(pca = TRUE)` is recorded separately as PCA preprocessing because
+    its layout remains randomly initialized when `Y_init` is absent. UMAP
+    comparators explicitly request spectral initialization. The aggregate
+    `workflow_comparator_parameters.csv` is the machine-readable parameter
+    contract. Each dataset has one portable float32 input shared by every
+    Python method. The R CPU,
     fastEmbedR CUDA, Python CPU, and Python CUDA arrays become eligible
     together; aggregation waits for all four arrays.
 
@@ -408,11 +418,28 @@ bash benchmark_scripts/fastembedr_jss_review_validation/local/run_tsne_longrun_m
 
 ## Evidence retained
 
-Each task writes a status CSV, raw repetition rows, saved layouts or compact
-fit summaries where applicable, `/usr/bin/time -v` output, CUDA memory traces,
-and the Slurm stdout/stderr log. Preflight also records package and image
+Each successful workflow method writes `result.csv`, raw timing repetitions,
+the sampled quality layout, and a complete two-dimensional `embedding.csv`.
+A shared R renderer reads that CSV and writes `embedding.png`, so R and Python
+methods use identical labels, palette construction, margins, opacity, and
+point-size rules. Tasks also retain
+`/usr/bin/time -v` output, CUDA memory traces, and the Slurm stdout/stderr log.
+Preflight also records package and image
 identity, the loaded shared-object checksum, backend capabilities,
 `sessionInfo()`, and `nvidia-smi` output.
+
+The gallery builder requires one campaign result directory as its first
+argument. It reads only that campaign's `embedding.csv` files and never scans
+older PNG files by timestamp. This prevents mixed-release galleries.
+
+```bash
+Rscript analysis/build_table5_and_embedding_gallery.R \
+  "$OUTPUT_ROOT"
+```
+
+The PCA, t-SNE, and UMAP timing table and gallery are generated from that same
+campaign root. Failed or unavailable combinations remain explicit empty
+positions rather than being replaced by results from another run.
 
 Metal is not runnable on the Linux HPC. The same R driver can be used for a
 separate local Apple Silicon campaign, but Metal evidence must not be inferred

@@ -21,6 +21,11 @@ required <- c(
     "benchmarks/linux/jss-review-validation/",
     "common/run_complete_campaign_controller.sh"
   ),
+  paste0(
+    "benchmarks/linux/jss-review-validation/",
+    "common/plot_method_output.R"
+  ),
+  "analysis/build_table5_and_embedding_gallery.R",
   "benchmarks/linux/jss-review-validation/FILES.sha256"
 )
 missing <- required[!file.exists(required) | file.info(required)$size <= 0L]

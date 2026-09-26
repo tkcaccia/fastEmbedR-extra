@@ -57,6 +57,7 @@ required = [
     "aggregate/clustering_validation_all.csv",
     "aggregate/workflow_comparators_all.csv",
     "aggregate/workflow_comparators_timing_eligible.csv",
+    "aggregate/workflow_comparator_parameters.csv",
     "aggregate/cuda_tsne_workflow_speed_ratio.csv",
 ]
 for relative in required:
@@ -80,6 +81,27 @@ for path in root.rglob("*.csv"):
     except Exception as exc:
         problems.append(f"unreadable status file {path}: {exc}")
 
+workflow = root / "workflow_comparators"
+if workflow.is_dir():
+    for status_path in workflow.rglob("status.csv"):
+        with status_path.open(newline="") as handle:
+            rows = list(csv.DictReader(handle))
+        if not rows or rows[-1].get("status", "").lower() != "success":
+            continue
+        directory = status_path.parent
+        for name in (
+            "result.csv",
+            "timing_repetitions.csv",
+            "quality_layout.csv",
+            "embedding.csv",
+            "embedding.png",
+        ):
+            artifact = directory / name
+            if not artifact.is_file() or artifact.stat().st_size == 0:
+                problems.append(
+                    f"successful method lacks {name}: {directory}"
+                )
+
 ratio_path = root / "aggregate/cuda_tsne_workflow_speed_ratio.csv"
 if ratio_path.is_file():
     with ratio_path.open(newline="") as handle:
@@ -102,6 +124,30 @@ if ratio_path.is_file():
             "workflow_level_not_optimizer_matched"
         ):
             problems.append("CUDA t-SNE ratio has an invalid comparison type")
+        if row.get("fastembedr_initialization") != "pca":
+            problems.append("fastEmbedR CUDA t-SNE did not request PCA init")
+        if row.get("cuml_initialization") != "pca":
+            problems.append("cuML CUDA t-SNE did not request PCA init")
+        if row.get("initialization_match") != (
+            "same_policy_not_same_coordinates"
+        ):
+            problems.append("CUDA t-SNE initialization match is not explicit")
+
+parameter_path = root / "aggregate/workflow_comparator_parameters.csv"
+if parameter_path.is_file():
+    with parameter_path.open(newline="") as handle:
+        parameters = list(csv.DictReader(handle))
+    for row in parameters:
+        if row.get("family") not in {"tsne", "umap"}:
+            continue
+        if not row.get("initialization_requested"):
+            problems.append("Missing comparator initialization metadata")
+        if not row.get("initialization_match"):
+            problems.append("Missing initialization match classification")
+    rtsne = [row for row in parameters if row.get("method") == "rtsne"]
+    if rtsne and any(row.get("initialization_requested") != "random"
+                     for row in rtsne):
+        problems.append("Rtsne PCA preprocessing was mislabeled as PCA init")
 
 quality_path = root / "aggregate/backend_quality_raw.csv"
 if quality_path.is_file():
@@ -111,7 +157,9 @@ if quality_path.is_file():
         if row.get("timing_eligible", "").lower() == "true":
             problems.append("A quality diagnostic was marked timing eligible")
         if row.get("method") == "tsne" and row.get("total_iterations") != "750":
-            problems.append("A t-SNE quality diagnostic did not use 750 iterations")
+            problems.append(
+                "A t-SNE quality diagnostic did not use 750 iterations"
+            )
 
 report = campaign / "output_audit.txt"
 report.write_text(

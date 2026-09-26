@@ -51,9 +51,10 @@ missing = required.difference(inspect.signature(TSNE).parameters)
 if missing:
     raise RuntimeError(f"Installed cuML TSNE lacks: {sorted(missing)}")
 x = np.random.default_rng(4).normal(size=(256, 8)).astype(np.float32)
-for model in (PCA(n_components=2), UMAP(n_neighbors=15, random_state=4),
+for model in (PCA(n_components=2),
+              UMAP(n_neighbors=15, init="spectral", random_state=4),
               TSNE(perplexity=15, n_neighbors=46, max_iter=250,
-                   exaggeration_iter=50, random_state=4,
+                   exaggeration_iter=50, init="pca", random_state=4,
                    output_type="cupy")):
     result = model.fit_transform(x)
     cp.cuda.runtime.deviceSynchronize()

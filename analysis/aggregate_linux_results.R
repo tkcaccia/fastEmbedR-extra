@@ -534,59 +534,5 @@ if (nrow(landmark_success)) {
             row.names = FALSE, na = "")
 }
 
-find_plot <- function(dataset, profile, method) {
-  base <- file.path(results_root, dataset, "standard", profile)
-  candidates <- list.files(
-    base,
-    pattern = paste0("^", dataset, "_", method, "_.*seed4\\.png$"),
-    recursive = TRUE,
-    full.names = TRUE
-  )
-  if (!length(candidates)) return(NA_character_)
-  sort(candidates)[[1L]]
-}
-
-panels <- data.frame(
-  dataset = c("MNIST", "MNIST", "FashionMNIST", "TabulaMuris", "flow18", "mass41"),
-  profile = rep("cuda", 6L),
-  method = c(
-    "fastEmbedR_tsne_cuda_full",
-    "fastEmbedR_umap_cuda_fuzzy_full",
-    "fastEmbedR_umap_cuda_fuzzy_full",
-    "fastEmbedR_tsne_cuda_full",
-    "fastEmbedR_umap_cuda_fuzzy_full",
-    "fastEmbedR_tsne_cuda_full"
-  ),
-  title = c(
-    "A  MNIST: t-SNE",
-    "B  MNIST: fuzzy UMAP",
-    "C  Fashion-MNIST: fuzzy UMAP",
-    "D  Tabula Muris: t-SNE",
-    "E  flow18: fuzzy UMAP",
-    "F  mass41: t-SNE"
-  ),
-  stringsAsFactors = FALSE
-)
-panels$path <- mapply(find_plot, panels$dataset, panels$profile, panels$method,
-                      USE.NAMES = FALSE)
-write.csv(panels, file.path(output_dir, "representative_embedding_sources.csv"),
-          row.names = FALSE, na = "")
-
-if (all(file.exists(panels$path)) && requireNamespace("png", quietly = TRUE)) {
-  png(file.path(figure_dir, "hpc_representative_embeddings.png"),
-      width = 4800, height = 3200, res = 300, bg = "white")
-  par(mfrow = c(2, 3), mar = c(0.2, 0.2, 2.2, 0.2), oma = c(0, 0, 0, 0),
-      xaxs = "i", yaxs = "i")
-  for (i in seq_len(nrow(panels))) {
-    image <- png::readPNG(panels$path[[i]])
-    plot.new()
-    plot.window(xlim = c(0, 1), ylim = c(0, 1), asp = 1)
-    rasterImage(image, 0, 0, 1, 1, interpolate = TRUE)
-    title(main = panels$title[[i]], line = 0.45, cex.main = 1.1,
-          font.main = 2, adj = 0)
-  }
-  dev.off()
-}
-
 cat("Wrote publication outputs to:", output_dir, "\n")
 print(claim_summary)

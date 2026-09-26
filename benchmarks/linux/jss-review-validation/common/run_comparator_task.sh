@@ -140,3 +140,16 @@ mkdir -p "$MEASURE_DIR"
 echo "[$(date --iso-8601=seconds)] mode=$MODE dataset=$DATASET method=$METHOD"
 bash "$SUITE/common/run_measured.sh" "$BACKEND" "$PREFIX" -- \
   "${COMMAND[@]}"
+
+if [[ "$MODE" != inputs ]]; then
+  OUTPUT_DIR="$OUTPUT_ROOT/workflow_comparators/$MODE/$DATASET/$METHOD"
+  PLOT=(
+    "$CONTAINER" exec --cleanenv --bind "$BASE_DIR:$BASE_DIR"
+    --pwd "$BASE_DIR" "${FASTEMBEDR_CONTAINER_R_ENV[@]}"
+    "$IMAGE" "$FASTEMBEDR_RSCRIPT"
+    "$SUITE/common/plot_method_output.R"
+    "--input=$OUTPUT_DIR/embedding.csv"
+    "--output=$OUTPUT_DIR/embedding.png"
+  )
+  "${PLOT[@]}"
+fi

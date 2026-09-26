@@ -1,24 +1,32 @@
 #!/usr/bin/env Rscript
 
 args <- commandArgs(trailingOnly = TRUE)
-results_root <- if (length(args)) args[[1L]] else
-  "/Users/stefano/Documents/fastEmbedR-results/fastEmbedR-results"
+if (!length(args)) {
+  stop(
+    "Usage: build_table5_and_embedding_gallery.R RESULTS_ROOT ...",
+    call. = FALSE
+  )
+}
+results_root <- normalizePath(args[[1L]], mustWork = TRUE)
 script_arg <- grep("^--file=", commandArgs(FALSE), value = TRUE)
 script_path <- normalizePath(sub("^--file=", "", script_arg[[1L]]))
-jss_dir <- dirname(script_path)
-aggregate_dir <- if (length(args) >= 2L) args[[2L]] else
-  file.path(dirname(jss_dir), "mloss", "generated")
-generated_dir <- if (length(args) >= 3L) args[[3L]] else
-  file.path(jss_dir, "generated")
-figure_dir <- if (length(args) >= 4L) args[[4L]] else
-  file.path(jss_dir, "figures", "embedding_all_methods")
+repo_root <- normalizePath(file.path(dirname(script_path), ".."))
+generated_dir <- if (length(args) >= 2L) args[[2L]] else {
+  file.path(results_root, "publication", "tables")
+}
+figure_dir <- if (length(args) >= 3L) args[[3L]] else {
+  file.path(results_root, "publication", "embedding_plots")
+}
+latex_figure_prefix <- if (length(args) >= 4L) args[[4L]] else {
+  "../embedding_plots"
+}
 
 dir.create(generated_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(figure_dir, recursive = TRUE, showWarnings = FALSE)
-
-if (!requireNamespace("png", quietly = TRUE)) {
-  stop("The png package is required.", call. = FALSE)
-}
+source(file.path(
+  repo_root, "benchmarks", "linux", "jss-review-validation",
+  "common", "common.R"
+))
 
 datasets <- c(
   "COIL20", "USPS", "FashionMNIST",
@@ -27,53 +35,78 @@ datasets <- c(
 )
 dataset_labels <- c(
   COIL20 = "COIL-20", USPS = "USPS", FashionMNIST = "Fashion-MNIST",
-  "FlowRepository_FR-FCM-ZYRM_files" = "FlowRepository", flow18 = "flow18",
-  MNIST = "MNIST", imagenet = "ImageNet", MetRef = "MetRef",
-  mass41 = "mass41", TabulaMuris = "Tabula Muris",
-  Macosko2015_retina = "Retina"
+  "FlowRepository_FR-FCM-ZYRM_files" = "FlowRepository",
+  flow18 = "flow18", MNIST = "MNIST", imagenet = "ImageNet",
+  MetRef = "MetRef", mass41 = "mass41",
+  TabulaMuris = "Tabula Muris", Macosko2015_retina = "Retina"
+)
+table_dataset_labels <- c(
+  "COIL-20", "USPS", "Fashion", "FlowRepo.", "flow18", "MNIST",
+  "ImageNet", "MetRef", "mass41", "Tabula", "Retina"
 )
 
-read_runtime <- function(filename) {
-  path <- file.path(aggregate_dir, filename)
-  if (!file.exists(path)) stop("Missing aggregate input: ", path)
-  read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
+spec <- data.frame(
+  family = c(rep("pca", 6L), rep("tsne", 7L), rep("umap", 7L)),
+  method = c(
+    "fastembedr_pca", "irlba_pca", "stats_prcomp", "fastembedr_pca",
+    "sklearn_pca", "cuml_pca", "rtsne", "fitsne",
+    "fastembedr_tsne", "fastembedr_tsne", "sklearn_tsne",
+    "python_opentsne", "cuml_tsne", "r_umap", "uwot",
+    "uwot_fast_sgd", "fastembedr_umap", "fastembedr_umap",
+    "python_umap", "cuml_umap"
+  ),
+  route = c(
+    "r_cpu", "r_cpu", "r_cpu", "r_cuda", "python_cpu",
+    "python_cuda", "r_cpu", "r_cpu", "r_cpu", "r_cuda",
+    "python_cpu", "python_cpu", "python_cuda", "r_cpu", "r_cpu",
+    "r_cpu", "r_cpu", "r_cuda", "python_cpu", "python_cuda"
+  ),
+  title = c(
+    "fastEmbedR PCA [CPU]", "irlba [CPU]", "stats::prcomp [CPU]",
+    "fastEmbedR PCA [CUDA]", "scikit-learn PCA [Python]",
+    "RAPIDS cuML PCA [CUDA]", "Rtsne [CPU]", "FIt-SNE [CPU]",
+    "fastEmbedR t-SNE [CPU]", "fastEmbedR t-SNE [CUDA]",
+    "scikit-learn t-SNE [Python]", "openTSNE [Python]",
+    "RAPIDS cuML t-SNE [CUDA]", "umap [CPU]", "uwot [CPU]",
+    "uwot fast SGD [CPU]", "fastEmbedR fuzzy UMAP [CPU]",
+    "fastEmbedR fuzzy UMAP [CUDA]", "umap-learn [Python]",
+    "RAPIDS cuML UMAP [CUDA]"
+  ),
+  scope = c(
+    rep("R total", 4L), "Python fit", "Python fit",
+    rep("R total", 4L), rep("Python fit", 3L), rep("R total", 5L),
+    "Python fit", "Python fit"
+  ),
+  stringsAsFactors = FALSE
+)
+
+runtime_path <- file.path(
+  results_root, "aggregate", "workflow_comparators_all.csv"
+)
+if (!file.exists(runtime_path)) {
+  stop("Missing campaign aggregate: ", runtime_path, call. = FALSE)
 }
-
-tsne <- read_runtime("runtime_tsne_all_methods.csv")
-umap <- read_runtime("runtime_umap_all_methods.csv")
-
-tsne_order <- c(
-  "Rtsne_full", "KlugerLab_FItSNE", "fastEmbedR_tsne_cpu_full",
-  "fastEmbedR_tsne_cuda_full", "python_opentsne_fft",
-  "python_opentsne_fft_direct", "rapids_cuml_tsne_full",
-  "rapids_cuml_tsne_full_direct"
+runtime <- read.csv(
+  runtime_path, stringsAsFactors = FALSE, check.names = FALSE
 )
-tsne_headers <- c(
-  "Rtsne", "FIt-SNE", "fER CPU", "fER CUDA", "openTSNE R",
-  "openTSNE Py", "cuML R", "cuML Py"
+required_runtime <- c(
+  "comparator_mode", "dataset", "method", "elapsed_median_sec"
 )
-
-umap_order <- c(
-  "umap_package", "uwot_default", "uwot_fast_sgd",
-  "fastEmbedR_umap_cpu_fuzzy_full",
-  "fastEmbedR_umap_cpu_binary_full", "python_umap_learn",
-  "python_umap_learn_direct", "fastEmbedR_umap_cuda_fuzzy_full",
-  "fastEmbedR_umap_cuda_binary_full", "rapids_cuml_umap_full",
-  "rapids_cuml_umap_full_direct"
-)
-umap_headers <- c(
-  "umap", "uwot", "uwot fast", "fER fuzzy CPU", "fER binary CPU",
-  "umap-learn R", "umap-learn Py", "fER fuzzy CUDA",
-  "fER binary CUDA", "cuML R", "cuML Py"
-)
+if (!all(required_runtime %in% names(runtime))) {
+  stop("The workflow aggregate has an invalid schema.", call. = FALSE)
+}
 
 format_seconds <- function(x) {
   x <- suppressWarnings(as.numeric(x))
   ifelse(
     !is.finite(x), "--",
-    ifelse(x < 10, formatC(x, digits = 2L, format = "f"),
-           ifelse(x < 100, formatC(x, digits = 1L, format = "f"),
-                  formatC(x, digits = 0L, format = "f")))
+    ifelse(
+      x < 10, formatC(x, digits = 2L, format = "f"),
+      ifelse(
+        x < 100, formatC(x, digits = 1L, format = "f"),
+        formatC(x, digits = 0L, format = "f")
+      )
+    )
   )
 }
 
@@ -83,143 +116,79 @@ latex_escape <- function(x) {
   gsub("&", "\\\\&", x, fixed = TRUE)
 }
 
-table_dataset_labels <- c(
-  "COIL-20", "USPS", "Fashion", "FlowRepo.", "flow18", "MNIST",
-  "ImageNet", "MetRef", "mass41", "Tabula", "Retina"
-)
-
-total_runtime <- function(row) {
-  if (row$timing_interface == "direct Python") {
-    return(row$direct_python_process_total_sec)
+runtime_value <- function(dataset, method, route) {
+  rows <- runtime[
+    runtime$dataset == dataset & runtime$method == method &
+      runtime$comparator_mode == route,
+    , drop = FALSE
+  ]
+  if (nrow(rows) > 1L) {
+    stop("Duplicate workflow aggregate row.", call. = FALSE)
   }
-  row$runtime
+  if (!nrow(rows)) return(NA_real_)
+  suppressWarnings(as.numeric(rows$elapsed_median_sec[[1L]]))
 }
 
-runtime_matrix <- function(data, methods, row_labels) {
+runtime_matrix <- function(family) {
+  methods <- spec[spec$family == family, , drop = FALSE]
   output <- matrix(
-    "--", nrow = length(methods), ncol = length(datasets),
-    dimnames = list(row_labels, table_dataset_labels)
+    "--", nrow = nrow(methods), ncol = length(datasets),
+    dimnames = list(
+      paste0(methods$title, " [", methods$scope, "]"),
+      table_dataset_labels
+    )
   )
-  for (i in seq_len(nrow(data))) {
-    dataset_index <- match(data$dataset[[i]], datasets)
-    method_index <- match(data$method[[i]], methods)
-    if (!is.na(dataset_index) && !is.na(method_index)) {
-      output[method_index, dataset_index] <- format_seconds(
-        total_runtime(data[i, ])
-      )
+  for (row in seq_len(nrow(methods))) {
+    for (column in seq_along(datasets)) {
+      output[row, column] <- format_seconds(runtime_value(
+        datasets[[column]], methods$method[[row]], methods$route[[row]]
+      ))
     }
   }
   output
 }
 
-tsne_rows <- c(
-  "Rtsne [R total]", "FIt-SNE [R total]",
-  "fastEmbedR CPU [R total]", "fastEmbedR CUDA [R total]",
-  "openTSNE [R-mediated total]", "openTSNE [Python process total]",
-  "cuML t-SNE [R-mediated total]", "cuML t-SNE [Python process total]"
-)
-umap_rows <- c(
-  "umap [R total]", "uwot [R total]", "uwot fast SGD [R total]",
-  "fastEmbedR fuzzy CPU [R total]", "fastEmbedR binary CPU [R total]",
-  "umap-learn [R-mediated total]", "umap-learn [Python process total]",
-  "fastEmbedR fuzzy CUDA [R total]", "fastEmbedR binary CUDA [R total]",
-  "cuML UMAP [R-mediated total]", "cuML UMAP [Python process total]"
-)
-
 latex_runtime_panel <- function(title, matrix) {
   columns <- paste0("l", paste(rep("r", ncol(matrix)), collapse = ""))
   header <- paste(c("Method", colnames(matrix)), collapse = " & ")
-  body <- vapply(seq_len(nrow(matrix)), function(i) {
-    paste(c(latex_escape(rownames(matrix)[[i]]), matrix[i, ]),
-          collapse = " & ") |> paste0(" \\\\")
+  body <- vapply(seq_len(nrow(matrix)), function(index) {
+    values <- c(latex_escape(rownames(matrix)[[index]]), matrix[index, ])
+    paste0(paste(values, collapse = " & "), " \\\\")
   }, character(1L))
   c(
     paste0("\\textbf{", title, "}\\par\\smallskip"),
     "\\resizebox{\\textwidth}{!}{%",
     paste0("\\begin{tabular}{", columns, "}"),
-    "\\toprule",
-    paste0(header, " \\\\"),
-    "\\midrule",
-    body,
-    "\\bottomrule",
-    "\\end{tabular}%",
-    "}"
+    "\\toprule", paste0(header, " \\\\"), "\\midrule", body,
+    "\\bottomrule", "\\end{tabular}%", "}"
   )
 }
 
 table_lines <- c(
-  "\\begin{table}[p]",
-  "\\centering",
+  "\\begin{table}[p]", "\\centering",
   paste0(
-    "\\caption{Median total elapsed time in seconds for every tested method ",
-    "and data set. Methods are rows and data sets are columns. R rows report ",
-    "complete public-call time, R-mediated rows report the complete call made ",
-    "from R, and direct-Python rows report process-wall time rather than ",
-    "fit-only time. \\texttt{--} denotes an unavailable, failed, timed-out, ",
-    "or unrun combination. FlowRepo. denotes FlowRepository and Tabula denotes ",
-    "Tabula Muris.}"
+    "\\caption{Median elapsed time in seconds from one release-locked ",
+    "campaign. R rows report complete public fit calls; Python rows report ",
+    "direct fit calls. Plotting and CSV serialization occur after timing. ",
+    "The symbol -- denotes an unavailable, failed, timed-out, or unrun ",
+    "combination.}"
   ),
-  "\\label{tab:all-method-performance}",
-  "\\scriptsize",
-  latex_runtime_panel(
-    "A. t-SNE",
-    runtime_matrix(tsne, tsne_order, tsne_rows)
-  ),
-  "\\medskip",
-  latex_runtime_panel(
-    "B. UMAP",
-    runtime_matrix(umap, umap_order, umap_rows)
-  ),
+  "\\label{tab:all-method-performance}", "\\scriptsize",
+  latex_runtime_panel("A. PCA", runtime_matrix("pca")), "\\medskip",
+  latex_runtime_panel("B. t-SNE", runtime_matrix("tsne")), "\\medskip",
+  latex_runtime_panel("C. UMAP", runtime_matrix("umap")),
   "\\end{table}"
 )
 writeLines(
-  table_lines,
-  file.path(generated_dir, "table5_all_methods_runtime.tex")
+  table_lines, file.path(generated_dir, "table5_all_methods_runtime.tex")
 )
 
-spec <- data.frame(
-  family = c(rep("tsne", 6L), rep("umap", 9L)),
-  token = c(
-    "Rtsne_full", "KlugerLab_FItSNE",
-    "fastEmbedR_(opentsne|tsne)_cpu_full",
-    "fastEmbedR_(opentsne|tsne)_cuda_full",
-    "python_opentsne_fft(_direct)?",
-    "rapids_cuml_tsne_full", "umap_package", "uwot_default",
-    "uwot_fast_sgd", "fastEmbedR_umap_cpu_fuzzy_full",
-    "fastEmbedR_umap_cpu_binary_full",
-    "fastEmbedR_umap_cuda_fuzzy_full",
-    "fastEmbedR_umap_cuda_binary_full", "python_umap_learn",
-    "rapids_cuml_umap_full"
-  ),
-  profile = c(
-    "standard/cpu4", "standard/cpu4", "standard/cpu4", "standard/cuda",
-    "python/cpu4", "standard/cuda", "standard/cpu4", "standard/cpu4",
-    "standard/cpu4", "standard/cpu4", "standard/cpu4", "standard/cuda",
-    "standard/cuda", "python/cpu4", "standard/cuda"
-  ),
-  title = c(
-    "Rtsne", "FIt-SNE", "fastEmbedR::tsne [CPU]",
-    "fastEmbedR::tsne [CUDA]", "Python openTSNE",
-    "RAPIDS cuML t-SNE", "umap", "uwot", "uwot fast SGD",
-    "fastEmbedR fuzzy [CPU]", "fastEmbedR binary [CPU]",
-    "fastEmbedR fuzzy [CUDA]", "fastEmbedR binary [CUDA]",
-    "Python umap-learn", "RAPIDS cuML UMAP"
-  ),
-  stringsAsFactors = FALSE
-)
-
-find_plot <- function(dataset, token, profile) {
-  root <- file.path(results_root, dataset)
-  if (!dir.exists(root)) return(NA_character_)
-  files <- list.files(root, pattern = "seed4[.]png$", recursive = TRUE,
-                      full.names = TRUE)
-  normalized <- gsub("\\\\", "/", files)
-  profile_hit <- grepl(paste0("/", profile, "/"), normalized, fixed = TRUE)
-  token_hit <- grepl(paste0("_", token, "_threads[0-9]+_seed4[.]png$"),
-                     basename(files), perl = TRUE)
-  hits <- files[profile_hit & token_hit]
-  if (!length(hits)) return(NA_character_)
-  hits[[which.max(file.info(hits)$mtime)]]
+find_output <- function(dataset, method, route) {
+  path <- file.path(
+    results_root, "workflow_comparators", route, dataset, method,
+    "embedding.csv"
+  )
+  if (file.exists(path)) path else NA_character_
 }
 
 draw_placeholder <- function(title) {
@@ -230,98 +199,94 @@ draw_placeholder <- function(title) {
   text(0.5, 0.44, "Unavailable", cex = 0.82, col = "#666666")
 }
 
-draw_image <- function(path, title) {
+draw_output <- function(path, title) {
   if (is.na(path) || !file.exists(path)) {
     draw_placeholder(title)
   } else {
-    image <- png::readPNG(path)
-    plot.new()
-    plot.window(xlim = c(0, 1), ylim = c(0, 1), asp = 1)
-    rasterImage(image, 0, 0, 1, 1, interpolate = TRUE)
+    draw_embedding_csv(path)
   }
-  title(main = title, line = 0.25, cex.main = 0.92, font.main = 2)
+  title(main = title, line = 0.25, cex.main = 0.88, font.main = 2)
 }
 
 render_family <- function(dataset, family) {
   methods <- spec[spec$family == family, , drop = FALSE]
-  nrow_layout <- if (family == "tsne") 2L else 3L
+  rows <- ceiling(nrow(methods) / 3L)
   output <- file.path(
     figure_dir,
     paste0(gsub("[^A-Za-z0-9]+", "_", dataset), "_", family, ".png")
   )
   grDevices::png(
-    output, width = 1500,
-    height = if (family == "tsne") 1000 else 1375,
+    output, width = 1500, height = 500L * rows,
     res = 150, bg = "white"
   )
-  old <- par(mfrow = c(nrow_layout, 3L), mar = c(0.1, 0.1, 1.7, 0.1),
-             oma = c(0, 0, 2.3, 0), xaxs = "i", yaxs = "i")
+  old <- par(
+    mfrow = c(rows, 3L), mar = c(0.1, 0.1, 1.7, 0.1),
+    oma = c(0, 0, 2.3, 0), xaxs = "i", yaxs = "i"
+  )
+  on.exit({
+    par(old)
+    dev.off()
+  }, add = TRUE)
   paths <- character(nrow(methods))
-  for (i in seq_len(nrow(methods))) {
-    paths[[i]] <- find_plot(dataset, methods$token[[i]], methods$profile[[i]])
-    draw_image(paths[[i]], methods$title[[i]])
+  for (index in seq_len(nrow(methods))) {
+    paths[[index]] <- find_output(
+      dataset, methods$method[[index]], methods$route[[index]]
+    )
+    draw_output(paths[[index]], methods$title[[index]])
   }
-  mtext(paste0(dataset_labels[[dataset]], " (seed 4)"), side = 3,
-        outer = TRUE, line = 0.4, cex = 1.25, font = 2)
-  par(old)
-  dev.off()
-  data.frame(dataset = dataset, family = family, method = methods$title,
-             source = paths, available = !is.na(paths), stringsAsFactors = FALSE)
+  empty <- rows * 3L - nrow(methods)
+  if (empty > 0L) for (index in seq_len(empty)) plot.new()
+  mtext(
+    paste0(dataset_labels[[dataset]], " (seed 4)"), side = 3,
+    outer = TRUE, line = 0.4, cex = 1.25, font = 2
+  )
+  data.frame(
+    dataset = dataset, family = family, method = methods$title,
+    source = paths, available = !is.na(paths), stringsAsFactors = FALSE
+  )
 }
 
+families <- c("pca", "tsne", "umap")
 manifest <- do.call(rbind, lapply(datasets, function(dataset) {
-  rbind(render_family(dataset, "tsne"), render_family(dataset, "umap"))
+  do.call(rbind, lapply(families, function(family) {
+    render_family(dataset, family)
+  }))
 }))
-write.csv(manifest, file.path(generated_dir, "embedding_gallery_manifest.csv"),
-          row.names = FALSE, na = "")
-
-gallery_tex <- c(
-  "\\clearpage",
-  "\\section{Embedding output gallery}",
-  paste0(
-    "Figures~\\ref{fig:gallery-first}--\\ref{fig:gallery-last} show seed-4 ",
-    "layouts for every unique implementation represented in Table~",
-    "\\ref{tab:all-method-performance}. Direct-Python and R-mediated timing ",
-    "routes are not duplicated when they invoke the same implementation. ",
-    "Unavailable combinations are marked explicitly."
-  )
+write.csv(
+  manifest, file.path(generated_dir, "embedding_gallery_manifest.csv"),
+  row.names = FALSE, na = ""
 )
 
-for (dataset_index in seq_along(datasets)) {
-  dataset <- datasets[[dataset_index]]
+gallery_tex <- c(
+  "\\clearpage", "\\section{Method output gallery}",
+  paste0(
+    "The following figures are rebuilt from the coordinate CSV files of ",
+    "this campaign. Every panel uses the same R plotting function, label ",
+    "palette, point-size policy, margins, and axis-free presentation."
+  )
+)
+family_names <- c(pca = "PCA", tsne = "t-SNE", umap = "UMAP")
+for (dataset in datasets) {
   stem <- gsub("[^A-Za-z0-9]+", "_", dataset)
-  for (family in c("tsne", "umap")) {
-    label <- paste0("fig:gallery-", tolower(stem), "-", family)
-    if (dataset_index == 1L && family == "tsne") label <- "fig:gallery-first"
-    if (dataset_index == length(datasets) && family == "umap") {
-      label <- "fig:gallery-last"
-    }
-    family_title <- if (family == "tsne") "t-SNE" else "UMAP"
+  for (family in families) {
     gallery_tex <- c(
-      gallery_tex,
-      "",
-      if (dataset_index == 1L && family == "tsne") {
-        "\\begin{figure}[htbp]"
-      } else {
-        "\\begin{figure}[p]"
-      },
-      "\\centering",
+      gallery_tex, "", "\\begin{figure}[p]", "\\centering",
       paste0(
-        "\\includegraphics[width=0.94\\textwidth]{figures/embedding_all_methods/",
-        stem, "_", family, ".png}"
+        "\\includegraphics[width=0.94\\textwidth]",
+        "{", latex_figure_prefix, "/", stem, "_", family, ".png}"
       ),
       paste0(
         "\\caption{", latex_escape(dataset_labels[[dataset]]), " ",
-        family_title, " output layouts for the tested unique implementations ",
-        "(seed 4). Colors encode the benchmark labels and were not used for fitting.}"
+        family_names[[family]], " outputs for the tested methods (seed 4). ",
+        "Colors encode benchmark labels and were not used for fitting.}"
       ),
-      paste0("\\label{", label, "}"),
-      "\\end{figure}",
-      "\\clearpage"
+      "\\end{figure}", "\\clearpage"
     )
   }
 }
-writeLines(gallery_tex,
-           file.path(generated_dir, "all_methods_embedding_gallery.tex"))
+writeLines(
+  gallery_tex,
+  file.path(generated_dir, "all_methods_embedding_gallery.tex")
+)
 
-cat("Wrote Table 5 and embedding gallery under", jss_dir, "\n")
+cat("Wrote campaign Table 5 and method plots under", results_root, "\n")

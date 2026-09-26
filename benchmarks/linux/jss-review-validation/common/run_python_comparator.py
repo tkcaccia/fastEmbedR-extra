@@ -48,11 +48,12 @@ def read_inputs(args):
     quality_text = np.char.lower(np.asarray(rows["quality_sample"]).astype(str))
     quality = np.isin(quality_text, ("true", "t", "1"))
     labels = np.asarray(rows["label"]).astype(str)
+    source_rows = np.asarray(rows["source_row"], dtype=np.int64)
     edge = np.genfromtxt(
         os.path.join(args.input_dir, "quality_compact_affinity.csv"),
         delimiter=",", names=True, dtype=None, encoding="utf-8",
     )
-    return manifest, data, quality, labels, edge
+    return manifest, data, quality, labels, source_rows, edge
 
 
 def package_version(name):
@@ -99,7 +100,8 @@ def fit_cpu(method, data, rank, seed, threads):
         model = TSNE(
             n_components=2, perplexity=30,
             max_iter=TSNE_TOTAL_ITERATIONS,
-            init="pca", learning_rate="auto", method="barnes_hut",
+            init="pca", learning_rate="auto", early_exaggeration=12,
+            method="barnes_hut",
             random_state=seed, n_jobs=threads,
         )
     elif method == "python_opentsne":
@@ -108,7 +110,9 @@ def fit_cpu(method, data, rank, seed, threads):
             n_components=2, perplexity=30,
             n_iter=TSNE_NORMAL_ITERATIONS,
             early_exaggeration_iter=TSNE_EARLY_ITERATIONS,
-            initialization="pca",
+            initialization="pca", learning_rate="auto",
+            early_exaggeration=12, exaggeration=1,
+            initial_momentum=0.5, final_momentum=0.8,
             negative_gradient_method="fft", n_jobs=threads,
             random_state=seed,
         )
@@ -116,6 +120,9 @@ def fit_cpu(method, data, rank, seed, threads):
         import umap
         model = umap.UMAP(
             n_neighbors=30, n_components=2, init="spectral",
+            metric="euclidean", n_epochs=None, learning_rate=1,
+            min_dist=0.1, spread=1, repulsion_strength=1,
+            negative_sample_rate=5,
             random_state=seed, n_jobs=threads,
         )
     values = model.fit(data) if method == "python_opentsne" else (
@@ -133,14 +140,19 @@ def fit_cuda(method, data, rank, seed):
         model = TSNE(
             n_components=2, perplexity=30, n_neighbors=91,
             max_iter=TSNE_TOTAL_ITERATIONS,
-            method="fft", random_state=seed,
+            method="fft", init="pca", random_state=seed,
+            early_exaggeration=12, late_exaggeration=1,
             exaggeration_iter=TSNE_EARLY_ITERATIONS,
+            pre_momentum=0.5, post_momentum=0.8,
             output_type="cupy",
         )
     else:
         from cuml.manifold import UMAP
         model = UMAP(
             n_neighbors=30, n_components=2, init="spectral",
+            metric="euclidean", n_epochs=None, learning_rate=1,
+            min_dist=0.1, spread=1, repulsion_strength=1,
+            negative_sample_rate=5,
             random_state=seed, output_type="cupy",
         )
     return model, model.fit_transform(data)
@@ -228,7 +240,8 @@ def pca_quality(model, data, scores, quality):
     ratio = np.linalg.norm(reference - reconstructed) / np.linalg.norm(
         reference
     )
-    retained = float(np.sum(np.var(scores, axis=0)) / np.sum(np.var(data, axis=0)))
+    score_variance = np.sum(np.var(scores, axis=0))
+    retained = float(score_variance / np.sum(np.var(data, axis=0)))
     return {
         "trustworthiness": np.nan,
         "preserve_at_30": np.nan,
@@ -247,6 +260,42 @@ def write_csv(path, rows):
         writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
         writer.writeheader()
         writer.writerows(rows)
+
+
+def umap_epochs(n):
+    return 500 if n < 10000 else 200
+
+
+def read_parameter_contract(method):
+    path = os.path.join(
+        os.path.dirname(__file__), "workflow_parameter_contract.csv"
+    )
+    with open(path, newline="", encoding="utf-8") as handle:
+        rows = [row for row in csv.DictReader(handle)
+                if row["method"] == method]
+    if len(rows) != 1:
+        raise ValueError(f"Missing parameter contract for {method}")
+    return rows[0]
+
+
+def parameter_metadata(args, n):
+    row = read_parameter_contract(args.method)
+    row.pop("method")
+    row.pop("family")
+    row["learning_rate_value"] = {
+        "sklearn_tsne": max(n / 48, 50),
+        "python_opentsne": max(n / 12, 200),
+        "python_umap": 1,
+        "cuml_umap": 1,
+    }.get(args.method, "")
+    row["epochs_value"] = (
+        umap_epochs(n) if family(args.method) == "umap" else ""
+    )
+    row["min_dist_value"] = (
+        float(row["min_dist_policy"])
+        if family(args.method) == "umap" else ""
+    )
+    return row
 
 
 def result_row(args, manifest, elapsed, metrics):
@@ -307,26 +356,20 @@ def result_row(args, manifest, elapsed, metrics):
             if family(args.method) == "tsne"
             else "workflow_package_policy"
         ),
-        "initialization": {
-            "sklearn_tsne": "pca",
-            "python_opentsne": "pca",
-            "python_umap": "spectral",
-            "cuml_tsne": "package_default",
-            "cuml_umap": "spectral",
-        }.get(args.method, "not_applicable"),
         "knn_boundary": (
             "not_applicable" if family(args.method) == "pca"
             else "internal_to_fit_call"
         ),
         "input_precision": "float32",
     }
-    return row | metrics | versions
+    parameters = parameter_metadata(args, int(manifest["n"]))
+    return row | parameters | metrics | versions
 
 
 def main(args):
     if args.timing_reps < 2:
         raise ValueError("At least two timing repetitions are required")
-    manifest, data, quality, labels, edge = read_inputs(args)
+    manifest, data, quality, labels, source_rows, edge = read_inputs(args)
     rank = min(50, data.shape[0] - 1, data.shape[1] - 1)
     fit_once(args, data, rank)
     elapsed = []
@@ -364,6 +407,16 @@ def main(args):
         for index, seconds in enumerate(elapsed, start=1)
     ])
     if values.shape[1] >= 2:
+        write_csv(os.path.join(args.output_dir, "embedding.csv"), [
+            {
+                "benchmark_row": int(index + 1),
+                "source_row": int(source_rows[index]),
+                "label": str(labels[index]),
+                "dimension_1": float(values[index, 0]),
+                "dimension_2": float(values[index, 1]),
+            }
+            for index in range(len(values))
+        ])
         selected = values[quality, :2]
         indices = np.flatnonzero(quality)
         write_csv(os.path.join(args.output_dir, "quality_layout.csv"), [
