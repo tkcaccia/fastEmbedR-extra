@@ -27,6 +27,7 @@ campaign_verify_suite_revision
 CONTAINER="$(command -v apptainer || command -v singularity)"
 "$CONTAINER" exec --cleanenv --bind "$BASE_DIR:$BASE_DIR" \
   --pwd "$BASE_DIR" "${FASTEMBEDR_CONTAINER_R_ENV[@]}" \
+  --env "INCLUDE_NOMAD=${INCLUDE_NOMAD:-FALSE}" \
   "$IMAGE" "$FASTEMBEDR_RSCRIPT" \
   "$SUITE/common/score_full_cuda_pair.R" \
   "--dataset=$DATASET" "--data-root=$DATA_ROOT" \
@@ -34,6 +35,7 @@ CONTAINER="$(command -v apptainer || command -v singularity)"
 for family in tsne umap; do
   "$CONTAINER" exec --cleanenv --bind "$BASE_DIR:$BASE_DIR" \
     --pwd "$BASE_DIR" "${FASTEMBEDR_CONTAINER_R_ENV[@]}" \
+    --env "INCLUDE_NOMAD=${INCLUDE_NOMAD:-FALSE}" \
     "$IMAGE" "$FASTEMBEDR_RSCRIPT" \
     "$SUITE/common/plot_cuda_pair.R" \
     "--dataset=$DATASET" "--family=$family" \

@@ -88,6 +88,10 @@ for (family in c("tsne", "umap")) {
 }
 
 test_cuda_pair_plot <- function() {
+old_nomad <- Sys.getenv("INCLUDE_NOMAD", unset = NA_character_)
+on.exit(if (is.na(old_nomad)) Sys.unsetenv("INCLUDE_NOMAD") else {
+    Sys.setenv(INCLUDE_NOMAD = old_nomad)
+}, add = TRUE)
 pair_root <- tempfile("cuda-pair-test-")
 on.exit(unlink(pair_root, recursive = TRUE), add = TRUE)
 pair_input <- file.path(pair_root, "input")
@@ -136,6 +140,18 @@ stopifnot(all(utils::read.csv(file.path(pair_dir, "comparison.csv"))$
 summary <- utils::read.csv(file.path(pair_dir, "comparison.csv"))
 stopifnot(all(summary$plotted_n == 5L))
 stopifnot(all(summary$quality_sample_n == 4L))
+nomad_dir <- file.path(pair_output, "workflow_comparators",
+    "python_cuda", dataset, "nomad")
+dir.create(nomad_dir, recursive = TRUE)
+file.copy(file.path(dirname(nomad_dir), "cuml_tsne",
+    c("status.csv", "result.csv", "embedding.csv")), nomad_dir)
+Sys.setenv(INCLUDE_NOMAD = "TRUE")
+stopifnot(is.null(attr(run_plot(), "status")))
+nomad_summary <- utils::read.csv(file.path(pair_dir,
+    "comparison.csv"))
+stopifnot(nrow(nomad_summary) == 3L)
+stopifnot(identical(nomad_summary$method_family[[3L]], "nomad"))
+stopifnot(is.na(nomad_summary$sampled_kl[[3L]]))
 missing <- file.path(pair_output, "workflow_comparators", "python_cuda",
     dataset, "cuml_tsne", "status.csv")
 unlink(missing)

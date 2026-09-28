@@ -18,6 +18,10 @@ methods <- c(
     paste0("fastembedr_", family), paste0("cuml_", family)
 )
 modes <- c("r_cuda", "python_cuda")
+if (family == "tsne" && Sys.getenv("INCLUDE_NOMAD") == "TRUE") {
+    methods <- c(methods, "nomad")
+    modes <- c(modes, "python_cuda")
+}
 pair_dir <- file.path(plot_root, "cuda_comparison_live", dataset, family)
 dir.create(pair_dir, recursive = TRUE, showWarnings = FALSE)
 
@@ -79,7 +83,8 @@ format_metric <- function(value, digits = 3L) {
     format(round(value, digits), trim = TRUE, nsmall = digits)
 }
 
-draw_panel <- function(method, layout, labels, heading, quality_n) {
+draw_panel <- function(method, layout, labels, heading, quality_n,
+                       show_kl = TRUE) {
     graphics::par(mar = c(2.5, 0.5, 3.4, 0.5))
     if (is.null(layout)) {
         graphics::plot.new()
@@ -95,7 +100,7 @@ draw_panel <- function(method, layout, labels, heading, quality_n) {
     trust <- format_metric(metric(method, "trustworthiness"))
     preserve <- format_metric(metric(method, "preserve_at_30"))
     quality <- paste0("T=", trust, "  Preserve@30=", preserve)
-    if (family == "tsne") {
+    if (family == "tsne" && show_kl) {
         quality <- paste0(quality, "  compact-KL=",
             format_metric(metric(method, "sampled_kl")))
     }
@@ -114,6 +119,7 @@ main <- function() {
     results <- lapply(seq_along(methods), read_method)
     summary <- data.frame(
         dataset = dataset, family = family, method = methods,
+        method_family = ifelse(methods == "nomad", "nomad", family),
         status = vapply(results, `[[`, character(1L), "status"),
         timing_scope = vapply(results, function(x) {
             as.character(metric(x, "timing_scope"))
@@ -132,16 +138,23 @@ main <- function() {
         quality_sample_n = sum(sample$quality_sample),
         plotted_n = nrow(sample)
     )
+    summary$sampled_kl[methods == "nomad"] <- NA_real_
     write_csv_atomic(summary, file.path(pair_dir, "comparison.csv"))
     layouts <- lapply(results, read_layout, benchmark_rows = sample)
     image <- file.path(pair_dir, "comparison.png")
-    grDevices::png(image, width = 2200L, height = 1100L, res = 180L)
+    grDevices::png(image, width = 1100L * length(methods),
+        height = 1100L, res = 180L)
     on.exit(grDevices::dev.off(), add = TRUE)
-    graphics::par(mfrow = c(1L, 2L))
+    graphics::par(mfrow = c(1L, length(methods)))
     draw_panel(results[[1L]], layouts[[1L]], sample$label,
         "fastEmbedR CUDA (R public call)", sum(sample$quality_sample))
     draw_panel(results[[2L]], layouts[[2L]], sample$label,
         "cuML CUDA (direct Python fit)", sum(sample$quality_sample))
+    if (length(methods) == 3L) {
+        draw_panel(results[[3L]], layouts[[3L]], sample$label,
+            "NOMAD CUDA (distinct objective)",
+            sum(sample$quality_sample), show_kl = FALSE)
+    }
     state <- if (all(summary$status == "success") &&
             all(vapply(layouts, Negate(is.null), logical(1L)))) {
         "success"

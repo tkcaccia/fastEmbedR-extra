@@ -133,24 +133,34 @@ PY
 
 export INCLUDE_NOMAD=TRUE
 run_stage full_pairs
-run_stage full_nomad
 python3 - "$JSS_LEDGER" <<'PY'
 import csv
 import sys
 
 with open(sys.argv[1], newline="") as handle:
     rows = list(csv.DictReader(handle, delimiter="\t"))
-nomad = [row for row in rows if row["label"] == "full_nomad"]
 pair = [row for row in rows if row["label"] == "full_pairs"]
 assert len(pair) == 1
-assert pair[0]["array"] == "0-16%2"
-assert len(nomad) == 1
-assert nomad[0]["array"] == "0-10%2"
-assert nomad[0]["script"].endswith("run_full_nomad_cuda.sh")
-assert any(row["label"] == "controller_full_nomad" for row in rows)
-assert any(row["label"] == "controller_full_quality" for row in rows)
+assert pair[0]["array"] == "0-18%2"
+assert not any("full_nomad" in row["label"] for row in rows)
+next_stage = [row for row in rows if row["label"] ==
+              "controller_full_quality"]
+assert len(next_stage) == 1
+assert next_stage[0]["dependency"] == "afterany:" + pair[0]["job_id"]
 PY
 unset INCLUDE_NOMAD
+export JSS_CAMPAIGN_ID=test_without_nomad
+export JSS_CAMPAIGN_DIR="$TEST_ROOT/campaign_without_nomad"
+export JSS_LEDGER="$JSS_CAMPAIGN_DIR/jobs.tsv"
+run_stage full_pairs
+python3 - "$JSS_LEDGER" <<'PY'
+import csv
+import sys
+with open(sys.argv[1], newline="") as handle:
+    rows = list(csv.DictReader(handle, delimiter="\t"))
+pair = [row for row in rows if row["label"] == "full_pairs"]
+assert [row["array"] for row in pair] == ["0-16%2"]
+PY
 
 mkdir -p "$TEST_ROOT/mock_suite/common"
 cat > "$TEST_ROOT/mock_suite/common/run_array_task.sh" <<'EOF'
@@ -211,22 +221,24 @@ fi
 EOF
 export JSS_PAIR_CALLS="$TEST_ROOT/pair_calls.tsv"
 export JSS_FAIL_PAIR=TRUE
+export INCLUDE_NOMAD=TRUE
 PAIR="$(dirname "$CONTROLLER")/run_full_cuda_pair.sh"
 if SLURM_ARRAY_TASK_ID=0 bash "$PAIR" \
     > "$TEST_ROOT/full_pair.log" 2>&1; then
   echo 'Full CUDA bundle did not report a failed method.' >&2
   exit 1
 fi
-[[ "$(wc -l < "$JSS_PAIR_CALLS")" -eq 4 ]]
+[[ "$(wc -l < "$JSS_PAIR_CALLS")" -eq 5 ]]
 grep -q $'^r_cuda\t14\tTRUE$' "$JSS_PAIR_CALLS"
 grep -q $'^python_cuda\t14\tTRUE$' "$JSS_PAIR_CALLS"
 grep -q $'^r_cuda\t15\tTRUE$' "$JSS_PAIR_CALLS"
 grep -q $'^python_cuda\t15\tTRUE$' "$JSS_PAIR_CALLS"
+grep -q $'^python_nomad\t7\tTRUE$' "$JSS_PAIR_CALLS"
 grep -q ',python_cuda,tsne,14,failed,7,' \
   "$OUTPUT_ROOT/scheduler_status/full_cuda_pairs/555_0.csv"
 export JSS_FAIL_PAIR=FALSE
 : > "$JSS_PAIR_CALLS"
-for array_id in {0..16}; do
+for array_id in {0..18}; do
   SLURM_ARRAY_TASK_ID="$array_id" bash "$PAIR" \
     >> "$TEST_ROOT/full_pair_coverage.log"
 done
@@ -237,12 +249,20 @@ import sys
 
 with open(sys.argv[1], newline="") as handle:
     rows = list(csv.reader(handle, delimiter="\t"))
-assert len(rows) == 44
+assert len(rows) == 55
 actual = collections.Counter((mode, int(task)) for mode, task, flag in rows)
 assert all(flag == "TRUE" for _, _, flag in rows)
 expected = collections.Counter((mode, task)
                                for task in range(22)
                                for mode in ("r_cuda", "python_cuda"))
+expected.update(("python_nomad", task) for task in range(11))
 assert actual == expected
 PY
+unset INCLUDE_NOMAD
+: > "$JSS_PAIR_CALLS"
+for array_id in {0..16}; do
+  SLURM_ARRAY_TASK_ID="$array_id" bash "$PAIR" \
+    >> "$TEST_ROOT/full_pair_coverage.log"
+done
+[[ "$(wc -l < "$JSS_PAIR_CALLS")" -eq 44 ]]
 echo 'Campaign CPU/CUDA schedule: PASS'

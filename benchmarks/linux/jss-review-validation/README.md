@@ -453,13 +453,14 @@ bash \
   benchmark_scripts/fastembedr_jss_review_validation/submit_full_cuda_campaign.sh
 ```
 
-The staged controller submits 11 CPU input jobs, 11 binary-input jobs, 17
-GPU jobs (two concurrent), 11 R quality jobs, then a strict audit. Nine
-datasets run `fastembedr_tsne`, `cuml_tsne`, `fastembedr_umap`, and
-`cuml_umap` sequentially within a dataset job. FlowRepository and ImageNet
-keep separate allocations per method so a bundled 48-hour limit cannot
-truncate later methods. Each subrun records its own status and later methods
-still run after a failure. Each method has one warm-up and three
+The staged controller submits 11 CPU input jobs, 11 binary-input jobs,
+17 GPU jobs (19 with NOMAD; two concurrent), 11 R quality jobs, then a
+strict audit. Nine datasets run `fastembedr_tsne`, `cuml_tsne`,
+`fastembedr_umap`, and `cuml_umap` sequentially within a dataset job;
+NOMAD follows in that same allocation when enabled. FlowRepository and
+ImageNet keep separate allocations per method so a bundled 48-hour limit
+cannot truncate later methods. Each subrun records its own status and
+later methods still run after a failure. Each method has one warm-up and three
 same-seed timed repetitions. GPU work has a 42-hour method limit and a
 48-hour Slurm limit. A timeout or unavailable method is reported as a
 failure, never replaced by a smaller dataset or CPU fallback.
@@ -478,10 +479,10 @@ INCLUDE_NOMAD=TRUE bash \
 The launcher uses `/opt/nomad/bin/python` for NOMAD and rejects an image
 without installed, source-pinned NOMAD. A local Git checkout is accepted only
 when the installed projection module matches that pinned checkout.
-It records the installed NOMAD version and commit. An additional 11-job GPU
-wave runs NOMAD on all source rows after the fastEmbedR/cuML dataset jobs.
-The same saved
-float32 input and fixed quality rows are used. NOMAD is not t-SNE or UMAP:
+It records the installed NOMAD version and commit. NOMAD runs on all source
+rows in the same dataset GPU jobs as the other methods, with separate
+allocations for FlowRepository and ImageNet. The same saved float32 input and
+fixed quality rows are used. NOMAD is not t-SNE or UMAP:
 its inner-product neighbor search, contrastive objective, and 100-epoch
 schedule are reported separately. The benchmark requests eight neighbors,
 10,000 noise samples, a batch of at most 8,192 observations, and one cell
@@ -492,6 +493,8 @@ inapplicable. Its own `embedding.csv`, R-style `embedding.png`, timing
 repetitions, host/GPU memory measurements, and status are stored at
 `results/workflow_comparators/python_cuda/DATASET/nomad/`. The strict
 final audit requires all NOMAD outputs when this option is enabled.
+The t-SNE comparison image includes NOMAD as a third, clearly labelled
+visual panel. Its KL entry is inapplicable; the UMAP image remains a pair.
 Do not include NOMAD in t-SNE/UMAP speedup ratios or treat its 100 epochs
 as equivalent to 1,000 t-SNE iterations.
 

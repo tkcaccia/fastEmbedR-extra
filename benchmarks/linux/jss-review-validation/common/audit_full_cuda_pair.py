@@ -69,8 +69,21 @@ def audit(campaign, inputs, outputs):
                 failures.append(f"{dataset}/{method}: {error}")
         for family in ("tsne", "umap"):
             image = outputs / "cuda_comparison_live" / dataset
-            if not (image / family / "comparison.png").is_file():
+            panel = image / family
+            if not (panel / "comparison.png").is_file():
                 failures.append(f"{dataset}/{family}: missing paired plot")
+            if family == "tsne" and os.environ.get("INCLUDE_NOMAD") == "TRUE":
+                try:
+                    with (panel / "comparison.csv").open(
+                        newline="", encoding="utf-8"
+                    ) as handle:
+                        rows = list(csv.DictReader(handle))
+                    if not any(row["method"] == "nomad" and
+                               row["method_family"] == "nomad" and
+                               row["status"] == "success" for row in rows):
+                        raise ValueError("NOMAD panel is absent or mislabeled")
+                except (OSError, ValueError, KeyError) as error:
+                    failures.append(f"{dataset}/nomad-panel: {error}")
     with (campaign / "failures.tsv").open(encoding="utf-8") as handle:
         scheduler_failures = handle.read().splitlines()[1:]
     if scheduler_failures:

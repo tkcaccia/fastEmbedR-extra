@@ -53,15 +53,12 @@ case "$JSS_STAGE" in
   full_pairs)
     NEXT_STAGE=full_quality
     if [[ "${INCLUDE_NOMAD:-FALSE}" == TRUE ]]; then
-      NEXT_STAGE=full_nomad
+      full_array='0-18%2'
+    else
+      full_array='0-16%2'
     fi
     add_worker full_pairs \
-      "$SUITE/slurm/run_full_pairs_cuda.sh" '0-16%2'
-    ;;
-  full_nomad)
-    NEXT_STAGE=full_quality
-    add_worker full_nomad \
-      "$SUITE/slurm/run_full_nomad_cuda.sh" '0-10%2'
+      "$SUITE/slurm/run_full_pairs_cuda.sh" "$full_array"
     ;;
   full_quality)
     NEXT_STAGE=full_final_audit
