@@ -2,6 +2,7 @@
 
 import argparse
 import csv
+import gc
 import importlib.metadata
 import os
 import sys
@@ -13,8 +14,13 @@ from sklearn.manifold import trustworthiness
 from sklearn.neighbors import NearestNeighbors
 
 TSNE_EARLY_ITERATIONS = 250
-TSNE_TOTAL_ITERATIONS = 750
+TSNE_TOTAL_ITERATIONS = 1000
 TSNE_NORMAL_ITERATIONS = TSNE_TOTAL_ITERATIONS - TSNE_EARLY_ITERATIONS
+CUML_TSNE_MIN_GRAD_NORM = 0.0
+NOMAD_EPOCHS = 100
+NOMAD_MAX_BATCH = 8192
+NOMAD_NEIGHBORS = 8
+NOMAD_NOISE = 10000
 
 
 def parse_args():
@@ -27,6 +33,8 @@ def parse_args():
     parser.add_argument("--threads", type=int, default=4)
     parser.add_argument("--seed", type=int, default=4)
     parser.add_argument("--timing-reps", type=int, default=5)
+    parser.add_argument("--n-components", type=int, default=2)
+    parser.add_argument("--defer-quality", action="store_true")
     return parser.parse_args()
 
 
@@ -49,10 +57,12 @@ def read_inputs(args):
     quality = np.isin(quality_text, ("true", "t", "1"))
     labels = np.asarray(rows["label"]).astype(str)
     source_rows = np.asarray(rows["source_row"], dtype=np.int64)
-    edge = np.genfromtxt(
-        os.path.join(args.input_dir, "quality_compact_affinity.csv"),
-        delimiter=",", names=True, dtype=None, encoding="utf-8",
-    )
+    edge = None
+    if not args.defer_quality:
+        edge = np.genfromtxt(
+            os.path.join(args.input_dir, "quality_compact_affinity.csv"),
+            delimiter=",", names=True, dtype=None, encoding="utf-8",
+        )
     return manifest, data, quality, labels, source_rows, edge
 
 
@@ -64,6 +74,8 @@ def package_version(name):
 
 
 def family(name):
+    if name == "nomad":
+        return "nomad"
     if "pca" in name:
         return "pca"
     if "tsne" in name:
@@ -89,7 +101,7 @@ def to_numpy(value):
     return np.asarray(value)
 
 
-def fit_cpu(method, data, rank, seed, threads):
+def fit_cpu(method, data, rank, seed, threads, components):
     if method == "sklearn_pca":
         from sklearn.decomposition import PCA
         model = PCA(
@@ -98,7 +110,7 @@ def fit_cpu(method, data, rank, seed, threads):
     elif method == "sklearn_tsne":
         from sklearn.manifold import TSNE
         model = TSNE(
-            n_components=2, perplexity=30,
+            n_components=components, perplexity=30,
             max_iter=TSNE_TOTAL_ITERATIONS,
             init="pca", learning_rate="auto", early_exaggeration=12,
             method="barnes_hut",
@@ -107,67 +119,107 @@ def fit_cpu(method, data, rank, seed, threads):
     elif method == "python_opentsne":
         from openTSNE import TSNE
         model = TSNE(
-            n_components=2, perplexity=30,
+            n_components=components, perplexity=30,
             n_iter=TSNE_NORMAL_ITERATIONS,
             early_exaggeration_iter=TSNE_EARLY_ITERATIONS,
             initialization="pca", learning_rate="auto",
             early_exaggeration=12, exaggeration=1,
             initial_momentum=0.5, final_momentum=0.8,
-            negative_gradient_method="fft", n_jobs=threads,
+            negative_gradient_method=("fft" if components == 2 else "bh"),
+            n_jobs=threads,
             random_state=seed,
         )
-    else:
+    elif method == "python_umap":
         import umap
         model = umap.UMAP(
-            n_neighbors=30, n_components=2, init="spectral",
+            n_neighbors=30, n_components=components, init="spectral",
             metric="euclidean", n_epochs=None, learning_rate=1,
             min_dist=0.1, spread=1, repulsion_strength=1,
             negative_sample_rate=5,
             random_state=seed, n_jobs=threads,
         )
+    else:
+        raise ValueError(f"Unsupported CPU comparator: {method}")
     values = model.fit(data) if method == "python_opentsne" else (
         model.fit_transform(data)
     )
     return model, values
 
 
-def fit_cuda(method, data, rank, seed):
+def fit_cuda(method, data, rank, seed, components):
+    if method == "nomad":
+        import torch
+        from nomad_projection import NomadProjection
+        if not torch.cuda.is_available() or torch.cuda.device_count() != 1:
+            raise RuntimeError("NOMAD requires exactly one visible CUDA GPU")
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        torch.cuda.reset_peak_memory_stats()
+        model = NomadProjection()
+        values = model.fit_transform(
+            X=data, epochs=NOMAD_EPOCHS,
+            batch_size=min(NOMAD_MAX_BATCH, len(data)),
+            n_neighbors=NOMAD_NEIGHBORS, n_noise=NOMAD_NOISE,
+            n_cells=1 if len(data) < 5000 else 5,
+        )
+        torch.cuda.synchronize()
+        model.cuda_peak_allocated_bytes = torch.cuda.max_memory_allocated()
+        return model, values
     if method == "cuml_pca":
         from cuml.decomposition import PCA
         model = PCA(n_components=rank, output_type="cupy")
     elif method == "cuml_tsne":
         from cuml.manifold import TSNE
         model = TSNE(
-            n_components=2, perplexity=30, n_neighbors=91,
+            n_components=components, perplexity=30, n_neighbors=91,
             max_iter=TSNE_TOTAL_ITERATIONS,
             method="fft", init="pca", random_state=seed,
             early_exaggeration=12, late_exaggeration=1,
             exaggeration_iter=TSNE_EARLY_ITERATIONS,
             pre_momentum=0.5, post_momentum=0.8,
+            learning_rate=200, learning_rate_method="none",
+            min_grad_norm=CUML_TSNE_MIN_GRAD_NORM,
             output_type="cupy",
         )
-    else:
+    elif method == "cuml_umap":
         from cuml.manifold import UMAP
         model = UMAP(
-            n_neighbors=30, n_components=2, init="spectral",
+            n_neighbors=30, n_components=components, init="spectral",
             metric="euclidean", n_epochs=None, learning_rate=1,
             min_dist=0.1, spread=1, repulsion_strength=1,
             negative_sample_rate=5,
             random_state=seed, output_type="cupy",
         )
+    else:
+        raise ValueError(f"Unsupported CUDA comparator: {method}")
     return model, model.fit_transform(data)
 
 
 def fit_once(args, data, rank):
     started = time.perf_counter()
     if args.backend == "cuda":
-        model, values = fit_cuda(args.method, data, rank, args.seed)
+        model, values = fit_cuda(
+            args.method, data, rank, args.seed, args.n_components,
+        )
     else:
         model, values = fit_cpu(
-            args.method, data, rank, args.seed, args.threads
+            args.method, data, rank, args.seed, args.threads,
+            args.n_components
         )
+    if args.method == "cuml_tsne":
+        actual = getattr(model, "n_iter_", None)
+        if actual != TSNE_TOTAL_ITERATIONS:
+            raise RuntimeError(
+                f"cuML t-SNE stopped at {actual} of "
+                f"{TSNE_TOTAL_ITERATIONS} requested iterations"
+            )
     host_values = to_numpy(values)
     synchronize(args.backend)
+    if host_values.shape != (len(data), args.n_components):
+        raise RuntimeError("Comparator returned the wrong embedding shape")
+    if not np.isfinite(host_values).all():
+        raise RuntimeError("Comparator returned non-finite coordinates")
     elapsed = time.perf_counter() - started
     return model, host_values, elapsed
 
@@ -256,9 +308,12 @@ def write_csv(path, rows):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     if isinstance(rows, dict):
         rows = [rows]
+    rows = iter(rows)
+    first = next(rows)
     with open(path, "w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(handle, fieldnames=list(first))
         writer.writeheader()
+        writer.writerow(first)
         writer.writerows(rows)
 
 
@@ -282,13 +337,17 @@ def parameter_metadata(args, n):
     row = read_parameter_contract(args.method)
     row.pop("method")
     row.pop("family")
+    if args.n_components == 3 and args.method == "python_opentsne":
+        row["optimizer"] = "Barnes-Hut"
     row["learning_rate_value"] = {
         "sklearn_tsne": max(n / 48, 50),
         "python_opentsne": max(n / 12, 200),
         "python_umap": 1,
         "cuml_umap": 1,
+        "cuml_tsne": 200,
     }.get(args.method, "")
     row["epochs_value"] = (
+        NOMAD_EPOCHS if args.method == "nomad" else
         umap_epochs(n) if family(args.method) == "umap" else ""
     )
     row["min_dist_value"] = (
@@ -298,7 +357,7 @@ def parameter_metadata(args, n):
     return row
 
 
-def result_row(args, manifest, elapsed, metrics):
+def result_row(args, manifest, elapsed, metrics, model):
     versions = {
         "python_version": sys.version.split()[0],
         "numpy_version": package_version("numpy"),
@@ -310,12 +369,14 @@ def result_row(args, manifest, elapsed, metrics):
             "cuml_pca": "cuml",
             "cuml_tsne": "cuml",
             "cuml_umap": "cuml",
+            "nomad": "nomad_projection",
         }[args.method]),
     }
     row = {
         "dataset": args.dataset,
         "family": family(args.method),
         "method": args.method,
+        "n_components": args.n_components,
         "language": "Python",
         "backend": args.backend,
         "timing_scope": "direct_Python_fit",
@@ -334,13 +395,19 @@ def result_row(args, manifest, elapsed, metrics):
         "elapsed_q1_sec": float(np.quantile(elapsed, 0.25)),
         "elapsed_q3_sec": float(np.quantile(elapsed, 0.75)),
         "threads": args.threads,
-        "metric": "" if family(args.method) == "pca" else "euclidean",
+        "metric": (
+            "" if family(args.method) == "pca" else
+            "inner_product" if args.method == "nomad" else "euclidean"
+        ),
         "perplexity": 30 if family(args.method) == "tsne" else "",
-        "n_neighbors": 30 if family(args.method) == "umap" else "",
+        "n_neighbors": (
+            NOMAD_NEIGHBORS if args.method == "nomad" else
+            30 if family(args.method) == "umap" else ""
+        ),
         "iterations_policy": {
-            "sklearn_tsne": "750_total",
-            "python_opentsne": "250_early+500_normal",
-            "cuml_tsne": "750_total",
+            "sklearn_tsne": "1000_total",
+            "python_opentsne": "250_early+750_normal",
+            "cuml_tsne": "1000_total",
         }.get(args.method, "package_default"),
         "early_iterations": (
             TSNE_EARLY_ITERATIONS if family(args.method) == "tsne" else ""
@@ -352,15 +419,43 @@ def result_row(args, manifest, elapsed, metrics):
             TSNE_TOTAL_ITERATIONS if family(args.method) == "tsne" else ""
         ),
         "comparison_contract": (
-            "workflow_750_total_iterations"
-            if family(args.method) == "tsne"
-            else "workflow_package_policy"
+            "distinct_nomad_objective" if args.method == "nomad" else
+            "workflow_1000_total_iterations"
+            if family(args.method) == "tsne" else
+            "workflow_package_policy"
+        ),
+        "nomad_batch_size": (
+            min(NOMAD_MAX_BATCH, int(manifest["n"]))
+            if args.method == "nomad" else ""
+        ),
+        "nomad_n_noise": NOMAD_NOISE if args.method == "nomad" else "",
+        "nomad_n_cells": (
+            1 if int(manifest["n"]) < 5000 else 5
+        ) if args.method == "nomad" else "",
+        "nomad_cuda_peak_allocated_bytes": (
+            getattr(model, "cuda_peak_allocated_bytes", "")
+            if args.method == "nomad" else ""
         ),
         "knn_boundary": (
             "not_applicable" if family(args.method) == "pca"
             else "internal_to_fit_call"
         ),
         "input_precision": "float32",
+        "quality_deferred": args.defer_quality,
+        "cuml_tsne_learning_rate_method": (
+            "none" if args.method == "cuml_tsne" else ""
+        ),
+        "cuml_tsne_reported_neighbors": (
+            getattr(model, "n_neighbors", "")
+            if args.method == "cuml_tsne" else ""
+        ),
+        "cuml_tsne_reported_iterations": (
+            getattr(model, "n_iter_", "")
+            if args.method == "cuml_tsne" else ""
+        ),
+        "fitted_kl_divergence": float(getattr(
+            model, "kl_divergence_", np.nan
+        )) if args.method == "cuml_tsne" else np.nan,
     }
     parameters = parameter_metadata(args, int(manifest["n"]))
     return row | parameters | metrics | versions
@@ -369,23 +464,51 @@ def result_row(args, manifest, elapsed, metrics):
 def main(args):
     if args.timing_reps < 2:
         raise ValueError("At least two timing repetitions are required")
+    if args.n_components not in (2, 3):
+        raise ValueError("Output dimensions must be 2 or 3")
+    if args.method == "nomad" and args.backend != "cuda":
+        raise ValueError("NOMAD requires the CUDA backend")
+    if args.n_components == 3 and args.method in ("cuml_tsne", "nomad"):
+        write_csv(os.path.join(args.output_dir, "status.csv"), {
+            "experiment": "workflow_comparator",
+            "dataset": args.dataset,
+            "backend": f"python_{args.backend}",
+            "status": "unsupported",
+            "error": f"{args.method} supports only two output components.",
+            "method": args.method,
+        })
+        return
     manifest, data, quality, labels, source_rows, edge = read_inputs(args)
     rank = min(50, data.shape[0] - 1, data.shape[1] - 1)
-    fit_once(args, data, rank)
+    warmup_model, warmup_values, _ = fit_once(args, data, rank)
+    del warmup_model, warmup_values
+    if args.defer_quality:
+        gc.collect()
     elapsed = []
     model, values = None, None
     for _ in range(args.timing_reps):
+        if args.defer_quality:
+            model, values = None, None
+            gc.collect()
         model, values, seconds = fit_once(args, data, rank)
         elapsed.append(seconds)
     used_family = family(args.method)
-    metrics = (
-        pca_quality(model, data, values, quality)
-        if used_family == "pca"
-        else layout_quality(data, values, labels, quality, edge, used_family)
-    )
+    if args.defer_quality:
+        metrics = dict.fromkeys((
+            "trustworthiness", "preserve_at_30", "label_knn_accuracy",
+            "sampled_kl", "reconstruction_relative_l2",
+            "retained_variance_fraction",
+        ), np.nan)
+    else:
+        metrics = (
+            pca_quality(model, data, values, quality)
+            if used_family == "pca" else layout_quality(
+                data, values, labels, quality, edge, used_family
+            )
+        )
     write_csv(
         os.path.join(args.output_dir, "result.csv"),
-        result_row(args, manifest, elapsed, metrics),
+        result_row(args, manifest, elapsed, metrics, model),
     )
     write_csv(os.path.join(args.output_dir, "timing_repetitions.csv"), [
         {
@@ -407,26 +530,31 @@ def main(args):
         for index, seconds in enumerate(elapsed, start=1)
     ])
     if values.shape[1] >= 2:
-        write_csv(os.path.join(args.output_dir, "embedding.csv"), [
+        write_csv(os.path.join(args.output_dir, "embedding.csv"), (
             {
                 "benchmark_row": int(index + 1),
                 "source_row": int(source_rows[index]),
                 "label": str(labels[index]),
                 "dimension_1": float(values[index, 0]),
                 "dimension_2": float(values[index, 1]),
+                **({"dimension_3": float(values[index, 2])}
+                   if args.n_components == 3 else {}),
             }
             for index in range(len(values))
-        ])
-        selected = values[quality, :2]
-        indices = np.flatnonzero(quality)
-        write_csv(os.path.join(args.output_dir, "quality_layout.csv"), [
-            {
-                "benchmark_row": int(row + 1),
-                "x": float(selected[index, 0]),
-                "y": float(selected[index, 1]),
-            }
-            for index, row in enumerate(indices)
-        ])
+        ))
+        if not args.defer_quality:
+            selected = values[quality, :args.n_components]
+            indices = np.flatnonzero(quality)
+            write_csv(os.path.join(args.output_dir, "quality_layout.csv"), [
+                {
+                    "benchmark_row": int(row + 1),
+                    "x": float(selected[index, 0]),
+                    "y": float(selected[index, 1]),
+                    **({"z": float(selected[index, 2])}
+                       if args.n_components == 3 else {}),
+                }
+                for index, row in enumerate(indices)
+            ])
     write_csv(os.path.join(args.output_dir, "status.csv"), {
         "experiment": "workflow_comparator",
         "dataset": args.dataset,

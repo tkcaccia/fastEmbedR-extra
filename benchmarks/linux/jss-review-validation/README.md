@@ -1,8 +1,100 @@
 # fastEmbedR JSS reviewer-validation suite
 
+## Campaign identity and progress
+
+`submit_complete_campaign.sh` prints the verified fastEmbedR version,
+container SHA-256, installed package DLL SHA-256, and benchmark-suite
+manifest SHA-256 before returning. It saves these identities in
+`campaign_manifest.txt` in the new campaign directory. The exact package
+source commit is not inferred from the version; the binary and image hashes
+identify what was tested.
+
+`stages.tsv` records stage starts, submissions, and completions.
+`failures.tsv` records non-successful Slurm workers and array tasks after
+each wave finishes, including the stage, job ID, state, and exit code.
+The controller's own submission failures are recorded there too. The strict
+final check writes `job_audit.tsv`, `output_audit.txt`, and `final_audit.txt`.
+An empty `failures.tsv` before the final audit means no failure has been
+observed yet, not that the whole campaign has passed.
+
+## Live CUDA comparison
+
+Immediately after shared inputs are ready, the first GPU wave runs paired
+fastEmbedR and cuML t-SNE and UMAP workflows. Small datasets are scheduled
+first. Each dataset task writes a t-SNE comparison as soon as both t-SNE
+methods finish, then writes a UMAP comparison as soon as both UMAP methods
+finish. The rest of the campaign does not need to finish before these files
+can be inspected. CUDA PCA runs later and the embedding methods are not
+repeated in that stage.
+
+For each dataset and method family, inspect
+`results/cuda_comparison_live/DATASET/FAMILY/comparison.png` and
+`comparison.csv`. The two panels show every fitted benchmark row with the
+same label palette. Their captions give the plotted row count separately
+from the fixed quality-sample count used for trustworthiness, Preserve@30,
+and sampled compact-affinity KL for t-SNE. This common KL diagnostic is not
+cuML's fitted objective. Each method also retains its full-resolution
+`embedding.png`, `embedding.csv`, timing repetitions, and status under
+`results/workflow_comparators/{r_cuda,python_cuda}/DATASET/METHOD/`.
+An incomplete pair is visibly marked and fails the final audit.
+
+The fastEmbedR time is an R public-call measurement; the cuML time is a
+direct-Python fit measurement. Their input/output boundary is recorded, but
+the initialization, affinity support, and UMAP policies can differ. The live
+comparison is diagnostic, not a parameter-matched optimizer speedup.
+
+```bash
+cd /scratch/firenze/NN
+CAMPAIGN_ID=YOUR_CAMPAIGN_ID
+ROOT="fastEmbedR-results/jss_validation/campaigns/$CAMPAIGN_ID/results"
+find "$ROOT/cuda_comparison_live" -name comparison.png -print | sort
+find "$ROOT/cuda_comparison_live" -name comparison.csv -print | sort
+```
+
+After launch, inspect the paths printed by the launcher. For example:
+
+```bash
+tail -n 20 /scratch/firenze/NN/fastEmbedR-results/jss_validation/\
+campaigns/CAMPAIGN_ID/stages.tsv
+cat /scratch/firenze/NN/fastEmbedR-results/jss_validation/\
+campaigns/CAMPAIGN_ID/failures.tsv
+```
+
+## Three-dimensional embedding lane
+
+`submit_3d.sh` runs a separate 3D comparison over all 11 datasets using
+the shared inputs from a completed campaign. It does not replace or overwrite
+the 2D workflow comparisons. CPU R methods include fastEmbedR t-SNE and UMAP,
+Rtsne, FIt-SNE in Barnes-Hut mode, uwot, and the R umap package. Python CPU
+methods include scikit-learn t-SNE, openTSNE with its 3D Barnes-Hut optimizer,
+and umap-learn. cuML UMAP is scheduled on CUDA. cuML t-SNE and the current
+fastEmbedR CUDA optimizers are recorded as unsupported for 3D; no 2D output
+is relabelled as a 3D result and no CPU fallback is permitted.
+
+Every successful method writes `result.csv`, timing repetitions,
+`embedding.csv` with three coordinates, fixed-sample quality metrics, and a
+consistent fixed-angle projection PNG. The original three coordinates remain
+in the CSV and are used for quality scoring. A final audit writes
+`workflow_comparators_3d/audit.csv` and `metrics.csv`, failing if a result is
+missing or unexpectedly unsuccessful. The GPU arrays run in two waves to stay
+within the account's submission limit.
+
+After synchronizing this suite and rebuilding the image with the 3D FFT route,
+set `INPUT_ROOT` to the completed campaign's `input` directory and run:
+
+```bash
+cd /scratch/firenze/NN
+export INPUT_ROOT=/scratch/firenze/NN/fastEmbedR-results/jss_validation/campaigns/CAMPAIGN_ID/input
+bash benchmark_scripts/fastembedr_jss_review_validation/submit_3d.sh
+```
+
+The launcher verifies CPU/CUDA preflight evidence against the current image
+hash and checks that the 3D FFT diagnostic symbol is present. It submits only
+when these checks and the shared R/Python inputs are present.
+
 This directory prepares the release-level calculations requested during the
-JSS review. It does not submit jobs by itself. The only submission entry point
-is `submit_all.sh`, which the user runs explicitly on the HPC.
+JSS review. It does not submit jobs by itself. The user explicitly runs
+`submit_all.sh` for the primary campaign or `submit_3d.sh` for this 3D lane.
 
 ## Fixed paths
 
@@ -27,6 +119,20 @@ and Leiden calculations and verifies their returned backend metadata. There is
 no CPU fallback.
 
 ## Experiments
+
+The optional `fft_grid_sweep` fits full COIL20, MNIST, and Retina datasets
+with the same CPU KNN graph, PCA initialization, seed, and 1,000-iteration
+schedule at 128, 256, and 512 cells. CPU4 and CUDA jobs are separate. Each
+grid saves all layout coordinates, a dot-only plot, sampled trustworthiness,
+Preserve@30, label KNN accuracy, KL, one warm-up fit, and repeated embedding
+times. The fixed 2,000-row quality sample is archived. The resolution score
+is `1 - min(1, relative repulsive-force L2 error)` against exact forces on
+that sample's final coordinates. Separately, a quality-stability score
+compares trustworthiness, Preserve@30, and KL with the 512-cell fit; drops
+over 0.01, 0.03, or 5% respectively trigger `review_quality`. Neither score
+is a guarantee of visual quality. Peak job RSS and CUDA
+memory are in the corresponding `measurement/fft_grid_sweep` files. Use a
+rebuilt image after changing the package's automatic grid policy.
 
 1. `precompute`: selects at most 70,000 observations per dataset with a fixed
    stratified row set, then saves one CPU KNN object at width 90, one two-column
@@ -136,14 +242,14 @@ no CPU fallback.
 14. `workflow_comparators`: runs R CPU and fastEmbedR CUDA workflows alongside
     direct-Python CPU and direct-Python CUDA fits. R methods include
     fastEmbedR PCA, t-SNE, and fuzzy UMAP; `irlba`, `Rtsne`, FIt-SNE, `uwot`,
-    and R `umap`. Dense `stats::prcomp()` timing is restricted to COIL-20,
-    USPS, and MetRef because it is an exact reference rather than a scalable
+    and R `umap`. Dense `stats::prcomp()` timing is restricted to USPS and
+    MetRef because it is an exact reference rather than a scalable
     workflow competitor. The separate bounded PCA-accuracy experiment retains
     a dense reference for every dataset and backend. Python methods include
     randomized scikit-learn PCA, scikit-learn t-SNE, openTSNE, umap-learn, and
     RAPIDS cuML PCA, t-SNE, and UMAP. One warm-up is excluded before five
     same-seed repetitions. Comparative t-SNE runs use 250 early-exaggeration
-    and 500 normal iterations, matching cuML's 750 total iterations. The result
+    and 750 normal iterations, matching cuML's 1,000 total iterations. The result
     records median and interquartile timing,
     fixed-row trustworthiness, Preserve@30, label KNN accuracy, sampled
     compact-affinity KL for t-SNE, PCA reconstruction error and retained
@@ -161,20 +267,32 @@ no CPU fallback.
     comparators explicitly request spectral initialization. The aggregate
     `workflow_comparator_parameters.csv` is the machine-readable parameter
     contract. Each dataset has one portable float32 input shared by every
-    Python method. The R CPU,
-    fastEmbedR CUDA, Python CPU, and Python CUDA arrays become eligible
-    together; aggregation waits for all four arrays.
+    Python method. fastEmbedR results retain per-repetition preprocessing,
+    KNN, initialization, and embedding stage timings when the returned fit
+    reports them. Paired CUDA embedding jobs and independent CPU validation
+    waves start after shared comparator inputs. R CPU, Python CPU, and CUDA
+    PCA jobs follow their respective lanes. Aggregation waits for every
+    comparator result.
 
 The backend-quality experiment is an accuracy diagnostic. Its elapsed value is
 stored as `elapsed_sec_diagnostic`, uses no excluded warm-up, and always has
 `timing_eligible = FALSE`. It cannot enter a speed ratio. Publication timing
 comes only from the workflow-comparator rows with one excluded warm-up, at
 least five same-seed repetitions, a synchronized returned result, and the
-declared iteration contract. The aggregate creates the CUDA t-SNE ratio only
-after matching these fields and the common input/output boundary. The R and
-Python timing scopes remain separately labelled. This ratio is a workflow
-comparison, not an optimizer-only comparison: fastEmbedR uses compact affinity
-support whereas cuML uses its configured 91-neighbor support.
+declared iteration contract. Separate CUDA t-SNE and UMAP comparison files
+are created only after matching dataset, row count, precision, output
+dimensions, seed, and input/output boundary. R and direct-Python timing scopes
+remain separately labelled. These are workflow comparisons under reported
+package settings, not parameter-matched optimizer comparisons: t-SNE affinity
+support and UMAP minimum-distance policies differ. The final audit requires
+all eleven pairs, finite stage timings and quality values, and passing
+method-specific status rows. `validate_benchmark_logic.R` checks pairing and
+duplicate-row trustworthiness before a campaign is submitted.
+
+The full-dataset cuVS KNN experiment and the 70,000-row-capped quality
+experiment are different workloads. Their elapsed values are never divided
+or presented as components of the same timed call. The workflow-comparator
+stage timing reports KNN cost inside the same full public call.
 
 All eleven datasets are included: COIL20, USPS, FashionMNIST,
 FlowRepository_FR-FCM-ZYRM_files, flow18, MNIST, ImageNet features, MetRef,
@@ -189,7 +307,8 @@ packages scikit-learn, openTSNE, umap-learn, CuPy, and RAPIDS cuML. The CPU
 preflight runs a finite smoke calculation with every R comparator. The CUDA
 preflight executes both fastEmbedR and cuML PCA, UMAP, and t-SNE on the
 allocated GPU and synchronizes it. Namespace presence alone is not accepted
-as evidence.
+as evidence. The CPU preflight also uses production arguments and the full
+CSV-output path for FIt-SNE, both `uwot` modes, and `stats::prcomp()`.
 
 GNU `time` is recommended but no longer mandatory. Its absence must not abort
 a scientific calculation; the wrapper records Slurm MaxRSS when available and
@@ -238,12 +357,16 @@ input and benchmark waves are submitted.
 ## Submit
 
 The recommended launcher is a staged, self-submitting Slurm controller. It
-submits one bounded wave at a time, waits through Slurm dependencies rather
-than polling, retries submission-limit errors every 60 seconds, and records
-every job in a campaign-specific `jobs.tsv`. Comparator preflight advances
-through `afterok`; later waves use `afterany`, allowing independent
-calculations and the final audit to record partial failures without leaving
-mutually unsatisfied controller branches.
+submits bounded waves, waits through Slurm dependencies rather than polling,
+retries submission-limit errors every 60 seconds, and records every job in a
+campaign-specific `jobs.tsv`. Comparator preflight advances through `afterok`.
+After shared inputs are ready, separate CPU and CUDA controller lanes progress
+independently. An L40S queue therefore does not delay unrelated ada work.
+CUDA clustering waits until the CPU graph and membership results are ready;
+aggregation starts only after both lanes and CUDA clustering finish. Later
+waves use `afterany` so the final audit can record partial failures. The
+full-dataset CUDA-pair campaign retains its necessary dependency: scoring
+the paired embeddings must wait for the GPU fits that produce them.
 
 After installing a rebuilt image, use the image handoff launcher. It submits
 fresh strict CPU and CUDA package preflights and schedules a small `afterany`
@@ -277,7 +400,17 @@ manifest into the campaign directory, and exports its SHA-256 to every worker
 and controller. Each job verifies both the manifest identity and every listed
 file before running, so a campaign cannot silently mix source revisions. It
 also checks that each Slurm worker reserves at least the host CPUs required by
-its R thread setting. Do not launch
+its R thread setting. Only manifest-listed scripts are checked; older scripts
+left by synchronization are not part of the campaign and must not be submitted.
+The staged CUDA lane bundles transformation with landmark reconstruction,
+PCA timing with PCA accuracy, and the 18 long-run t-SNE settings with final
+fits and timing. Each dataset gets one allocation per bundle. Every subrun
+retains its original measurement, scheduler status, and output directory;
+the bundle also writes a per-subrun status CSV. A failure does not skip later
+subruns, but makes the array task and final audit fail. The focused full-data
+fastEmbedR-versus-cuML campaign is unchanged. Do not replace the scripts in
+an active campaign: its source checksum must remain fixed until completion.
+Do not launch
 `submit_all.sh` on an
 account with a small queued-job limit.
 
@@ -291,6 +424,93 @@ bash \
 
 The older `submit_all.sh` launcher remains disabled by default because it can
 exceed the cluster submission limit.
+
+## Full-source CUDA comparison
+
+The focused fastEmbedR-versus-cuML campaign fits t-SNE and UMAP to every row
+of each original dataset. It does not apply the 70,000-row cap used in the
+broader validation campaign. Both t-SNE methods use 1,000 total iterations;
+cuML t-SNE requests 91 neighbors, PCA initialization, and a fixed learning
+rate of 200. Its gradient stopping threshold is set to zero so that all
+1,000 requested iterations run; an unexpectedly early stop fails the task.
+Adaptive cuML tuning is disabled because it can change the requested
+neighbor count and perplexity. UMAP retains spectral
+initialization. The input, fit, timing, and
+full embedding CSV are saved before quality is calculated. A later R stage
+scores the saved coordinates on the same fixed, stratified quality rows for
+both implementations. Only quality evaluation is sampled; fitting and plots
+use all source rows.
+
+After transferring this entire checksum-locked suite to the HPC, verify that
+the current image has passing CPU and CUDA preflight evidence. Launch only
+this focused campaign with:
+
+```bash
+cd /scratch/firenze/NN
+bash benchmark_scripts/fastembedr_jss_review_validation/verify_preflight.sh
+bash \
+  benchmark_scripts/fastembedr_jss_review_validation/submit_full_cuda_campaign.sh
+```
+
+The staged controller submits 11 CPU input jobs, 11 binary-input jobs, 44
+single-method GPU jobs (two concurrent), 11 R quality jobs, then a strict
+audit. The four GPU methods are `fastembedr_tsne`, `cuml_tsne`,
+`fastembedr_umap`, and `cuml_umap`. Each method has one warm-up and three
+same-seed timed repetitions. GPU work has a 42-hour method limit and a
+48-hour Slurm limit. A timeout or unavailable method is reported as a
+failure, never replaced by a smaller dataset or CPU fallback.
+
+To include NOMAD as a separate 2D CUDA method in a new full-dataset
+campaign, first build an image with CUDA-enabled PyTorch and
+`nomad-projection` installed from a pinned 40-character Git commit. Then
+verify the new image with fresh strict CPU and CUDA preflights and run:
+
+```bash
+cd /scratch/firenze/NN
+INCLUDE_NOMAD=TRUE bash \
+  benchmark_scripts/fastembedr_jss_review_validation/submit_full_cuda_campaign.sh
+```
+
+The launcher uses `/opt/nomad/bin/python` for NOMAD and rejects an image
+without installed, source-pinned NOMAD. A local Git checkout is accepted only
+when the installed projection module matches that pinned checkout.
+It records the installed NOMAD version and commit. An additional GPU wave runs
+NOMAD on all source rows after the fastEmbedR/cuML pairs. The same saved
+float32 input and fixed quality rows are used. NOMAD is not t-SNE or UMAP:
+its inner-product neighbor search, contrastive objective, and 100-epoch
+schedule are reported separately. The benchmark requests eight neighbors,
+10,000 noise samples, a batch of at most 8,192 observations, and one cell
+below 5,000 rows or five cells otherwise. These explicit batch and cell
+settings avoid a zero-step run on small datasets. The R quality pass scores
+trustworthiness, Preserve@30, and label KNN accuracy; t-SNE KL is
+inapplicable. Its own `embedding.csv`, R-style `embedding.png`, timing
+repetitions, host/GPU memory measurements, and status are stored at
+`results/workflow_comparators/python_cuda/DATASET/nomad/`. The strict
+final audit requires all NOMAD outputs when this option is enabled.
+Do not include NOMAD in t-SNE/UMAP speedup ratios or treat its 100 epochs
+as equivalent to 1,000 t-SNE iterations.
+
+The launcher prints the campaign path. Its `campaign_manifest.txt` records
+the image, package binary, suite checksum, and execution mode. `stages.tsv`,
+`failures.tsv`, and `jobs.tsv` track progress and every job. Per-method
+`result.csv`, `timing_repetitions.csv`, `embedding.csv`, `embedding.png`,
+`status.csv`, `quality.csv`, and `result_with_quality.csv` live under
+`results/workflow_comparators/{r_cuda,python_cuda}/DATASET/METHOD/`.
+R-generated paired plots and summaries live under
+`results/cuda_comparison_live/DATASET/{tsne,umap}/`. The final audit verifies
+that each fit used every source row and that post-fit R quality succeeded.
+Do not use incomplete results as manuscript evidence.
+
+The cuML t-SNE failure analysis is kept in
+`diagnostics/diagnose_cuml_tsne.py`. It compares the archived adaptive
+750-iteration setting with 1,000-iteration adaptive and fixed-parameter
+settings on the same MetRef float32 matrix. Random initialization is only a
+diagnostic control; the published comparison uses PCA initialization.
+The MetRef diagnostic showed that cuML's default `min_grad_norm=1e-7`
+stopped its FFT route at 28 iterations with a collapsed layout. Setting
+`min_grad_norm=0` completed 1,000 iterations. The current HPC campaign is
+checksum-locked and must not be changed in place; this policy is for the
+next campaign after the revised suite is transferred.
 
 For the observed-recall and backend-quality families on an account with a
 small queued-job limit, use the compact launcher:
@@ -350,9 +570,7 @@ sbatch --dependency="afterok:$PRECOMPUTE_JOB" \
 sbatch --dependency="afterok:$PRECOMPUTE_JOB" \
   benchmark_scripts/fastembedr_jss_review_validation/slurm/run_landmark_reconstruction_cpu4.sh
 sbatch --dependency="afterok:$PRECOMPUTE_JOB:$CUDA_PREFLIGHT_JOB" \
-  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_transform_cuda.sh
-sbatch --dependency="afterok:$PRECOMPUTE_JOB:$CUDA_PREFLIGHT_JOB" \
-  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_landmark_reconstruction_cuda.sh
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_transform_landmark_cuda_bundle.sh
 ```
 
 The CUDA launchers still fail explicitly if preflight detects an unavailable
@@ -379,17 +597,15 @@ sbatch --dependency="afterok:$INPUT_JOB" \
 sbatch --dependency="afterok:$INPUT_JOB" \
   benchmark_scripts/fastembedr_jss_review_validation/slurm/run_tsne_longrun_python_cpu4.sh
 sbatch --dependency="afterok:$INPUT_JOB" \
-  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_tsne_longrun_cuda.sh
-sbatch --dependency="afterok:$INPUT_JOB" \
-  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_tsne_longrun_final_cuda.sh
+  benchmark_scripts/fastembedr_jss_review_validation/slurm/run_tsne_longrun_cuda_bundle.sh
 sbatch --dependency="afterok:$INPUT_JOB" \
   benchmark_scripts/fastembedr_jss_review_validation/slurm/run_tsne_timing_cpu4.sh
 sbatch --dependency="afterok:$INPUT_JOB" \
   benchmark_scripts/fastembedr_jss_review_validation/slurm/run_tsne_timing_python_cpu4.sh
 ```
 
-The CUDA timing job also depends on successful CUDA preflight. `submit_all.sh`
-sets this dependency automatically. Timing outputs are written separately as
+The bundled CUDA job also depends on successful CUDA preflight. Timing outputs
+are written separately as
 `tsne_timing_raw.csv` and `tsne_timing_summary.csv`; neither is inferred from
 the correctness-seed runs.
 
@@ -424,6 +640,14 @@ A shared R renderer reads that CSV and writes `embedding.png`, so R and Python
 methods use identical labels, palette construction, margins, opacity, and
 point-size rules. Tasks also retain
 `/usr/bin/time -v` output, CUDA memory traces, and the Slurm stdout/stderr log.
+Comparator fits currently have a temporary 600-second per-method limit. Set
+`METHOD_TIMEOUT_SECONDS` to a positive integer to override it. Input
+precomputation is not subject to this limit. A timeout writes an explicit
+`status.csv` row and cannot pass the final campaign audit.
+The audit also checks that a successful method's reported family agrees with
+its method name. The JSS figure builder requires `status=PASS` in
+`final_audit.txt`; quality-diagnostic elapsed times cannot replace repeated
+R CUDA public-call measurements.
 Preflight also records package and image
 identity, the loaded shared-object checksum, backend capabilities,
 `sessionInfo()`, and `nvidia-smi` output.

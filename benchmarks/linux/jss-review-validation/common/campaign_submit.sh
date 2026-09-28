@@ -48,6 +48,82 @@ campaign_init_ledger() {
       $'timestamp_utc\tcampaign_id\tstage\trole\tlabel\tjob_id\tdependency\tscript\tarray' \
       > "$JSS_LEDGER"
   fi
+  if [[ ! -f "$JSS_CAMPAIGN_DIR/stages.tsv" ]]; then
+    printf 'timestamp_utc\tstage\tevent\tdetail\n' \
+      > "$JSS_CAMPAIGN_DIR/stages.tsv"
+  fi
+  if [[ ! -f "$JSS_CAMPAIGN_DIR/failures.tsv" ]]; then
+    printf 'timestamp_utc\tstage\tlabel\tjob_id\ttask_id\tstate\texit_code\n' \
+      > "$JSS_CAMPAIGN_DIR/failures.tsv"
+  fi
+}
+
+campaign_record_stage() {
+  printf '%s\t%s\t%s\t%s\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" "$2" "${3:--}" \
+    >> "$JSS_CAMPAIGN_DIR/stages.tsv"
+}
+
+campaign_record_controller_failure() {
+  local code="$1"
+  campaign_record_stage "$JSS_STAGE" failed \
+    "controller=${SLURM_JOB_ID:-local} exit=$code"
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$JSS_STAGE" controller \
+    "${SLURM_JOB_ID:-local}" '-' FAILED "$code" \
+    >> "$JSS_CAMPAIGN_DIR/failures.tsv"
+}
+
+campaign_record_previous_stage() {
+  local previous_stage job_id label records task_id state exit_code attempt
+  local failed=0
+  previous_stage="$(awk -F '\t' -v label="controller_$JSS_STAGE" \
+    '$4 == "controller" && $5 == label { stage = $3 }
+     END { print stage }' "$JSS_LEDGER")"
+  [[ -n "$previous_stage" ]] || return 0
+  [[ "$previous_stage" != "$JSS_STAGE" ]] || return 0
+  if grep -Fqx "$previous_stage" \
+      "$JSS_CAMPAIGN_DIR/audited_stages.txt" 2>/dev/null; then
+    return 0
+  fi
+  while IFS=$'\t' read -r label job_id; do
+    [[ -n "$job_id" ]] || continue
+    records=''
+    for attempt in 1 2 3 4 5; do
+      records="$(sacct -X -n -P -j "$job_id" \
+        -o JobID,State,ExitCode 2>/dev/null || true)"
+      [[ -n "$records" ]] && break
+      sleep 2
+    done
+    if [[ -z "$records" ]]; then
+      printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$previous_stage" \
+        "$label" "$job_id" '-' UNKNOWN NA \
+        >> "$JSS_CAMPAIGN_DIR/failures.tsv"
+      failed=$((failed + 1))
+      continue
+    fi
+    while IFS='|' read -r task_id state exit_code; do
+      [[ "$task_id" == "$job_id" || \
+         "$task_id" == "$job_id"'_'* ]] || continue
+      if [[ "$task_id" == "$job_id" ]] && \
+          grep -q "^${job_id}_" <<< "$records"; then
+        continue
+      fi
+      if [[ "$state" != COMPLETED* || "$exit_code" != 0:0 ]]; then
+        printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+          "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$previous_stage" \
+          "$label" "$job_id" "$task_id" "$state" "$exit_code" \
+          >> "$JSS_CAMPAIGN_DIR/failures.tsv"
+        failed=$((failed + 1))
+      fi
+    done <<< "$records"
+  done < <(awk -F '\t' -v stage="$previous_stage" \
+    'NR > 1 && $3 == stage && $4 == "worker" { print $5 "\t" $6 }' \
+    "$JSS_LEDGER")
+  campaign_record_stage "$previous_stage" completed "failures=$failed"
+  printf '%s\n' "$previous_stage" \
+    >> "$JSS_CAMPAIGN_DIR/audited_stages.txt"
 }
 
 campaign_existing_job() {

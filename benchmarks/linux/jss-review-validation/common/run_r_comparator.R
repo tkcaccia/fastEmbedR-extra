@@ -30,9 +30,19 @@ backend <- arg_value("backend", "cpu")
 threads <- as_int(arg_value("threads"), 4L)
 seed <- as_int(arg_value("seed"), 4L)
 timing_reps <- as_int(arg_value("timing-reps"), 5L)
+n_components <- as_int(arg_value("n-components"), 2L)
+defer_quality <- identical(arg_value("defer-quality"), "TRUE")
+full_dataset <- identical(arg_value("full-dataset"), "TRUE")
+output_group <- if (n_components == 3L) {
+    "workflow_comparators_3d"
+} else "workflow_comparators"
 tsne_early_iterations <- 250L
-tsne_total_iterations <- 750L
+tsne_total_iterations <- 1000L
 tsne_normal_iterations <- tsne_total_iterations - tsne_early_iterations
+parameter_contract <- utils::read.csv(
+    file.path(script_dir, "workflow_parameter_contract.csv"),
+    stringsAsFactors = FALSE, na.strings = character()
+)
 
 if (!backend %in% c("cpu", "cuda")) {
     stop("Unsupported comparator backend: ", backend, call. = FALSE)
@@ -43,11 +53,16 @@ if (backend == "cuda" && !startsWith(method, "fastembedr_")) {
 if (timing_reps < 2L) {
     stop("At least two timing repetitions are required.", call. = FALSE)
 }
+if (!n_components %in% c(2L, 3L)) {
+    stop("Output dimensions must be 2 or 3.", call. = FALSE)
+}
 
 method_family <- function(name) {
-    if (grepl("pca", name, fixed = TRUE)) return("pca")
-    if (grepl("tsne", name, fixed = TRUE)) return("tsne")
-    "umap"
+    family <- parameter_contract$family[parameter_contract$method == name]
+    if (length(family) != 1L || !family %in% c("pca", "tsne", "umap")) {
+        stop("Unknown comparator method: ", name, call. = FALSE)
+    }
+    family
 }
 
 method_version <- function(name) {
@@ -72,11 +87,9 @@ umap_epoch_policy <- function(n) {
 }
 
 method_parameters <- function(name, family, fit, n) {
-    contract <- utils::read.csv(
-        file.path(script_dir, "workflow_parameter_contract.csv"),
-        stringsAsFactors = FALSE, na.strings = character()
-    )
-    row <- contract[contract$method == name, , drop = FALSE]
+    row <- parameter_contract[
+        parameter_contract$method == name, , drop = FALSE
+    ]
     if (nrow(row) != 1L || row$family != family) {
         stop("Missing parameter contract for ", name, call. = FALSE)
     }
@@ -104,16 +117,35 @@ method_parameters <- function(name, family, fit, n) {
     } else if (family == "umap") {
         as.numeric(row$min_dist_policy)
     } else NA_real_
+    if (name == "fitsne" && n_components == 3L) {
+        row$optimizer <- "Barnes-Hut"
+    }
+    if (name == "fastembedr_tsne") {
+        row$optimizer <- fit$parameters$repulsion %||% NA_character_
+    }
     row[setdiff(names(row), c("method", "family"))]
 }
 
 load_benchmark_data <- function() {
     shared <- readRDS(file.path(input_root, dataset, "matched_inputs.rds"))
     loaded <- load_dataset(data_root, dataset)
-    standard <- as_double_matrix(
+    selected <- if (full_dataset) loaded$data else {
         loaded$data[shared$rows, , drop = FALSE]
-    )
-    list(shared = shared, double = standard, float = float::fl(standard))
+    }
+    if (full_dataset && nrow(selected) != length(shared$rows)) {
+        stop("Full comparator input does not cover every source row.")
+    }
+    if (defer_quality && startsWith(method, "fastembedr_")) {
+        return(list(shared = shared, double = NULL,
+            float = as_float_matrix(selected), n = nrow(selected),
+            p = ncol(selected)))
+    }
+    standard <- as_double_matrix(selected)
+    list(shared = shared, double = standard,
+        float = if (startsWith(method, "fastembedr_")) {
+            float::fl(standard)
+        } else NULL,
+        n = nrow(standard), p = ncol(standard))
 }
 
 load_fitsne <- function() {
@@ -145,34 +177,43 @@ fit_pca <- function(name, x, rank) {
     stats::prcomp(x, rank. = rank, center = TRUE, scale. = FALSE)
 }
 
-fit_tsne <- function(name, x, perplexity) {
+fit_tsne <- function(name, x, perplexity, fitsne = NULL) {
     if (name == "fastembedr_tsne") {
         return(fastEmbedR::tsne(
-            x, perplexity = perplexity, backend = backend,
+            x, perplexity = perplexity, n_components = n_components,
+            backend = backend,
             n.cores = threads, seed = seed,
             learning_rate = max(nrow(x) / 12, 200),
             early_exaggeration_iter = tsne_early_iterations,
             early_exaggeration = 12,
             n_iter = tsne_normal_iterations, exaggeration = 1,
             initial_momentum = 0.8, final_momentum = 0.8,
-            max_step_norm = 5, negative_gradient_method = "fft",
+            max_step_norm = 5,
+            negative_gradient_method = if (n_components == 3L) {
+                "auto"
+            } else "fft",
             auto_config = FALSE
         ))
     }
     if (name == "rtsne") {
         return(Rtsne::Rtsne(
-            x, dims = 2L, perplexity = perplexity, pca = TRUE,
+            x, dims = n_components, perplexity = perplexity, pca = TRUE,
             initial_dims = 50L, Y_init = NULL,
-            theta = 0.5, max_iter = 750L, num_threads = threads,
+            theta = 0.5, max_iter = tsne_total_iterations,
+            num_threads = threads,
             stop_lying_iter = 250L, mom_switch_iter = 250L,
             momentum = 0.5, final_momentum = 0.8, eta = 200,
             exaggeration_factor = 12, check_duplicates = FALSE,
             verbose = FALSE
         ))
     }
-    fitsne <- load_fitsne()
+    if (is.null(fitsne)) {
+        stop("FIt-SNE wrapper was not loaded.", call. = FALSE)
+    }
     fitsne$fun(
-        x, dims = 2L, perplexity = perplexity, max_iter = 750L,
+        x, dims = n_components, perplexity = perplexity,
+        fft_not_bh = n_components == 2L,
+        max_iter = tsne_total_iterations,
         initialization = "pca", stop_early_exag_iter = 250L,
         exaggeration_factor = 12, learning_rate = "auto",
         momentum = 0.5, final_momentum = 0.8,
@@ -184,16 +225,18 @@ fit_tsne <- function(name, x, perplexity) {
 fit_umap <- function(name, x, neighbors) {
     if (name == "fastembedr_umap") {
         return(fastEmbedR::umap(
-            x, n_neighbors = neighbors, graph_mode = "fuzzy",
+            x, n_neighbors = neighbors, n_components = n_components,
+            graph_mode = "fuzzy",
             backend = backend, n.cores = threads, seed = seed
         ))
     }
     if (name %in% c("uwot", "uwot_fast_sgd")) {
         fast <- identical(name, "uwot_fast_sgd")
         return(uwot::umap(
-            x, n_neighbors = neighbors, init = "spectral",
+            x, n_neighbors = neighbors, n_components = n_components,
+            init = "spectral",
             metric = "euclidean", n_epochs = umap_epoch_policy(nrow(x)),
-            alpha = 1,
+            learning_rate = 1,
             min_dist = 0.01, spread = 1, repulsion_strength = 1,
             negative_sample_rate = 5,
             n_threads = threads,
@@ -203,7 +246,7 @@ fit_umap <- function(name, x, neighbors) {
     }
     config <- umap::umap.defaults
     config$n_neighbors <- as.integer(neighbors)
-    config$n_components <- 2L
+    config$n_components <- n_components
     config$metric <- "euclidean"
     config$input <- "data"
     config$init <- "spectral"
@@ -216,13 +259,14 @@ fit_umap <- function(name, x, neighbors) {
     umap::umap(x, config = config, method = "naive")
 }
 
-fit_once <- function(name, x, perplexity, neighbors, rank) {
+fit_once <- function(name, x, perplexity, neighbors, rank,
+                     fitsne = NULL) {
     set.seed(seed)
     family <- method_family(name)
     switch(
         family,
         pca = fit_pca(name, x, rank),
-        tsne = fit_tsne(name, x, perplexity),
+        tsne = fit_tsne(name, x, perplexity, fitsne),
         umap = fit_umap(name, x, neighbors)
     )
 }
@@ -266,11 +310,28 @@ pca_diagnostics <- function(fit, x, quality_rows) {
     )
 }
 
-write_outputs <- function(fit, elapsed, benchmark) {
+stage_seconds <- function(fit) {
+    fields <- c(
+        preprocess = "preprocess_elapsed",
+        knn = "knn_elapsed",
+        initialization = "initialization_elapsed",
+        embedding = "embedding_elapsed"
+    )
+    if (!startsWith(method, "fastembedr_")) {
+        return(setNames(rep(NA_real_, length(fields)), names(fields)))
+    }
+    vapply(fields, function(field) {
+        value <- fit$metrics[[field]]
+        if (length(value) == 1L) as.numeric(value) else NA_real_
+    }, numeric(1L))
+}
+
+write_outputs <- function(fit, elapsed, benchmark, stages = NULL,
+                          output_dir = output_root) {
     family <- method_family(method)
     layout <- extract_layout(fit, family)
     rows <- benchmark$shared$quality_rows
-    quality <- if (family == "pca") {
+    quality <- if (family == "pca" || defer_quality) {
         data.frame(
             trustworthiness = NA_real_, preserve_at_30 = NA_real_,
             label_knn_accuracy = NA_real_, sampled_kl = NA_real_
@@ -284,7 +345,7 @@ write_outputs <- function(fit, elapsed, benchmark) {
         )
     }
     if (family == "umap") quality$sampled_kl <- NA_real_
-    extra <- if (family == "pca") {
+    extra <- if (family == "pca" && !defer_quality) {
         pca_diagnostics(fit, benchmark$double, rows)
     } else {
         data.frame(
@@ -303,12 +364,25 @@ write_outputs <- function(fit, elapsed, benchmark) {
     } else {
         "cpu"
     }
-    out <- file.path(output_root, "workflow_comparators", comparator_mode,
+    if (is.null(stages)) {
+        stages <- matrix(NA_real_, nrow = length(elapsed), ncol = 4L)
+        colnames(stages) <- names(stage_seconds(fit))
+    }
+    stage_median <- apply(stages, 2L, function(value) {
+        if (all(is.na(value))) NA_real_ else stats::median(value)
+    })
+    fit_parameters <- if (startsWith(method, "fastembedr_")) {
+        fit$parameters
+    } else {
+        NULL
+    }
+    out <- file.path(output_dir, output_group, comparator_mode,
         dataset,
         method
     )
     result <- cbind(data.frame(
         dataset = dataset, family = family, method = method,
+        n_components = n_components,
         language = "R", backend = result_backend,
         timing_scope = "R_public_fit",
         timing_boundary = timing_boundary,
@@ -334,20 +408,27 @@ write_outputs <- function(fit, elapsed, benchmark) {
             NA_integer_
         },
         comparison_contract = if (family == "tsne") {
-            "workflow_750_total_iterations"
+            "workflow_1000_total_iterations"
         } else {
             "workflow_package_policy"
         },
-        n = nrow(benchmark$double), p = ncol(benchmark$double),
+        n = benchmark$n, p = benchmark$p,
         elapsed_median_sec = stats::median(elapsed),
         elapsed_q1_sec = unname(stats::quantile(elapsed, 0.25)),
         elapsed_q3_sec = unname(stats::quantile(elapsed, 0.75)),
+        preprocess_median_sec = stage_median[["preprocess"]],
+        knn_median_sec = stage_median[["knn"]],
+        initialization_median_sec = stage_median[["initialization"]],
+        embedding_median_sec = stage_median[["embedding"]],
+        nn_engine = fit_parameters$nn_engine %||% NA_character_,
+        nn_backend = fit_parameters$nn_backend %||% NA_character_,
         threads = threads, implementation_version = method_version(method),
         stringsAsFactors = FALSE
-    ), method_parameters(method, family, fit, nrow(benchmark$double)),
+    ), method_parameters(method, family, fit, benchmark$n),
     quality, extra)
+    result$quality_deferred <- defer_quality
     write_csv_atomic(result, file.path(out, "result.csv"))
-    write_csv_atomic(data.frame(
+    write_csv_atomic(cbind(data.frame(
         dataset = dataset, method = method, backend = result_backend,
         seed = seed, timing_replicate = seq_along(elapsed),
         warmup_count = 1L, warmup_excluded = TRUE,
@@ -359,12 +440,19 @@ write_outputs <- function(fit, elapsed, benchmark) {
             NA_integer_
         },
         elapsed_sec = elapsed, stringsAsFactors = FALSE
-    ), file.path(out, "timing_repetitions.csv"))
-    write_csv_atomic(data.frame(
-        benchmark_row = rows,
-        source_row = benchmark$shared$rows[rows],
-        x = layout[rows, 1L], y = layout[rows, 2L]
-    ), file.path(out, "quality_layout.csv"))
+    ), as.data.frame(stages)), file.path(out, "timing_repetitions.csv"))
+    if (!defer_quality) {
+        quality_layout <- data.frame(
+            benchmark_row = rows,
+            source_row = benchmark$shared$rows[rows],
+            x = layout[rows, 1L], y = layout[rows, 2L]
+        )
+        if (n_components == 3L) {
+            quality_layout$z <- layout[rows, 3L]
+        }
+        write_csv_atomic(quality_layout, file.path(out,
+            "quality_layout.csv"))
+    }
     write_csv_atomic(
         embedding_output_table(
             layout, benchmark$shared$labels, benchmark$shared$rows
@@ -378,45 +466,106 @@ write_outputs <- function(fit, elapsed, benchmark) {
 }
 
 run <- function() {
+    if (n_components == 3L && backend == "cuda" &&
+            startsWith(method, "fastembedr_")) {
+        out <- file.path(output_root, output_group, paste0("r_", backend),
+                         dataset, method)
+        write_csv_atomic(status_row(
+            "workflow_comparator", dataset, paste0("r_", backend),
+            "unsupported", "3D is not supported by this method/backend.",
+            method = method
+        ), file.path(out, "status.csv"))
+        return(invisible(NULL))
+    }
     suppressPackageStartupMessages(library(fastEmbedR))
     suppressPackageStartupMessages(library(float))
     benchmark <- load_benchmark_data()
-    rank <- min(50L, nrow(benchmark$double) - 1L,
-        ncol(benchmark$double) - 1L
-    )
+    rank <- min(50L, benchmark$n - 1L, benchmark$p - 1L)
     input <- if (startsWith(method, "fastembedr")) {
         benchmark$float
     } else {
         benchmark$double
     }
-    warmup <- fit_once(method, input, 30, 30L, rank)
+    fitsne <- if (method == "fitsne") load_fitsne() else NULL
+    warmup <- fit_once(method, input, 30, 30L, rank, fitsne)
     assert_fastembedr_backend(warmup)
     message("Warm-up completed: ", dataset, "/", method)
+    stage_names <- names(stage_seconds(warmup))
+    if (full_dataset) {
+        rm(warmup)
+        gc()
+    }
     elapsed <- numeric(timing_reps)
+    stages <- matrix(NA_real_, nrow = timing_reps, ncol = 4L)
+    colnames(stages) <- stage_names
     fit <- NULL
     for (index in seq_len(timing_reps)) {
+        if (full_dataset) {
+            fit <- NULL
+            gc()
+        }
         timing <- system.time({
-            fit <- fit_once(method, input, 30, 30L, rank)
+            fit <- fit_once(method, input, 30, 30L, rank, fitsne)
         })
         assert_fastembedr_backend(fit)
         elapsed[[index]] <- timing[["elapsed"]]
+        stages[index, ] <- stage_seconds(fit)
         message(
             "Timing repetition ", index, "/", timing_reps,
             ": ", format(elapsed[[index]], digits = 6), " seconds"
         )
     }
-    write_outputs(fit, elapsed, benchmark)
+    write_outputs(fit, elapsed, benchmark, stages)
 }
 
-tryCatch(run(), error = function(error) {
+run_smoke <- function() {
+    suppressPackageStartupMessages(library(fastEmbedR))
+    suppressPackageStartupMessages(library(float))
+    set.seed(seed)
+    x <- matrix(stats::rnorm(256L * 8L), nrow = 256L)
+    input <- if (startsWith(method, "fastembedr_")) float::fl(x) else x
+    fitsne <- if (method == "fitsne") load_fitsne() else NULL
+    fit <- fit_once(method, input, 5, 15L, 2L, fitsne)
+    assert_fastembedr_backend(fit)
+    layout <- extract_layout(fit, method_family(method))
+    if (!identical(dim(layout), c(256L, 2L)) ||
+            any(!is.finite(layout))) {
+        stop("Comparator smoke returned an invalid layout.")
+    }
+    method_parameters(method, method_family(method), fit, nrow(x))
+    smoke_dir <- tempfile("comparator-smoke-")
+    on.exit(unlink(smoke_dir, recursive = TRUE), add = TRUE)
+    benchmark <- list(
+        double = x, n = nrow(x), p = ncol(x),
+        shared = list(
+            quality_rows = seq_len(128L), rows = seq_len(nrow(x)),
+            labels = rep(c("A", "B"), length.out = nrow(x)),
+            perplexity = 5
+        )
+    )
+    write_outputs(
+        fit, rep(1, 2L), benchmark, output_dir = smoke_dir
+    )
+    message("Comparator production-call smoke: PASS ", method)
+}
+
+if (identical(arg_value("smoke"), "TRUE")) {
+    run_smoke()
+} else tryCatch(run(), error = function(error) {
     comparator_mode <- paste0("r_", backend)
-    out <- file.path(output_root, "workflow_comparators", comparator_mode,
+    out <- file.path(output_root, output_group, comparator_mode,
         dataset,
         method
     )
+    detail <- conditionMessage(error)
+    if (!is.null(conditionCall(error))) {
+        detail <- paste0(detail, " [call: ", paste(
+            deparse(conditionCall(error)), collapse = " "
+        ), "]")
+    }
     write_csv_atomic(status_row(
         "workflow_comparator", dataset, comparator_mode, "failed",
-        conditionMessage(error), method = method
+        detail, method = method
     ), file.path(out, "status.csv"))
     stop(error)
 })

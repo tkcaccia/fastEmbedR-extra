@@ -165,10 +165,21 @@ point_size <- function(n) {
 
 draw_layout_dots <- function(layout, labels = NULL) {
     layout <- layout_matrix(layout)
-    if (ncol(layout) < 2L || any(!is.finite(layout[, 1:2, drop = FALSE]))) {
-        stop("Plot coordinates must be finite and two-dimensional.",
+    if (ncol(layout) < 2L || ncol(layout) > 3L ||
+            any(!is.finite(layout))) {
+        stop("Plot coordinates must be finite and two- or three-dimensional.",
             call. = FALSE
         )
+    }
+    if (ncol(layout) == 3L) {
+        azimuth <- pi / 6
+        elevation <- pi / 9
+        horizontal <- layout[, 1L] * cos(azimuth) -
+            layout[, 2L] * sin(azimuth)
+        vertical <- (layout[, 1L] * sin(azimuth) +
+            layout[, 2L] * cos(azimuth)) * sin(elevation) +
+            layout[, 3L] * cos(elevation)
+        layout <- cbind(horizontal, vertical)
     }
     labels <- clean_plot_labels(labels)
     graphics::par(mar = rep(0.1, 4L))
@@ -197,11 +208,13 @@ embedding_output_table <- function(layout, labels = NULL,
     if (length(labels) != n || length(source_rows) != n) {
         stop("Output metadata must have one value per row.", call. = FALSE)
     }
-    data.frame(
+    output <- data.frame(
         benchmark_row = seq_len(n), source_row = source_rows,
         label = as.character(labels), dimension_1 = layout[, 1L],
         dimension_2 = layout[, 2L], stringsAsFactors = FALSE
     )
+    if (ncol(layout) == 3L) output$dimension_3 <- layout[, 3L]
+    output
 }
 
 plot_embedding_csv <- function(input, output) {
@@ -233,7 +246,11 @@ read_embedding_csv <- function(input) {
             anyDuplicated(table$source_row)) {
         stop("Embedding CSV row identifiers are invalid.", call. = FALSE)
     }
-    layout <- as.matrix(table[c("dimension_1", "dimension_2")])
+    dimensions <- c("dimension_1", "dimension_2")
+    if ("dimension_3" %in% names(table)) {
+        dimensions <- c(dimensions, "dimension_3")
+    }
+    layout <- as.matrix(table[dimensions])
     storage.mode(layout) <- "double"
     list(layout = layout, labels = clean_plot_labels(table$label))
 }
@@ -512,8 +529,14 @@ sampled_tsne_kl <- function(layout, knn, perplexity) {
 trustworthiness_from_distances <- function(high, low, k) {
     n <- nrow(high)
     k <- min(as.integer(k), n - 1L)
-    high_order <- t(apply(high, 1L, order))[, -1L, drop = FALSE]
-    low_order <- t(apply(low, 1L, order))[, -1L, drop = FALSE]
+    diag(high) <- Inf
+    diag(low) <- Inf
+    high_order <- t(apply(high, 1L, order))[
+        , seq_len(n - 1L), drop = FALSE
+    ]
+    low_order <- t(apply(low, 1L, order))[
+        , seq_len(n - 1L), drop = FALSE
+    ]
     penalty <- 0
     for (i in seq_len(n)) {
         high_k <- high_order[i, seq_len(k)]

@@ -51,6 +51,24 @@ verify_output_contract <- function(layout) {
     )
 }
 
+smoke_production_calls <- function(methods, backend) {
+    script <- file.path(script_dir, "run_r_comparator.R")
+    rscript <- file.path(R.home("bin"), "Rscript")
+    for (method in methods) {
+        output <- suppressWarnings(system2(
+            rscript,
+            c(shQuote(script), "--smoke=TRUE",
+              paste0("--backend=", backend),
+              paste0("--method=", method)),
+            stdout = TRUE, stderr = TRUE
+        ))
+        writeLines(output)
+        if (!identical(attr(output, "status") %||% 0L, 0L)) {
+            stop("Production comparator smoke failed: ", method)
+        }
+    }
+}
+
 set.seed(4L)
 x <- matrix(stats::rnorm(256L * 8L), nrow = 256L)
 rank <- 2L
@@ -74,6 +92,10 @@ if (backend == "cuda") {
     assert_matrix(umap_fit, nrow(x))
     assert_layout_backend(umap_fit, "cuda")
     verify_output_contract(embedding_result_matrix(umap_fit))
+    smoke_production_calls(
+        c("fastembedr_pca", "fastembedr_tsne", "fastembedr_umap"),
+        "cuda"
+    )
     writeLines("R CUDA comparator smoke: PASS")
     quit(save = "no", status = 0L)
 }
@@ -115,6 +137,10 @@ assert_matrix(
     nrow(x), field = "layout"
 )
 verify_output_contract(x[, 1:2, drop = FALSE])
+smoke_production_calls(
+    c("stats_prcomp", "fitsne", "uwot", "uwot_fast_sgd"),
+    "cpu"
+)
 
 versions <- vapply(
     packages, function(package) as.character(utils::packageVersion(package)),

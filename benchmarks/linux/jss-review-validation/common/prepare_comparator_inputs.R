@@ -27,14 +27,17 @@ output_root <- arg_value(
     "output-root", file.path(base_dir, "fastEmbedR-results", "jss_validation")
 )
 dataset <- arg_value("dataset", "MNIST")
+full_dataset <- identical(arg_value("full-dataset"), "TRUE")
 
 write_float32_matrix <- function(x, path) {
     connection <- file(path, "wb")
     on.exit(close(connection), add = TRUE)
-    writeBin(
-        as.vector(t(as_double_matrix(x))), connection,
-        size = 4L, endian = "little"
-    )
+    for (first in seq.int(1L, nrow(x), by = 1024L)) {
+        last <- min(first + 1023L, nrow(x))
+        block <- as_double_matrix(x[first:last, , drop = FALSE])
+        writeBin(as.vector(t(block)), connection,
+            size = 4L, endian = "little")
+    }
 }
 
 prepare_quality_affinity <- function(x, rows, perplexity) {
@@ -53,7 +56,12 @@ main <- function() {
     }
     shared <- readRDS(shared_path)
     loaded <- load_dataset(data_root, dataset)
-    x <- loaded$data[shared$rows, , drop = FALSE]
+    if (full_dataset && length(shared$rows) != nrow(loaded$data)) {
+        stop("Full-dataset input does not include every source row.")
+    }
+    x <- if (full_dataset) loaded$data else {
+        loaded$data[shared$rows, , drop = FALSE]
+    }
     directory <- file.path(input_root, dataset, "workflow_comparators")
     dir.create(directory, recursive = TRUE, showWarnings = FALSE)
     write_float32_matrix(x, file.path(directory, "data_float32.bin"))
@@ -67,19 +75,23 @@ main <- function() {
         label = labels,
         quality_sample = seq_len(nrow(x)) %in% shared$quality_rows
     ), file.path(directory, "rows_labels.csv"))
-    affinity <- prepare_quality_affinity(
-        x, shared$quality_rows, shared$perplexity
-    )
-    write_csv_atomic(
-        affinity, file.path(directory, "quality_compact_affinity.csv")
-    )
+    if (!full_dataset) {
+        affinity <- prepare_quality_affinity(
+            x, shared$quality_rows, shared$perplexity
+        )
+        write_csv_atomic(
+            affinity, file.path(directory, "quality_compact_affinity.csv")
+        )
+    }
     write_csv_atomic(data.frame(
         dataset = dataset, n = nrow(x), p = ncol(x),
         quality_n = length(shared$quality_rows),
         perplexity = shared$perplexity,
         n_neighbors = ceiling(shared$perplexity),
+        full_source = full_dataset,
         selected_rows_sha256 = sha256_file(
-            file.path(input_root, dataset, "row_identifiers.csv")
+            if (full_dataset) file.path(directory, "rows_labels.csv")
+            else file.path(input_root, dataset, "row_identifiers.csv")
         ), stringsAsFactors = FALSE
     ), file.path(directory, "manifest.csv"))
     status <- status_row(

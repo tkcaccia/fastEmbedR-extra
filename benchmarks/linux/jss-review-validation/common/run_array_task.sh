@@ -19,7 +19,8 @@ source "$SUITE/common/campaign_submit.sh"
 campaign_verify_suite_revision
 
 IMAGE_SHA256="${FASTEMBEDR_IMAGE_SHA256:-}"
-if [[ "$MODE" == "preflight" && -z "$IMAGE_SHA256" ]]; then
+if [[ "$MODE" == "preflight" || "$MODE" == "fft_grid_sweep" ]] && \
+   [[ -z "$IMAGE_SHA256" ]]; then
   if command -v sha256sum >/dev/null 2>&1; then
     IMAGE_SHA256="$(sha256sum "$IMAGE" | awk '{print $1}')"
   else
@@ -37,6 +38,7 @@ THREADS=(1 2 4 8 12)
 PCA_THREADS=(1 4 12)
 PCA_RANKS=(2 50)
 SCALING_DATASETS=(COIL20 MNIST flow18 imagenet)
+GRID_SWEEP_DATASETS=(COIL20 MNIST Macosko2015_retina)
 LONGRUN_DATASETS=(USPS FashionMNIST MNIST MetRef)
 LONGRUN_GRIDS=(128 256 512)
 LONGRUN_ITERATIONS=(50 100 250 500 750 1000)
@@ -61,9 +63,15 @@ case "$MODE" in
   preflight)
     THREAD_COUNT=1
     ;;
-  precompute|affinity|knn_observed|knn_sensitivity)
+  fft_grid_sweep)
+    DATASET="${GRID_SWEEP_DATASETS[$TASK_ID]}"
+    EXTRA+=("--seed=4" "--grids=128,256,512")
+    EXTRA+=("--job-id=${SLURM_JOB_ID:-local}_${TASK_ID}")
+    ;;
+  precompute|full_precompute|affinity|knn_observed|knn_sensitivity)
     DATASET="${DATASETS[$TASK_ID]}"
     [[ "$MODE" == "precompute" || "$MODE" == "affinity" ]] && THREAD_COUNT=12
+    [[ "$MODE" == "full_precompute" ]] && THREAD_COUNT=1
     ;;
   longrun_precompute)
     DATASET="${LONGRUN_DATASETS[$TASK_ID]}"
@@ -216,6 +224,10 @@ trap 'record_scheduler_status interrupted 130; exit 130' INT
 
 NV=()
 if [[ "$BACKEND" == "cuda" ]]; then NV=(--nv); fi
+R_SCRIPT="$SUITE/common/run_validation.R"
+if [[ "$MODE" == fft_grid_sweep ]]; then
+  R_SCRIPT="$SUITE/common/run_fft_grid_sweep.R"
+fi
 
 COMMAND=(
   "$CONTAINER" exec "${NV[@]}" --cleanenv
@@ -228,7 +240,7 @@ COMMAND=(
   --env "MKL_NUM_THREADS=$THREAD_COUNT"
   --env "RCPP_PARALLEL_NUM_THREADS=$THREAD_COUNT"
   "$IMAGE" "$FASTEMBEDR_RSCRIPT"
-  "$SUITE/common/run_validation.R"
+  "$R_SCRIPT"
   "--mode=$MODE"
   "--base-dir=$BASE_DIR"
   "--data-root=$DATA_ROOT"

@@ -52,7 +52,7 @@ comparison_tsne_early <- as_int(
     arg_value("comparison-tsne-early-iterations"), 250L
 )
 comparison_tsne_total <- as_int(
-    arg_value("comparison-tsne-total-iterations"), 750L
+    arg_value("comparison-tsne-total-iterations"), 1000L
 )
 comparison_tsne_normal <- comparison_tsne_total - comparison_tsne_early
 if (comparison_tsne_early < 0L || comparison_tsne_normal < 1L) {
@@ -266,6 +266,39 @@ run_precompute <- function() {
         shared_input = path, stringsAsFactors = FALSE
     ), file.path(dataset_input_dir(dataset), "manifest.csv"))
     write_status("precompute", dataset, "cpu", "success")
+}
+
+run_full_precompute <- function() {
+    require_expected_version()
+    loaded <- load_dataset(data_root, dataset)
+    n <- nrow(loaded$data)
+    rows <- seq_len(n)
+    sample_n <- if (ncol(loaded$data) > 5000L) {
+        min(quality_n, 500L)
+    } else if (ncol(loaded$data) > 1000L) {
+        min(quality_n, 1000L)
+    } else quality_n
+    quality_rows <- stratified_rows(loaded$labels, n, sample_n, 2027L)
+    shared <- list(
+        dataset = dataset, source_path = loaded$path,
+        source_object = loaded$object_name,
+        source_n = n, source_p = ncol(loaded$data),
+        rows = rows, labels = loaded$labels,
+        quality_rows = quality_rows, perplexity = perplexity,
+        package_version = as.character(utils::packageVersion("fastEmbedR"))
+    )
+    path <- shared_input_path(dataset)
+    dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+    saveRDS(shared, path, compress = FALSE)
+    write_csv_atomic(data.frame(
+        dataset = dataset, source_path = loaded$path,
+        source_n = n, source_p = ncol(loaded$data),
+        benchmark_n = n, benchmark_p = ncol(loaded$data),
+        quality_n = length(quality_rows), full_source = TRUE,
+        shared_input = path
+    ), file.path(dataset_input_dir(dataset), "manifest.csv"))
+    write_status("full_precompute", dataset, "cpu", "success",
+        n = n, p = ncol(loaded$data))
 }
 
 write_longrun_portable_inputs <- function(bundle, directory) {
@@ -1942,40 +1975,52 @@ workflow_timing_eligibility <- function(x) {
     eligible
 }
 
-cuda_tsne_workflow_ratios <- function(x) {
+cuda_workflow_ratios <- function(x, family) {
     required <- c(
-        "family", "backend", "method", "total_iterations",
-        "device_synchronized", "elapsed_median_sec"
+        "family", "backend", "method", "n", "p", "n_components",
+        "device_synchronized", "elapsed_median_sec",
+        "initialization_requested", "affinity_support", "input_precision"
     )
     if (!all(required %in% names(x))) return(data.frame())
     eligible <- workflow_timing_eligibility(x)
-    eligible <- eligible & x$family == "tsne" & x$backend == "cuda"
-    eligible <- eligible & x$total_iterations == 750L
-    eligible <- eligible & x$comparison_contract ==
-        "workflow_750_total_iterations"
+    eligible <- eligible & x$family == family & x$backend == "cuda"
+    contract <- if (family == "tsne") {
+        "workflow_1000_total_iterations"
+    } else "workflow_package_policy"
+    eligible <- eligible & x$comparison_contract == contract
+    if (family == "tsne") {
+        eligible <- eligible & x$total_iterations == 1000L
+    } else {
+        eligible <- eligible & x$n_neighbors == 30L
+    }
     eligible <- eligible & x$timing_boundary ==
         "host_float32_to_host_result"
+    eligible <- eligible & x$input_precision == "float32"
     eligible <- eligible & as.logical(x$device_synchronized)
     eligible[is.na(eligible)] <- FALSE
     selected <- x[eligible, , drop = FALSE]
     fast <- selected[
-        selected$method == "fastembedr_tsne" &
+        selected$method == paste0("fastembedr_", family) &
             selected$timing_scope == "R_public_fit", , drop = FALSE
     ]
     cuml <- selected[
-        selected$method == "cuml_tsne" &
+        selected$method == paste0("cuml_", family) &
             selected$timing_scope == "direct_Python_fit", , drop = FALSE
     ]
     keys <- c(
-        "dataset", "seed", "total_iterations", "timing_boundary",
-        "comparison_contract"
+        "dataset", "seed", "n", "p", "n_components",
+        "timing_boundary", "comparison_contract", "input_precision"
     )
+    keys <- c(keys, if (family == "tsne") "total_iterations" else {
+        "n_neighbors"
+    })
     paired <- merge(fast, cuml, by = keys, suffixes = c("_fast", "_cuml"))
     if (!nrow(paired)) return(data.frame())
-    data.frame(
+    result <- data.frame(
         dataset = paired$dataset,
         seed = paired$seed,
-        total_iterations = paired$total_iterations,
+        n = paired$n, p = paired$p,
+        n_components = paired$n_components,
         timing_reps_fastembedr = paired$timing_reps_fast,
         timing_reps_cuml = paired$timing_reps_cuml,
         warmup_count_fastembedr = paired$warmup_count_fast,
@@ -1988,17 +2033,42 @@ cuda_tsne_workflow_ratios <- function(x) {
         fastembedr_timing_scope = paired$timing_scope_fast,
         cuml_timing_scope = paired$timing_scope_cuml,
         timing_boundary = paired$timing_boundary,
+        input_precision = paired$input_precision,
+        fastembedr_knn_median_sec = paired$knn_median_sec_fast,
+        fastembedr_embedding_median_sec =
+            paired$embedding_median_sec_fast,
+        fastembedr_trustworthiness = paired$trustworthiness_fast,
+        cuml_trustworthiness = paired$trustworthiness_cuml,
+        fastembedr_preserve_at_30 = paired$preserve_at_30_fast,
+        cuml_preserve_at_30 = paired$preserve_at_30_cuml,
         fastembedr_initialization =
             paired$initialization_requested_fast,
         cuml_initialization = paired$initialization_requested_cuml,
         initialization_match =
             "same_policy_not_same_coordinates",
-        comparison_type = "workflow_level_not_optimizer_matched",
-        fastembedr_support = "compact_k_equals_perplexity",
-        cuml_support = "standard_n_neighbors_91",
-        optimizer_matched = FALSE,
+        fastembedr_support = paired$affinity_support_fast,
+        cuml_support = paired$affinity_support_cuml,
+        parameter_matched = FALSE,
         stringsAsFactors = FALSE
     )
+    if (family == "tsne") {
+        result$total_iterations <- paired$total_iterations
+        result$comparison_type <- "workflow_level_not_optimizer_matched"
+    } else {
+        result$n_neighbors <- paired$n_neighbors
+        result$fastembedr_min_dist <- paired$min_dist_value_fast
+        result$cuml_min_dist <- paired$min_dist_value_cuml
+        result$comparison_type <- "workflow_level_not_parameter_matched"
+    }
+    result
+}
+
+cuda_tsne_workflow_ratios <- function(x) {
+    cuda_workflow_ratios(x, "tsne")
+}
+
+cuda_umap_workflow_ratios <- function(x) {
+    cuda_workflow_ratios(x, "umap")
 }
 
 run_aggregate <- function() {
@@ -2462,6 +2532,13 @@ run_aggregate <- function() {
                 file.path(out, "cuda_tsne_workflow_speed_ratio.csv")
             )
         }
+        cuda_umap <- cuda_umap_workflow_ratios(comparators)
+        if (nrow(cuda_umap)) {
+            write_csv_atomic(
+                cuda_umap,
+                file.path(out, "cuda_umap_workflow_speed_ratio.csv")
+            )
+        }
     }
     agreement <- aggregate_support_agreement(output_root)
     if (nrow(agreement)) {
@@ -2778,6 +2855,7 @@ aggregate_pca_accuracy_agreement <- function(root) {
 dispatch <- list(
     preflight = run_preflight,
     precompute = run_precompute,
+    full_precompute = run_full_precompute,
     longrun_precompute = run_longrun_precompute,
     longrun = run_longrun_tsne,
     longrun_timing = run_longrun_timing,
