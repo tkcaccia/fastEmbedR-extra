@@ -402,13 +402,14 @@ file before running, so a campaign cannot silently mix source revisions. It
 also checks that each Slurm worker reserves at least the host CPUs required by
 its R thread setting. Only manifest-listed scripts are checked; older scripts
 left by synchronization are not part of the campaign and must not be submitted.
-The staged CUDA lane bundles transformation with landmark reconstruction,
+The staged CUDA lane bundles both support settings per dataset,
+transformation with landmark reconstruction,
 PCA timing with PCA accuracy, and the 18 long-run t-SNE settings with final
 fits and timing. Each dataset gets one allocation per bundle. Every subrun
 retains its original measurement, scheduler status, and output directory;
 the bundle also writes a per-subrun status CSV. A failure does not skip later
-subruns, but makes the array task and final audit fail. The focused full-data
-fastEmbedR-versus-cuML campaign is unchanged. Do not replace the scripts in
+subruns, but makes the array task and final audit fail. CUDA support now uses
+11 dataset jobs rather than 22. Do not replace the scripts in
 an active campaign: its source checksum must remain fixed until completion.
 Do not launch
 `submit_all.sh` on an
@@ -452,10 +453,13 @@ bash \
   benchmark_scripts/fastembedr_jss_review_validation/submit_full_cuda_campaign.sh
 ```
 
-The staged controller submits 11 CPU input jobs, 11 binary-input jobs, 44
-single-method GPU jobs (two concurrent), 11 R quality jobs, then a strict
-audit. The four GPU methods are `fastembedr_tsne`, `cuml_tsne`,
-`fastembedr_umap`, and `cuml_umap`. Each method has one warm-up and three
+The staged controller submits 11 CPU input jobs, 11 binary-input jobs, 17
+GPU jobs (two concurrent), 11 R quality jobs, then a strict audit. Nine
+datasets run `fastembedr_tsne`, `cuml_tsne`, `fastembedr_umap`, and
+`cuml_umap` sequentially within a dataset job. FlowRepository and ImageNet
+keep separate allocations per method so a bundled 48-hour limit cannot
+truncate later methods. Each subrun records its own status and later methods
+still run after a failure. Each method has one warm-up and three
 same-seed timed repetitions. GPU work has a 42-hour method limit and a
 48-hour Slurm limit. A timeout or unavailable method is reported as a
 failure, never replaced by a smaller dataset or CPU fallback.
@@ -474,8 +478,9 @@ INCLUDE_NOMAD=TRUE bash \
 The launcher uses `/opt/nomad/bin/python` for NOMAD and rejects an image
 without installed, source-pinned NOMAD. A local Git checkout is accepted only
 when the installed projection module matches that pinned checkout.
-It records the installed NOMAD version and commit. An additional GPU wave runs
-NOMAD on all source rows after the fastEmbedR/cuML pairs. The same saved
+It records the installed NOMAD version and commit. An additional 11-job GPU
+wave runs NOMAD on all source rows after the fastEmbedR/cuML dataset jobs.
+The same saved
 float32 input and fixed quality rows are used. NOMAD is not t-SNE or UMAP:
 its inner-product neighbor search, contrastive objective, and 100-epoch
 schedule are reported separately. The benchmark requests eight neighbors,

@@ -88,6 +88,7 @@ with open(sys.argv[1], newline="") as handle:
 workers = {row["job_id"]: row["stage"] for row in rows
            if row["role"] == "worker"}
 bundles = {
+    "support_cuda": ("run_support_cuda.sh", "0-10%5"),
     "transform_cuda": ("run_transform_landmark_cuda_bundle.sh", "0-10%5"),
     "pca_cuda": ("run_pca_accuracy_cuda_bundle.sh", "0-10%5"),
     "longrun_cuda_1": ("run_tsne_longrun_cuda_bundle.sh", "0-3%4"),
@@ -140,6 +141,9 @@ import sys
 with open(sys.argv[1], newline="") as handle:
     rows = list(csv.DictReader(handle, delimiter="\t"))
 nomad = [row for row in rows if row["label"] == "full_nomad"]
+pair = [row for row in rows if row["label"] == "full_pairs"]
+assert len(pair) == 1
+assert pair[0]["array"] == "0-16%2"
 assert len(nomad) == 1
 assert nomad[0]["array"] == "0-10%2"
 assert nomad[0]["script"].endswith("run_full_nomad_cuda.sh")
@@ -163,6 +167,12 @@ export SUITE="$TEST_ROOT/mock_suite"
 export SLURM_JOB_ID=555
 export JSS_BUNDLE_CALLS="$TEST_ROOT/bundle_calls.tsv"
 BUNDLE="$(dirname "$CONTROLLER")/run_bundled_cuda.sh"
+SLURM_ARRAY_TASK_ID=7 bash "$BUNDLE" support \
+  > "$TEST_ROOT/support_bundle.log"
+[[ "$(wc -l < "$JSS_BUNDLE_CALLS")" -eq 2 ]]
+grep -q $'^support\tcuda\t14\t' "$JSS_BUNDLE_CALLS"
+grep -q $'^support\tcuda\t15\t' "$JSS_BUNDLE_CALLS"
+: > "$JSS_BUNDLE_CALLS"
 SLURM_ARRAY_TASK_ID=0 bash "$BUNDLE" pca_accuracy \
   > "$TEST_ROOT/pca_bundle.log"
 [[ "$(wc -l < "$JSS_BUNDLE_CALLS")" -eq 4 ]]
@@ -189,4 +199,50 @@ grep -q $'^landmark_reconstruction\tcuda\t1\t0.2\t' \
   "$JSS_BUNDLE_CALLS"
 grep -q ',landmark_reconstruction,0,failed,7,' \
   "$OUTPUT_ROOT/scheduler_status/bundles/transform_landmark/555_0.csv"
+
+cat > "$TEST_ROOT/mock_suite/common/run_comparator_task.sh" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\t%s\t%s\n' "$1" "$COMPARATOR_TASK_ID" \
+  "$FULL_CUDA_PAIR" >> "$JSS_PAIR_CALLS"
+if [[ "${JSS_FAIL_PAIR:-FALSE}" == TRUE && \
+      "$1" == python_cuda && "$COMPARATOR_TASK_ID" == 14 ]]; then
+  exit 7
+fi
+EOF
+export JSS_PAIR_CALLS="$TEST_ROOT/pair_calls.tsv"
+export JSS_FAIL_PAIR=TRUE
+PAIR="$(dirname "$CONTROLLER")/run_full_cuda_pair.sh"
+if SLURM_ARRAY_TASK_ID=0 bash "$PAIR" \
+    > "$TEST_ROOT/full_pair.log" 2>&1; then
+  echo 'Full CUDA bundle did not report a failed method.' >&2
+  exit 1
+fi
+[[ "$(wc -l < "$JSS_PAIR_CALLS")" -eq 4 ]]
+grep -q $'^r_cuda\t14\tTRUE$' "$JSS_PAIR_CALLS"
+grep -q $'^python_cuda\t14\tTRUE$' "$JSS_PAIR_CALLS"
+grep -q $'^r_cuda\t15\tTRUE$' "$JSS_PAIR_CALLS"
+grep -q $'^python_cuda\t15\tTRUE$' "$JSS_PAIR_CALLS"
+grep -q ',python_cuda,tsne,14,failed,7,' \
+  "$OUTPUT_ROOT/scheduler_status/full_cuda_pairs/555_0.csv"
+export JSS_FAIL_PAIR=FALSE
+: > "$JSS_PAIR_CALLS"
+for array_id in {0..16}; do
+  SLURM_ARRAY_TASK_ID="$array_id" bash "$PAIR" \
+    >> "$TEST_ROOT/full_pair_coverage.log"
+done
+python3 - "$JSS_PAIR_CALLS" <<'PY'
+import collections
+import csv
+import sys
+
+with open(sys.argv[1], newline="") as handle:
+    rows = list(csv.reader(handle, delimiter="\t"))
+assert len(rows) == 44
+actual = collections.Counter((mode, int(task)) for mode, task, flag in rows)
+assert all(flag == "TRUE" for _, _, flag in rows)
+expected = collections.Counter((mode, task)
+                               for task in range(22)
+                               for mode in ("r_cuda", "python_cuda"))
+assert actual == expected
+PY
 echo 'Campaign CPU/CUDA schedule: PASS'

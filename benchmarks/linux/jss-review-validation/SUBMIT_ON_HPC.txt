@@ -2,8 +2,8 @@ cd /scratch/firenze/NN
 
 # Optional separate-objective NOMAD comparison: use only after the image
 # contains CUDA PyTorch and NOMAD installed from a pinned Git commit.
-# This starts a new full-dataset campaign; do not submit it alongside the
-# same campaign without NOMAD.
+# This starts a separate full-dataset campaign after the complete validation
+# campaign; do not overlap them on a constrained l40s queue.
 # INCLUDE_NOMAD=TRUE bash \
 #   benchmark_scripts/fastembedr_jss_review_validation/submit_full_cuda_campaign.sh
 

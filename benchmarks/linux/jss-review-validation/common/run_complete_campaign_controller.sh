@@ -56,7 +56,7 @@ case "$JSS_STAGE" in
       NEXT_STAGE=full_nomad
     fi
     add_worker full_pairs \
-      "$SUITE/slurm/run_full_pairs_cuda.sh" '0-43%2'
+      "$SUITE/slurm/run_full_pairs_cuda.sh" '0-16%2'
     ;;
   full_nomad)
     NEXT_STAGE=full_quality
@@ -116,7 +116,7 @@ case "$JSS_STAGE" in
     ;;
   support_cuda)
     NEXT_STAGE=recall_quality_cuda
-    add_worker support_cuda "$SUITE/slurm/run_support_cuda.sh" '0-21%5'
+    add_worker support_cuda "$SUITE/slurm/run_support_cuda.sh" '0-10%5'
     ;;
   recall_quality_cpu)
     NEXT_STAGE=transform_cpu
