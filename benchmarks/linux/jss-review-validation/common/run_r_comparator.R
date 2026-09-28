@@ -30,6 +30,8 @@ backend <- arg_value("backend", "cpu")
 threads <- as_int(arg_value("threads"), 4L)
 seed <- as_int(arg_value("seed"), 4L)
 timing_reps <- as_int(arg_value("timing-reps"), 5L)
+timeout_seconds <- as.numeric(arg_value("timeout-seconds", 7200))
+deadline_epoch <- as.numeric(arg_value("deadline-epoch", Inf))
 n_components <- as_int(arg_value("n-components"), 2L)
 defer_quality <- identical(arg_value("defer-quality"), "TRUE")
 full_dataset <- identical(arg_value("full-dataset"), "TRUE")
@@ -52,6 +54,14 @@ if (backend == "cuda" && !startsWith(method, "fastembedr_")) {
 }
 if (timing_reps < 2L) {
     stop("At least two timing repetitions are required.", call. = FALSE)
+}
+if (!is.finite(timeout_seconds) || timeout_seconds <= 0) {
+    stop("Timeout must be positive.", call. = FALSE)
+}
+
+can_fit_repetitions <- function(observed, count, remaining) {
+    reserve <- min(300, timeout_seconds * 0.05)
+    remaining >= reserve + 1.2 * max(observed) * count
 }
 if (!n_components %in% c(2L, 3L)) {
     stop("Output dimensions must be 2 or 3.", call. = FALSE)
@@ -327,7 +337,8 @@ stage_seconds <- function(fit) {
 }
 
 write_outputs <- function(fit, elapsed, benchmark, stages = NULL,
-                          output_dir = output_root) {
+                          output_dir = output_root,
+                          warmup_excluded = TRUE) {
     family <- method_family(method)
     layout <- extract_layout(fit, family)
     rows <- benchmark$shared$quality_rows
@@ -387,9 +398,20 @@ write_outputs <- function(fit, elapsed, benchmark, stages = NULL,
         timing_scope = "R_public_fit",
         timing_boundary = timing_boundary,
         timing_interface = "R_public_function",
-        timing_eligible = TRUE,
-        seed = seed, timing_reps = timing_reps, warmup_count = 1L,
-        warmup_excluded = TRUE,
+        timing_eligible = warmup_excluded &&
+            length(elapsed) == timing_reps,
+        seed = seed, timing_reps = length(elapsed),
+        timing_reps_requested = timing_reps,
+        warmup_count = as.integer(warmup_excluded),
+        warmup_excluded = warmup_excluded,
+        timing_policy = if (!warmup_excluded) {
+            "single_fit_budget"
+        } else if (length(elapsed) < timing_reps) {
+            "partial_budget"
+        } else {
+            "complete_repeated"
+        },
+        method_timeout_seconds = timeout_seconds,
         device_synchronized = backend == "cuda",
         output_materialized_on_host_before_timer = TRUE,
         early_iterations = if (family == "tsne") {
@@ -431,7 +453,9 @@ write_outputs <- function(fit, elapsed, benchmark, stages = NULL,
     write_csv_atomic(cbind(data.frame(
         dataset = dataset, method = method, backend = result_backend,
         seed = seed, timing_replicate = seq_along(elapsed),
-        warmup_count = 1L, warmup_excluded = TRUE,
+        warmup_count = as.integer(warmup_excluded),
+        warmup_excluded = warmup_excluded,
+        timing_reps_requested = timing_reps,
         timing_scope = "R_public_fit",
         timing_boundary = timing_boundary,
         total_iterations = if (family == "tsne") {
@@ -465,6 +489,49 @@ write_outputs <- function(fit, elapsed, benchmark, stages = NULL,
     ), file.path(out, "status.csv"))
 }
 
+timed_fits <- function(input, rank, fitsne) {
+    pilot_time <- system.time({
+        pilot <- fit_once(method, input, 30, 30L, rank, fitsne)
+    })[["elapsed"]]
+    assert_fastembedr_backend(pilot)
+    message("Pilot completed: ", dataset, "/", method, " in ",
+        format(pilot_time, digits = 6), " seconds")
+    stage_names <- names(stage_seconds(pilot))
+    remaining <- deadline_epoch - as.numeric(Sys.time())
+    if (!can_fit_repetitions(pilot_time, timing_reps, remaining)) {
+        stages <- matrix(stage_seconds(pilot), nrow = 1L,
+            dimnames = list(NULL, stage_names))
+        message("Skipping timing repeats: method time budget.")
+        return(list(fit = pilot, elapsed = pilot_time,
+            stages = stages, warmup_excluded = FALSE))
+    }
+    rm(pilot)
+    if (full_dataset) gc()
+    elapsed <- numeric()
+    stages <- matrix(NA_real_, nrow = 0L, ncol = 4L,
+        dimnames = list(NULL, stage_names))
+    fit <- NULL
+    for (index in seq_len(timing_reps)) {
+        if (index > 1L && !can_fit_repetitions(
+                c(pilot_time, elapsed), 1L,
+                deadline_epoch - as.numeric(Sys.time()))) break
+        if (full_dataset) {
+            fit <- NULL
+            gc()
+        }
+        timing <- system.time({
+            fit <- fit_once(method, input, 30, 30L, rank, fitsne)
+        })[["elapsed"]]
+        assert_fastembedr_backend(fit)
+        elapsed <- c(elapsed, timing)
+        stages <- rbind(stages, stage_seconds(fit))
+        message("Timing repetition ", index, "/", timing_reps,
+            ": ", format(timing, digits = 6), " seconds")
+    }
+    list(fit = fit, elapsed = elapsed, stages = stages,
+        warmup_excluded = TRUE)
+}
+
 run <- function() {
     if (n_components == 3L && backend == "cuda" &&
             startsWith(method, "fastembedr_")) {
@@ -487,35 +554,9 @@ run <- function() {
         benchmark$double
     }
     fitsne <- if (method == "fitsne") load_fitsne() else NULL
-    warmup <- fit_once(method, input, 30, 30L, rank, fitsne)
-    assert_fastembedr_backend(warmup)
-    message("Warm-up completed: ", dataset, "/", method)
-    stage_names <- names(stage_seconds(warmup))
-    if (full_dataset) {
-        rm(warmup)
-        gc()
-    }
-    elapsed <- numeric(timing_reps)
-    stages <- matrix(NA_real_, nrow = timing_reps, ncol = 4L)
-    colnames(stages) <- stage_names
-    fit <- NULL
-    for (index in seq_len(timing_reps)) {
-        if (full_dataset) {
-            fit <- NULL
-            gc()
-        }
-        timing <- system.time({
-            fit <- fit_once(method, input, 30, 30L, rank, fitsne)
-        })
-        assert_fastembedr_backend(fit)
-        elapsed[[index]] <- timing[["elapsed"]]
-        stages[index, ] <- stage_seconds(fit)
-        message(
-            "Timing repetition ", index, "/", timing_reps,
-            ": ", format(elapsed[[index]], digits = 6), " seconds"
-        )
-    }
-    write_outputs(fit, elapsed, benchmark, stages)
+    timed <- timed_fits(input, rank, fitsne)
+    write_outputs(timed$fit, timed$elapsed, benchmark, timed$stages,
+        warmup_excluded = timed$warmup_excluded)
 }
 
 run_smoke <- function() {

@@ -460,10 +460,15 @@ strict audit. Nine datasets run `fastembedr_tsne`, `cuml_tsne`,
 NOMAD follows in that same allocation when enabled. FlowRepository and
 ImageNet keep separate allocations per method so a bundled 48-hour limit
 cannot truncate later methods. Each subrun records its own status and
-later methods still run after a failure. Each method has one warm-up and three
-same-seed timed repetitions. GPU work has a 42-hour method limit and a
-48-hour Slurm limit. A timeout or unavailable method is reported as a
-failure, never replaced by a smaller dataset or CPU fallback.
+later methods still run after a failure. Each method allows at most two
+hours. Its first fit is a timing pilot: if the remaining budget cannot
+accommodate all requested same-seed repetitions, that fit is saved once
+with `timing_eligible=FALSE` and no repeated calculation. Otherwise the
+pilot is excluded as warm-up and three repetitions are attempted. The
+48-hour Slurm limit covers the bundled methods. A fit exceeding two hours
+is reported as a timeout, never replaced by a smaller dataset or CPU
+fallback. The strict final audit does not accept single-fit timing as a
+replicated speed comparison.
 
 To include NOMAD as a separate 2D CUDA method in a new full-dataset
 campaign, first build an image with CUDA-enabled PyTorch and
@@ -648,10 +653,14 @@ A shared R renderer reads that CSV and writes `embedding.png`, so R and Python
 methods use identical labels, palette construction, margins, opacity, and
 point-size rules. Tasks also retain
 `/usr/bin/time -v` output, CUDA memory traces, and the Slurm stdout/stderr log.
-Comparator fits currently have a temporary 600-second per-method limit. Set
+Comparator fits have a 7,200-second per-method limit. Set
 `METHOD_TIMEOUT_SECONDS` to a positive integer to override it. Input
-precomputation is not subject to this limit. A timeout writes an explicit
-`status.csv` row and cannot pass the final campaign audit.
+precomputation is not subject to this limit. A pilot fit is retained without
+repetition when the projected repeated run exceeds the budget. Its result
+records `timing_reps=1`, `timing_policy=single_fit_budget`, and
+`timing_eligible=FALSE`; it remains usable for visualization and quality,
+not a speedup ratio. A fit that itself exceeds the limit writes an explicit
+timeout `status.csv` and cannot pass the final campaign audit.
 The audit also checks that a successful method's reported family agrees with
 its method name. The JSS figure builder requires `status=PASS` in
 `final_audit.txt`; quality-diagnostic elapsed times cannot replace repeated

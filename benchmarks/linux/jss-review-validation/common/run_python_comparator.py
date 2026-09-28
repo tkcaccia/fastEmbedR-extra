@@ -33,6 +33,8 @@ def parse_args():
     parser.add_argument("--threads", type=int, default=4)
     parser.add_argument("--seed", type=int, default=4)
     parser.add_argument("--timing-reps", type=int, default=5)
+    parser.add_argument("--timeout-seconds", type=float, default=7200)
+    parser.add_argument("--deadline-epoch", type=float, default=float("inf"))
     parser.add_argument("--n-components", type=int, default=2)
     parser.add_argument("--defer-quality", action="store_true")
     return parser.parse_args()
@@ -357,7 +359,13 @@ def parameter_metadata(args, n):
     return row
 
 
-def result_row(args, manifest, elapsed, metrics, model):
+def can_fit_repetitions(args, observed, count):
+    reserve = min(300, args.timeout_seconds * 0.05)
+    remaining = args.deadline_epoch - time.time()
+    return remaining >= reserve + 1.2 * max(observed) * count
+
+
+def result_row(args, manifest, elapsed, metrics, model, warmup_excluded):
     versions = {
         "python_version": sys.version.split()[0],
         "numpy_version": package_version("numpy"),
@@ -382,11 +390,18 @@ def result_row(args, manifest, elapsed, metrics, model):
         "timing_scope": "direct_Python_fit",
         "timing_boundary": "host_float32_to_host_result",
         "timing_interface": "Python_estimator_fit_transform",
-        "timing_eligible": True,
+        "timing_eligible": warmup_excluded and len(elapsed) == args.timing_reps,
         "seed": args.seed,
-        "timing_reps": args.timing_reps,
-        "warmup_count": 1,
-        "warmup_excluded": True,
+        "timing_reps": len(elapsed),
+        "timing_reps_requested": args.timing_reps,
+        "warmup_count": int(warmup_excluded),
+        "warmup_excluded": warmup_excluded,
+        "timing_policy": (
+            "single_fit_budget" if not warmup_excluded else
+            "partial_budget" if len(elapsed) < args.timing_reps else
+            "complete_repeated"
+        ),
+        "method_timeout_seconds": args.timeout_seconds,
         "device_synchronized": args.backend == "cuda",
         "output_materialized_on_host_before_timer": True,
         "n": int(manifest["n"]),
@@ -464,6 +479,8 @@ def result_row(args, manifest, elapsed, metrics, model):
 def main(args):
     if args.timing_reps < 2:
         raise ValueError("At least two timing repetitions are required")
+    if not np.isfinite(args.timeout_seconds) or args.timeout_seconds <= 0:
+        raise ValueError("Timeout must be positive")
     if args.n_components not in (2, 3):
         raise ValueError("Output dimensions must be 2 or 3")
     if args.method == "nomad" and args.backend != "cuda":
@@ -480,18 +497,33 @@ def main(args):
         return
     manifest, data, quality, labels, source_rows, edge = read_inputs(args)
     rank = min(50, data.shape[0] - 1, data.shape[1] - 1)
-    warmup_model, warmup_values, _ = fit_once(args, data, rank)
-    del warmup_model, warmup_values
-    if args.defer_quality:
-        gc.collect()
-    elapsed = []
-    model, values = None, None
-    for _ in range(args.timing_reps):
+    pilot_model, pilot_values, pilot_seconds = fit_once(args, data, rank)
+    print(f"Pilot completed: {pilot_seconds:.3f} seconds", flush=True)
+    warmup_excluded = can_fit_repetitions(
+        args, [pilot_seconds], args.timing_reps
+    )
+    if warmup_excluded:
+        del pilot_model, pilot_values
         if args.defer_quality:
-            model, values = None, None
             gc.collect()
-        model, values, seconds = fit_once(args, data, rank)
-        elapsed.append(seconds)
+        elapsed = []
+        model, values = None, None
+        for index in range(args.timing_reps):
+            if index and not can_fit_repetitions(
+                args, [pilot_seconds, *elapsed], 1
+            ):
+                break
+            if args.defer_quality:
+                model, values = None, None
+                gc.collect()
+            model, values, seconds = fit_once(args, data, rank)
+            elapsed.append(seconds)
+            print(f"Timing repetition {index + 1}/{args.timing_reps}: "
+                  f"{seconds:.3f} seconds", flush=True)
+    else:
+        model, values = pilot_model, pilot_values
+        elapsed = [pilot_seconds]
+        print("Skipping timing repeats: method time budget", flush=True)
     used_family = family(args.method)
     if args.defer_quality:
         metrics = dict.fromkeys((
@@ -508,7 +540,8 @@ def main(args):
         )
     write_csv(
         os.path.join(args.output_dir, "result.csv"),
-        result_row(args, manifest, elapsed, metrics, model),
+        result_row(args, manifest, elapsed, metrics, model,
+                   warmup_excluded),
     )
     write_csv(os.path.join(args.output_dir, "timing_repetitions.csv"), [
         {
@@ -517,8 +550,9 @@ def main(args):
             "backend": args.backend,
             "seed": args.seed,
             "timing_replicate": index,
-            "warmup_count": 1,
-            "warmup_excluded": True,
+            "warmup_count": int(warmup_excluded),
+            "warmup_excluded": warmup_excluded,
+            "timing_reps_requested": args.timing_reps,
             "timing_scope": "direct_Python_fit",
             "timing_boundary": "host_float32_to_host_result",
             "total_iterations": (

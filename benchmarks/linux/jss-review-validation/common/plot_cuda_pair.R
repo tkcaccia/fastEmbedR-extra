@@ -52,7 +52,8 @@ read_method <- function(index) {
 metric <- function(method, name) {
     value <- if (is.null(method$result)) NULL else method$result[[name]]
     if (length(value) == 1L) return(value)
-    if (name %in% c("timing_scope", "timing_boundary")) {
+    if (name %in% c("timing_scope", "timing_boundary",
+            "timing_policy")) {
         NA_character_
     } else {
         NA_real_
@@ -97,6 +98,11 @@ draw_panel <- function(method, layout, labels, heading, quality_n,
         axes = FALSE, ann = FALSE, frame.plot = FALSE)
     graphics::title(main = heading, cex.main = 0.9)
     elapsed <- format_metric(metric(method, "elapsed_median_sec"), 2L)
+    timing_note <- if (isTRUE(metric(method, "timing_eligible"))) {
+        ""
+    } else {
+        " (unreplicated)"
+    }
     trust <- format_metric(metric(method, "trustworthiness"))
     preserve <- format_metric(metric(method, "preserve_at_30"))
     quality <- paste0("T=", trust, "  Preserve@30=", preserve)
@@ -105,7 +111,9 @@ draw_panel <- function(method, layout, labels, heading, quality_n,
             format_metric(metric(method, "sampled_kl")))
     }
     details <- paste0("n=", nrow(layout), "; quality n=", quality_n)
-    graphics::mtext(paste0(elapsed, " s  |  ", quality,
+    reps <- metric(method, "timing_reps")
+    if (is.finite(reps)) details <- paste0(details, "; reps=", reps)
+    graphics::mtext(paste0(elapsed, " s", timing_note, "  |  ", quality,
         "  |  ", details), side = 1L, line = 0.5, cex = 0.75)
 }
 
@@ -127,6 +135,14 @@ main <- function() {
         timing_boundary = vapply(results, function(x) {
             as.character(metric(x, "timing_boundary"))
         }, character(1L)),
+        timing_policy = vapply(results, function(x) {
+            as.character(metric(x, "timing_policy"))
+        }, character(1L)),
+        timing_reps = vapply(results, metric, numeric(1L),
+            name = "timing_reps"),
+        timing_eligible = vapply(results, function(x) {
+            isTRUE(metric(x, "timing_eligible"))
+        }, logical(1L)),
         elapsed_median_sec = vapply(results, metric, numeric(1L),
             name = "elapsed_median_sec"),
         trustworthiness = vapply(results, metric, numeric(1L),

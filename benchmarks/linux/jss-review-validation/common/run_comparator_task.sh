@@ -11,7 +11,7 @@ INPUT_ROOT="${INPUT_ROOT:?INPUT_ROOT is required}"
 OUTPUT_ROOT="${OUTPUT_ROOT:?OUTPUT_ROOT is required}"
 TASK_ID="${COMPARATOR_TASK_ID:-${SLURM_ARRAY_TASK_ID:-0}}"
 THREADS="${SLURM_CPUS_PER_TASK:-4}"
-METHOD_TIMEOUT_SECONDS="${METHOD_TIMEOUT_SECONDS:-600}"
+METHOD_TIMEOUT_SECONDS="${METHOD_TIMEOUT_SECONDS:-7200}"
 N_COMPONENTS="${N_COMPONENTS:-2}"
 FULL_CUDA_PAIR="${FULL_CUDA_PAIR:-FALSE}"
 TIMING_REPS="${TIMING_REPS:-5}"
@@ -61,6 +61,7 @@ fi
   echo "METHOD_TIMEOUT_SECONDS must be a positive integer" >&2
   exit 2
 }
+METHOD_DEADLINE_EPOCH="$(( $(date +%s) + METHOD_TIMEOUT_SECONDS ))"
 
 BACKEND=cpu
 case "$MODE" in
@@ -102,6 +103,9 @@ case "$MODE" in
       "--input-root=$INPUT_ROOT" "--output-root=$OUTPUT_ROOT"
       "--dataset=$DATASET" "--method=$METHOD" "--threads=$THREADS"
       "--backend=cpu" "--n-components=$N_COMPONENTS"
+      "--timing-reps=$TIMING_REPS"
+      "--timeout-seconds=$METHOD_TIMEOUT_SECONDS"
+      "--deadline-epoch=$METHOD_DEADLINE_EPOCH"
     )
     ;;
   r_cuda)
@@ -126,6 +130,8 @@ case "$MODE" in
       "--dataset=$DATASET" "--method=$METHOD" "--threads=$THREADS"
       "--backend=cuda" "--n-components=$N_COMPONENTS"
       "--timing-reps=$TIMING_REPS"
+      "--timeout-seconds=$METHOD_TIMEOUT_SECONDS"
+      "--deadline-epoch=$METHOD_DEADLINE_EPOCH"
     )
     ;;
   python_cpu|python_cuda|python_nomad)
@@ -163,6 +169,8 @@ case "$MODE" in
       "--method=$METHOD" "--backend=$BACKEND" "--threads=$THREADS"
       "--n-components=$N_COMPONENTS"
       "--timing-reps=$TIMING_REPS"
+      "--timeout-seconds=$METHOD_TIMEOUT_SECONDS"
+      "--deadline-epoch=$METHOD_DEADLINE_EPOCH"
     )
     ;;
   *)

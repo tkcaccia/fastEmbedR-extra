@@ -18,6 +18,35 @@ load_functions(file.path(root, "common", "run_validation.R"), c(
     "workflow_timing_eligibility", "cuda_workflow_ratios"
 ))
 load_functions(file.path(root, "common", "run_r_comparator.R"),
+    c("stage_seconds", "can_fit_repetitions", "timed_fits"))
+
+timeout_seconds <- 7200
+stopifnot(can_fit_repetitions(100, 3L, 7200))
+stopifnot(!can_fit_repetitions(1900, 3L, 5200))
+counter <- new.env(parent = emptyenv())
+counter$n <- 0L
+fit_once <- function(...) {
+    counter$n <- counter$n + 1L
+    list(metrics = list())
+}
+assert_fastembedr_backend <- function(fit) invisible(fit)
+stage_seconds <- function(fit) {
+    c(preprocess = 0, knn = 0, initialization = 0, embedding = 0)
+}
+dataset <- "fixture"
+method <- "fastembedr_tsne"
+timing_reps <- 3L
+full_dataset <- FALSE
+deadline_epoch <- as.numeric(Sys.time()) + 120
+single <- timed_fits(matrix(0, 2L, 2L), 1L, NULL)
+stopifnot(counter$n == 1L, length(single$elapsed) == 1L,
+    !single$warmup_excluded)
+counter$n <- 0L
+deadline_epoch <- as.numeric(Sys.time()) + 7200
+repeated <- timed_fits(matrix(0, 2L, 2L), 1L, NULL)
+stopifnot(counter$n == 4L, length(repeated$elapsed) == 3L,
+    repeated$warmup_excluded)
+load_functions(file.path(root, "common", "run_r_comparator.R"),
     "stage_seconds")
 
 contract <- utils::read.csv(file.path(root, "common",

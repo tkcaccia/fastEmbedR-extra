@@ -56,6 +56,11 @@ def audit(campaign, inputs, outputs):
                               "preserve_at_30"):
                     if not math.isfinite(float(result[field])):
                         raise ValueError(f"non-finite {field}")
+                if result["timing_eligible"].lower() != "true":
+                    failures.append(
+                        f"{dataset}/{method}: fit succeeded but "
+                        "timing was not fully replicated"
+                    )
                 if not (directory / "embedding.csv").is_file():
                     raise ValueError("missing full embedding CSV")
                 if not (directory / "quality.csv").is_file():
