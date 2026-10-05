@@ -72,6 +72,15 @@ cd /scratch/firenze/NN
 bash current_fastembedr_validation/submit_current_validation_hpc.sh
 ```
 
+## Billion-vector data acquisition
+
+The official Turing-ANNS and Yandex DEEP billion-vector acquisition
+procedure is documented in
+[`benchmarks/linux/massive-data/BIGANN_DATASETS.md`](benchmarks/linux/massive-data/BIGANN_DATASETS.md).
+Its downloader streams a requested prefix or complete base file, checks
+storage and source identity, and records a local checksum manifest. Raw
+vectors are not stored in this repository.
+
 ## JSS reviewer-validation campaign
 
 The complete release-validation campaign requested for the Journal of
