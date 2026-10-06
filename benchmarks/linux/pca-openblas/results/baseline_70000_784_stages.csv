@@ -1,0 +1,4 @@
+"n","p","repeat_id","elapsed_sec","prepare_sec","sketch_sec","project_sec","small_svd_and_scores_sec","pca_sec","gemm_backend","blas_threads_requested","blas_threads_effective"
+70000,784,1,6.109,0.112607057,4.735883093,1.190668646,0.041376432,6.080535228,"native_cpu_float32",1,1
+70000,784,2,6.206,0.110617078,4.827935265,1.197066846,0.041721548,6.177340737,"native_cpu_float32",1,1
+70000,784,3,6.167,0.113968062,4.781744902,1.198241786,0.043598415,6.137553165,"native_cpu_float32",1,1

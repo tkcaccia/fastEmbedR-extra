@@ -1,0 +1,4 @@
+"n","p","repeat_id","elapsed_sec","prepare_sec","sketch_sec","project_sec","small_svd_and_scores_sec","pca_sec","gemm_backend","blas_threads_requested","blas_threads_effective"
+20000,512,1,0.1,0.022857774,0.028736796,0.034973973,0.005310093,0.091878636,"openblas_sgemm",4,4
+20000,512,2,0.101,0.023014794,0.029632469,0.035230026,0.00536223,0.093239519,"openblas_sgemm",4,4
+20000,512,3,0.104,0.022271367,0.033606631,0.034623617,0.0054153,0.095916915,"openblas_sgemm",4,4
