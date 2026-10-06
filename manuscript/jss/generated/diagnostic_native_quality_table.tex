@@ -1,0 +1,37 @@
+\begin{table}[p]
+\centering
+\scriptsize
+\caption{File-to-layout quality from campaign 20260930T203319Z. Each entry is CPU / CUDA, over successful full-workflow seeds. A missing CPU FlowRepository result is shown as --. KL is the production t-SNE objective; UMAP has no KL entry. The campaign audit failed.}
+\label{tab:native-quality}
+\begin{tabular}{lccc}
+\toprule
+Data set & Trustworthiness & Preserve@30 & Final KL \\
+\midrule
+\multicolumn{4}{l}{Compact-support t-SNE} \\
+COIL-20 & 0.938 / 0.940 & 0.630 / 0.627 & 0.794 / -- \\
+Fashion-MNIST & 0.972 / 0.973 & 0.483 / 0.484 & 2.697 / -- \\
+flow18 & 0.960 / 0.966 & 0.438 / 0.444 & 2.887 / -- \\
+ImageNet & 0.646 / 0.658 & 0.155 / 0.158 & 2.287 / -- \\
+Retina & 0.906 / 0.912 & 0.424 / 0.431 & 2.941 / -- \\
+mass41 & 0.963 / 0.968 & 0.401 / 0.408 & 2.905 / -- \\
+MetRef & 0.848 / 0.847 & 0.444 / 0.442 & 1.850 / -- \\
+MNIST & 0.939 / 0.941 & 0.436 / 0.437 & 2.903 / -- \\
+Tabula Muris & 0.949 / 0.960 & 0.619 / 0.634 & 2.183 / -- \\
+USPS & 0.949 / 0.951 & 0.467 / 0.467 & 2.167 / -- \\
+FlowRepository & -- / 0.964 & -- / 0.440 & -- / -- \\
+\midrule
+\multicolumn{4}{l}{Fuzzy UMAP} \\
+COIL-20 & 0.915 / 0.908 & 0.612 / 0.612 & -- / -- \\
+Fashion-MNIST & 0.971 / 0.961 & 0.480 / 0.465 & -- / -- \\
+flow18 & 0.960 / 0.961 & 0.443 / 0.436 & -- / -- \\
+ImageNet & 0.582 / 0.589 & 0.105 / 0.107 & -- / -- \\
+Retina & 0.905 / 0.902 & 0.416 / 0.408 & -- / -- \\
+mass41 & 0.971 / 0.968 & 0.413 / 0.408 & -- / -- \\
+MetRef & 0.826 / 0.835 & 0.411 / 0.420 & -- / -- \\
+MNIST & 0.940 / 0.938 & 0.456 / 0.451 & -- / -- \\
+Tabula Muris & 0.934 / 0.922 & 0.613 / 0.599 & -- / -- \\
+USPS & 0.889 / 0.882 & 0.358 / 0.354 & -- / -- \\
+FlowRepository & -- / 0.961 & -- / 0.442 & -- / -- \\
+\bottomrule
+\end{tabular}
+\end{table}

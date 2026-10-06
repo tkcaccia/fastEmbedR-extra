@@ -4,8 +4,8 @@ Reproducible benchmark code, compact result tables, and figure-generation
 workflows for [`fastEmbedR`](https://github.com/tkcaccia/fastEmbedR).
 
 This repository is deliberately separate from the installable R package. It
-does not contain the manuscript, raw datasets, credentials, container images,
-or large replicate-level result archives.
+contains the JSS manuscript bundle, but not raw datasets, credentials,
+container images, or large replicate-level result archives.
 
 ## Repository layout
 
@@ -16,6 +16,7 @@ or large replicate-level result archives.
 | `benchmarks/shared/` | Platform-independent measurement engine and quality metrics |
 | `benchmarks/legacy/fastEmbedR-benchmark/` | Complete migrated source and history of the former standalone benchmark repository |
 | `analysis/` | Raw-result aggregation and deterministic table/figure builders |
+| `manuscript/jss/` | JSS manuscript, supplement, build recipe, figures, tables, and PDF/Word outputs |
 | `results/aggregate/` | Compact machine-readable benchmark summaries |
 | `results/figures/` | Figures generated from the aggregate CSV files |
 | `results/tables/` | Tables generated from the aggregate CSV files |
@@ -26,6 +27,14 @@ or large replicate-level result archives.
 The macOS and Linux workflows are intentionally distinct. They share the R
 measurement engine but do not share launchers, hardware assumptions, thread
 configuration, accelerator checks, or output roots.
+
+## JSS manuscript
+
+The current manuscript and supplement are in
+[`manuscript/jss/`](manuscript/jss/README.md). Build both PDFs and editable
+Word files with `bash manuscript/jss/build.sh`. The bundle contains the
+generated tables and figures needed to compile without raw benchmark data;
+its README records the evidence campaigns and their audit limitations.
 
 ## Integrated benchmark repository
 

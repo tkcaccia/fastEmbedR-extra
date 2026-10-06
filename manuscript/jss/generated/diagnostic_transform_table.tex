@@ -1,0 +1,16 @@
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Held-out transformation in campaign 20260930T203319Z. Each value is the median of data-set medians over successful seeds. Query/reference Preserve@30 is compared with joint embedding of the same queries; the reference is held fixed during transformation.}
+\label{tab:transform-results}
+\begin{tabular}{llrrrrrr}
+\toprule
+Method & Backend & Data sets & Transform s & Preserve@30 & Joint & Label KNN & Ref. shift \\
+\midrule
+t-SNE & CPU & 11 & 64.684 & 0.371 & 0.393 & 0.784 & 0 \\
+UMAP & CPU & 11 & 65.976 & 0.343 & 0.346 & 0.776 & 0 \\
+t-SNE & CUDA & 11 & 0.621 & 0.374 & 0.392 & 0.786 & 0 \\
+UMAP & CUDA & 11 & 0.543 & 0.351 & 0.340 & 0.780 & 0 \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,0 +1,10 @@
+\begin{tabular}{llrrrrrr}
+\toprule
+Method & Backend & Data sets & Time ratio & Preserve@30 $\Delta$ & Procrustes & RSS ratio & GPU ratio \\
+\midrule
+t-SNE & CPU & 11 & 0.41 & -0.006 & 0.86 & 0.98 & -- \\
+Fuzzy UMAP & CPU & 11 & 0.34 & -0.011 & 0.52 & 1.01 & -- \\
+t-SNE & CUDA & 11 & 0.77 & -0.006 & 0.95 & 1.09 & -- \\
+Fuzzy UMAP & CUDA & 11 & 1.29 & -0.006 & 0.47 & 1.07 & -- \\
+\bottomrule
+\end{tabular}

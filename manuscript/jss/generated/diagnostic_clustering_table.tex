@@ -1,0 +1,22 @@
+\begin{table}[htbp]
+\centering
+\caption{Clustering in campaign 20260930T203319Z. The Runs column counts completed data-set--seed fits; times exclude graph construction. Label ARI uses external data-set labels; paired ARI compares native CPU with igraph or an accelerator with native CPU. Graph sizes identify any fixed Walktrap subset. Missing runs are not zero.}
+\label{tab:diagnostic-clustering}
+\scriptsize
+\begin{tabular}{lllrrrrr}
+\toprule
+Method & Backend & Implementation & Runs & $n$ range & Median seconds & Label ARI & Paired ARI \\
+\midrule
+louvain & CPU & fastEmbedR & 6 & 873--1440 & 0.006 & 0.496 & 0.838 \\
+leiden & CPU & fastEmbedR & 6 & 873--1440 & 0.011 & 0.518 & 0.965 \\
+louvain & CPU & igraph & 6 & 873--1440 & 0.017 & 0.512 & 0.838 \\
+leiden & CPU & igraph & 6 & 873--1440 & 0.025 & 0.515 & 0.965 \\
+louvain & CUDA & fastEmbedR & 6 & 873--1440 & 0.026 & 0.504 & 0.911 \\
+leiden & CUDA & fastEmbedR & 6 & 873--1440 & 0.045 & 0.513 & 0.933 \\
+louvain & METAL & fastEmbedR & 0 & -- & -- & -- & -- \\
+leiden & METAL & fastEmbedR & 0 & -- & -- & -- & -- \\
+walktrap & CPU & fastEmbedR & 6 & 873--1440 & 0.320 & 0.424 & 0.922 \\
+walktrap & CPU & igraph & 6 & 873--1440 & 0.091 & 0.428 & 0.922 \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,0 +1,232 @@
+"dataset","family","method","source","available"
+"COIL20","pca","fastEmbedR PCA [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/COIL20/fastembedr_pca/embedding.csv",TRUE
+"COIL20","pca","irlba [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/COIL20/irlba_pca/embedding.csv",TRUE
+"COIL20","pca","fastEmbedR PCA [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/COIL20/fastembedr_pca/embedding.csv",TRUE
+"COIL20","pca","scikit-learn PCA [Python]",,FALSE
+"COIL20","pca","RAPIDS cuML PCA [CUDA]",,FALSE
+"COIL20","tsne","Rtsne [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/COIL20/rtsne/embedding.csv",TRUE
+"COIL20","tsne","FIt-SNE [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/COIL20/fitsne/embedding.csv",TRUE
+"COIL20","tsne","fastEmbedR t-SNE [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/COIL20/fastembedr_tsne/embedding.csv",TRUE
+"COIL20","tsne","fastEmbedR t-SNE [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/COIL20/fastembedr_tsne/embedding.csv",TRUE
+"COIL20","tsne","scikit-learn t-SNE [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/COIL20/sklearn_tsne/embedding.csv",TRUE
+"COIL20","tsne","openTSNE [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/COIL20/python_opentsne/embedding.csv",TRUE
+"COIL20","tsne","RAPIDS cuML t-SNE [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cuda/COIL20/cuml_tsne/embedding.csv",TRUE
+"COIL20","umap","umap [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/COIL20/r_umap/embedding.csv",TRUE
+"COIL20","umap","uwot [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/COIL20/uwot/embedding.csv",TRUE
+"COIL20","umap","uwot fast SGD [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/COIL20/uwot_fast_sgd/embedding.csv",TRUE
+"COIL20","umap","fastEmbedR fuzzy UMAP [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/COIL20/fastembedr_umap/embedding.csv",TRUE
+"COIL20","umap","fastEmbedR binary UMAP [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/COIL20/fastembedr_umap_binary/embedding.csv",TRUE
+"COIL20","umap","fastEmbedR fuzzy UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/COIL20/fastembedr_umap/embedding.csv",TRUE
+"COIL20","umap","fastEmbedR binary UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/COIL20/fastembedr_umap_binary/embedding.csv",TRUE
+"COIL20","umap","umap-learn [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/COIL20/python_umap/embedding.csv",TRUE
+"COIL20","umap","RAPIDS cuML UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cuda/COIL20/cuml_umap/embedding.csv",TRUE
+"USPS","pca","fastEmbedR PCA [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/USPS/fastembedr_pca/embedding.csv",TRUE
+"USPS","pca","irlba [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/USPS/irlba_pca/embedding.csv",TRUE
+"USPS","pca","fastEmbedR PCA [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/USPS/fastembedr_pca/embedding.csv",TRUE
+"USPS","pca","scikit-learn PCA [Python]",,FALSE
+"USPS","pca","RAPIDS cuML PCA [CUDA]",,FALSE
+"USPS","tsne","Rtsne [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/USPS/rtsne/embedding.csv",TRUE
+"USPS","tsne","FIt-SNE [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/USPS/fitsne/embedding.csv",TRUE
+"USPS","tsne","fastEmbedR t-SNE [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/USPS/fastembedr_tsne/embedding.csv",TRUE
+"USPS","tsne","fastEmbedR t-SNE [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/USPS/fastembedr_tsne/embedding.csv",TRUE
+"USPS","tsne","scikit-learn t-SNE [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/USPS/sklearn_tsne/embedding.csv",TRUE
+"USPS","tsne","openTSNE [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/USPS/python_opentsne/embedding.csv",TRUE
+"USPS","tsne","RAPIDS cuML t-SNE [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cuda/USPS/cuml_tsne/embedding.csv",TRUE
+"USPS","umap","umap [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/USPS/r_umap/embedding.csv",TRUE
+"USPS","umap","uwot [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/USPS/uwot/embedding.csv",TRUE
+"USPS","umap","uwot fast SGD [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/USPS/uwot_fast_sgd/embedding.csv",TRUE
+"USPS","umap","fastEmbedR fuzzy UMAP [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/USPS/fastembedr_umap/embedding.csv",TRUE
+"USPS","umap","fastEmbedR binary UMAP [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/USPS/fastembedr_umap_binary/embedding.csv",TRUE
+"USPS","umap","fastEmbedR fuzzy UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/USPS/fastembedr_umap/embedding.csv",TRUE
+"USPS","umap","fastEmbedR binary UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/USPS/fastembedr_umap_binary/embedding.csv",TRUE
+"USPS","umap","umap-learn [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/USPS/python_umap/embedding.csv",TRUE
+"USPS","umap","RAPIDS cuML UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cuda/USPS/cuml_umap/embedding.csv",TRUE
+"FashionMNIST","pca","fastEmbedR PCA [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/FashionMNIST/fastembedr_pca/embedding.csv",TRUE
+"FashionMNIST","pca","irlba [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/FashionMNIST/irlba_pca/embedding.csv",TRUE
+"FashionMNIST","pca","fastEmbedR PCA [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/FashionMNIST/fastembedr_pca/embedding.csv",TRUE
+"FashionMNIST","pca","scikit-learn PCA [Python]",,FALSE
+"FashionMNIST","pca","RAPIDS cuML PCA [CUDA]",,FALSE
+"FashionMNIST","tsne","Rtsne [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/FashionMNIST/rtsne/embedding.csv",TRUE
+"FashionMNIST","tsne","FIt-SNE [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/FashionMNIST/fitsne/embedding.csv",TRUE
+"FashionMNIST","tsne","fastEmbedR t-SNE [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/FashionMNIST/fastembedr_tsne/embedding.csv",TRUE
+"FashionMNIST","tsne","fastEmbedR t-SNE [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/FashionMNIST/fastembedr_tsne/embedding.csv",TRUE
+"FashionMNIST","tsne","scikit-learn t-SNE [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/FashionMNIST/sklearn_tsne/embedding.csv",TRUE
+"FashionMNIST","tsne","openTSNE [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/FashionMNIST/python_opentsne/embedding.csv",TRUE
+"FashionMNIST","tsne","RAPIDS cuML t-SNE [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cuda/FashionMNIST/cuml_tsne/embedding.csv",TRUE
+"FashionMNIST","umap","umap [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/FashionMNIST/r_umap/embedding.csv",TRUE
+"FashionMNIST","umap","uwot [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/FashionMNIST/uwot/embedding.csv",TRUE
+"FashionMNIST","umap","uwot fast SGD [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/FashionMNIST/uwot_fast_sgd/embedding.csv",TRUE
+"FashionMNIST","umap","fastEmbedR fuzzy UMAP [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/FashionMNIST/fastembedr_umap/embedding.csv",TRUE
+"FashionMNIST","umap","fastEmbedR binary UMAP [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/FashionMNIST/fastembedr_umap_binary/embedding.csv",TRUE
+"FashionMNIST","umap","fastEmbedR fuzzy UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/FashionMNIST/fastembedr_umap/embedding.csv",TRUE
+"FashionMNIST","umap","fastEmbedR binary UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/FashionMNIST/fastembedr_umap_binary/embedding.csv",TRUE
+"FashionMNIST","umap","umap-learn [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/FashionMNIST/python_umap/embedding.csv",TRUE
+"FashionMNIST","umap","RAPIDS cuML UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cuda/FashionMNIST/cuml_umap/embedding.csv",TRUE
+"FlowRepository_FR-FCM-ZYRM_files","pca","fastEmbedR PCA [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/FlowRepository_FR-FCM-ZYRM_files/fastembedr_pca/embedding.csv",TRUE
+"FlowRepository_FR-FCM-ZYRM_files","pca","irlba [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/FlowRepository_FR-FCM-ZYRM_files/irlba_pca/embedding.csv",TRUE
+"FlowRepository_FR-FCM-ZYRM_files","pca","fastEmbedR PCA [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/FlowRepository_FR-FCM-ZYRM_files/fastembedr_pca/embedding.csv",TRUE
+"FlowRepository_FR-FCM-ZYRM_files","pca","scikit-learn PCA [Python]",,FALSE
+"FlowRepository_FR-FCM-ZYRM_files","pca","RAPIDS cuML PCA [CUDA]",,FALSE
+"FlowRepository_FR-FCM-ZYRM_files","tsne","Rtsne [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/FlowRepository_FR-FCM-ZYRM_files/rtsne/embedding.csv",TRUE
+"FlowRepository_FR-FCM-ZYRM_files","tsne","FIt-SNE [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/FlowRepository_FR-FCM-ZYRM_files/fitsne/embedding.csv",TRUE
+"FlowRepository_FR-FCM-ZYRM_files","tsne","fastEmbedR t-SNE [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/FlowRepository_FR-FCM-ZYRM_files/fastembedr_tsne/embedding.csv",TRUE
+"FlowRepository_FR-FCM-ZYRM_files","tsne","fastEmbedR t-SNE [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/FlowRepository_FR-FCM-ZYRM_files/fastembedr_tsne/embedding.csv",TRUE
+"FlowRepository_FR-FCM-ZYRM_files","tsne","scikit-learn t-SNE [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/FlowRepository_FR-FCM-ZYRM_files/sklearn_tsne/embedding.csv",TRUE
+"FlowRepository_FR-FCM-ZYRM_files","tsne","openTSNE [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/FlowRepository_FR-FCM-ZYRM_files/python_opentsne/embedding.csv",TRUE
+"FlowRepository_FR-FCM-ZYRM_files","tsne","RAPIDS cuML t-SNE [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cuda/FlowRepository_FR-FCM-ZYRM_files/cuml_tsne/embedding.csv",TRUE
+"FlowRepository_FR-FCM-ZYRM_files","umap","umap [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/FlowRepository_FR-FCM-ZYRM_files/r_umap/embedding.csv",TRUE
+"FlowRepository_FR-FCM-ZYRM_files","umap","uwot [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/FlowRepository_FR-FCM-ZYRM_files/uwot/embedding.csv",TRUE
+"FlowRepository_FR-FCM-ZYRM_files","umap","uwot fast SGD [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/FlowRepository_FR-FCM-ZYRM_files/uwot_fast_sgd/embedding.csv",TRUE
+"FlowRepository_FR-FCM-ZYRM_files","umap","fastEmbedR fuzzy UMAP [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/FlowRepository_FR-FCM-ZYRM_files/fastembedr_umap/embedding.csv",TRUE
+"FlowRepository_FR-FCM-ZYRM_files","umap","fastEmbedR binary UMAP [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/FlowRepository_FR-FCM-ZYRM_files/fastembedr_umap_binary/embedding.csv",TRUE
+"FlowRepository_FR-FCM-ZYRM_files","umap","fastEmbedR fuzzy UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/FlowRepository_FR-FCM-ZYRM_files/fastembedr_umap/embedding.csv",TRUE
+"FlowRepository_FR-FCM-ZYRM_files","umap","fastEmbedR binary UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/FlowRepository_FR-FCM-ZYRM_files/fastembedr_umap_binary/embedding.csv",TRUE
+"FlowRepository_FR-FCM-ZYRM_files","umap","umap-learn [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/FlowRepository_FR-FCM-ZYRM_files/python_umap/embedding.csv",TRUE
+"FlowRepository_FR-FCM-ZYRM_files","umap","RAPIDS cuML UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cuda/FlowRepository_FR-FCM-ZYRM_files/cuml_umap/embedding.csv",TRUE
+"flow18","pca","fastEmbedR PCA [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/flow18/fastembedr_pca/embedding.csv",TRUE
+"flow18","pca","irlba [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/flow18/irlba_pca/embedding.csv",TRUE
+"flow18","pca","fastEmbedR PCA [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/flow18/fastembedr_pca/embedding.csv",TRUE
+"flow18","pca","scikit-learn PCA [Python]",,FALSE
+"flow18","pca","RAPIDS cuML PCA [CUDA]",,FALSE
+"flow18","tsne","Rtsne [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/flow18/rtsne/embedding.csv",TRUE
+"flow18","tsne","FIt-SNE [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/flow18/fitsne/embedding.csv",TRUE
+"flow18","tsne","fastEmbedR t-SNE [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/flow18/fastembedr_tsne/embedding.csv",TRUE
+"flow18","tsne","fastEmbedR t-SNE [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/flow18/fastembedr_tsne/embedding.csv",TRUE
+"flow18","tsne","scikit-learn t-SNE [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/flow18/sklearn_tsne/embedding.csv",TRUE
+"flow18","tsne","openTSNE [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/flow18/python_opentsne/embedding.csv",TRUE
+"flow18","tsne","RAPIDS cuML t-SNE [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cuda/flow18/cuml_tsne/embedding.csv",TRUE
+"flow18","umap","umap [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/flow18/r_umap/embedding.csv",TRUE
+"flow18","umap","uwot [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/flow18/uwot/embedding.csv",TRUE
+"flow18","umap","uwot fast SGD [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/flow18/uwot_fast_sgd/embedding.csv",TRUE
+"flow18","umap","fastEmbedR fuzzy UMAP [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/flow18/fastembedr_umap/embedding.csv",TRUE
+"flow18","umap","fastEmbedR binary UMAP [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/flow18/fastembedr_umap_binary/embedding.csv",TRUE
+"flow18","umap","fastEmbedR fuzzy UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/flow18/fastembedr_umap/embedding.csv",TRUE
+"flow18","umap","fastEmbedR binary UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/flow18/fastembedr_umap_binary/embedding.csv",TRUE
+"flow18","umap","umap-learn [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/flow18/python_umap/embedding.csv",TRUE
+"flow18","umap","RAPIDS cuML UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cuda/flow18/cuml_umap/embedding.csv",TRUE
+"MNIST","pca","fastEmbedR PCA [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/MNIST/fastembedr_pca/embedding.csv",TRUE
+"MNIST","pca","irlba [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/MNIST/irlba_pca/embedding.csv",TRUE
+"MNIST","pca","fastEmbedR PCA [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/MNIST/fastembedr_pca/embedding.csv",TRUE
+"MNIST","pca","scikit-learn PCA [Python]",,FALSE
+"MNIST","pca","RAPIDS cuML PCA [CUDA]",,FALSE
+"MNIST","tsne","Rtsne [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/MNIST/rtsne/embedding.csv",TRUE
+"MNIST","tsne","FIt-SNE [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/MNIST/fitsne/embedding.csv",TRUE
+"MNIST","tsne","fastEmbedR t-SNE [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/MNIST/fastembedr_tsne/embedding.csv",TRUE
+"MNIST","tsne","fastEmbedR t-SNE [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/MNIST/fastembedr_tsne/embedding.csv",TRUE
+"MNIST","tsne","scikit-learn t-SNE [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/MNIST/sklearn_tsne/embedding.csv",TRUE
+"MNIST","tsne","openTSNE [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/MNIST/python_opentsne/embedding.csv",TRUE
+"MNIST","tsne","RAPIDS cuML t-SNE [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cuda/MNIST/cuml_tsne/embedding.csv",TRUE
+"MNIST","umap","umap [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/MNIST/r_umap/embedding.csv",TRUE
+"MNIST","umap","uwot [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/MNIST/uwot/embedding.csv",TRUE
+"MNIST","umap","uwot fast SGD [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/MNIST/uwot_fast_sgd/embedding.csv",TRUE
+"MNIST","umap","fastEmbedR fuzzy UMAP [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/MNIST/fastembedr_umap/embedding.csv",TRUE
+"MNIST","umap","fastEmbedR binary UMAP [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/MNIST/fastembedr_umap_binary/embedding.csv",TRUE
+"MNIST","umap","fastEmbedR fuzzy UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/MNIST/fastembedr_umap/embedding.csv",TRUE
+"MNIST","umap","fastEmbedR binary UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/MNIST/fastembedr_umap_binary/embedding.csv",TRUE
+"MNIST","umap","umap-learn [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/MNIST/python_umap/embedding.csv",TRUE
+"MNIST","umap","RAPIDS cuML UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cuda/MNIST/cuml_umap/embedding.csv",TRUE
+"imagenet","pca","fastEmbedR PCA [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/imagenet/fastembedr_pca/embedding.csv",TRUE
+"imagenet","pca","irlba [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/imagenet/irlba_pca/embedding.csv",TRUE
+"imagenet","pca","fastEmbedR PCA [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/imagenet/fastembedr_pca/embedding.csv",TRUE
+"imagenet","pca","scikit-learn PCA [Python]",,FALSE
+"imagenet","pca","RAPIDS cuML PCA [CUDA]",,FALSE
+"imagenet","tsne","Rtsne [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/imagenet/rtsne/embedding.csv",TRUE
+"imagenet","tsne","FIt-SNE [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/imagenet/fitsne/embedding.csv",TRUE
+"imagenet","tsne","fastEmbedR t-SNE [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/imagenet/fastembedr_tsne/embedding.csv",TRUE
+"imagenet","tsne","fastEmbedR t-SNE [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/imagenet/fastembedr_tsne/embedding.csv",TRUE
+"imagenet","tsne","scikit-learn t-SNE [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/imagenet/sklearn_tsne/embedding.csv",TRUE
+"imagenet","tsne","openTSNE [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/imagenet/python_opentsne/embedding.csv",TRUE
+"imagenet","tsne","RAPIDS cuML t-SNE [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cuda/imagenet/cuml_tsne/embedding.csv",TRUE
+"imagenet","umap","umap [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/imagenet/r_umap/embedding.csv",TRUE
+"imagenet","umap","uwot [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/imagenet/uwot/embedding.csv",TRUE
+"imagenet","umap","uwot fast SGD [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/imagenet/uwot_fast_sgd/embedding.csv",TRUE
+"imagenet","umap","fastEmbedR fuzzy UMAP [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/imagenet/fastembedr_umap/embedding.csv",TRUE
+"imagenet","umap","fastEmbedR binary UMAP [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/imagenet/fastembedr_umap_binary/embedding.csv",TRUE
+"imagenet","umap","fastEmbedR fuzzy UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/imagenet/fastembedr_umap/embedding.csv",TRUE
+"imagenet","umap","fastEmbedR binary UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/imagenet/fastembedr_umap_binary/embedding.csv",TRUE
+"imagenet","umap","umap-learn [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/imagenet/python_umap/embedding.csv",TRUE
+"imagenet","umap","RAPIDS cuML UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cuda/imagenet/cuml_umap/embedding.csv",TRUE
+"MetRef","pca","fastEmbedR PCA [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/MetRef/fastembedr_pca/embedding.csv",TRUE
+"MetRef","pca","irlba [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/MetRef/irlba_pca/embedding.csv",TRUE
+"MetRef","pca","fastEmbedR PCA [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/MetRef/fastembedr_pca/embedding.csv",TRUE
+"MetRef","pca","scikit-learn PCA [Python]",,FALSE
+"MetRef","pca","RAPIDS cuML PCA [CUDA]",,FALSE
+"MetRef","tsne","Rtsne [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/MetRef/rtsne/embedding.csv",TRUE
+"MetRef","tsne","FIt-SNE [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/MetRef/fitsne/embedding.csv",TRUE
+"MetRef","tsne","fastEmbedR t-SNE [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/MetRef/fastembedr_tsne/embedding.csv",TRUE
+"MetRef","tsne","fastEmbedR t-SNE [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/MetRef/fastembedr_tsne/embedding.csv",TRUE
+"MetRef","tsne","scikit-learn t-SNE [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/MetRef/sklearn_tsne/embedding.csv",TRUE
+"MetRef","tsne","openTSNE [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/MetRef/python_opentsne/embedding.csv",TRUE
+"MetRef","tsne","RAPIDS cuML t-SNE [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cuda/MetRef/cuml_tsne/embedding.csv",TRUE
+"MetRef","umap","umap [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/MetRef/r_umap/embedding.csv",TRUE
+"MetRef","umap","uwot [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/MetRef/uwot/embedding.csv",TRUE
+"MetRef","umap","uwot fast SGD [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/MetRef/uwot_fast_sgd/embedding.csv",TRUE
+"MetRef","umap","fastEmbedR fuzzy UMAP [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/MetRef/fastembedr_umap/embedding.csv",TRUE
+"MetRef","umap","fastEmbedR binary UMAP [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/MetRef/fastembedr_umap_binary/embedding.csv",TRUE
+"MetRef","umap","fastEmbedR fuzzy UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/MetRef/fastembedr_umap/embedding.csv",TRUE
+"MetRef","umap","fastEmbedR binary UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/MetRef/fastembedr_umap_binary/embedding.csv",TRUE
+"MetRef","umap","umap-learn [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/MetRef/python_umap/embedding.csv",TRUE
+"MetRef","umap","RAPIDS cuML UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cuda/MetRef/cuml_umap/embedding.csv",TRUE
+"mass41","pca","fastEmbedR PCA [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/mass41/fastembedr_pca/embedding.csv",TRUE
+"mass41","pca","irlba [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/mass41/irlba_pca/embedding.csv",TRUE
+"mass41","pca","fastEmbedR PCA [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/mass41/fastembedr_pca/embedding.csv",TRUE
+"mass41","pca","scikit-learn PCA [Python]",,FALSE
+"mass41","pca","RAPIDS cuML PCA [CUDA]",,FALSE
+"mass41","tsne","Rtsne [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/mass41/rtsne/embedding.csv",TRUE
+"mass41","tsne","FIt-SNE [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/mass41/fitsne/embedding.csv",TRUE
+"mass41","tsne","fastEmbedR t-SNE [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/mass41/fastembedr_tsne/embedding.csv",TRUE
+"mass41","tsne","fastEmbedR t-SNE [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/mass41/fastembedr_tsne/embedding.csv",TRUE
+"mass41","tsne","scikit-learn t-SNE [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/mass41/sklearn_tsne/embedding.csv",TRUE
+"mass41","tsne","openTSNE [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/mass41/python_opentsne/embedding.csv",TRUE
+"mass41","tsne","RAPIDS cuML t-SNE [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cuda/mass41/cuml_tsne/embedding.csv",TRUE
+"mass41","umap","umap [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/mass41/r_umap/embedding.csv",TRUE
+"mass41","umap","uwot [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/mass41/uwot/embedding.csv",TRUE
+"mass41","umap","uwot fast SGD [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/mass41/uwot_fast_sgd/embedding.csv",TRUE
+"mass41","umap","fastEmbedR fuzzy UMAP [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/mass41/fastembedr_umap/embedding.csv",TRUE
+"mass41","umap","fastEmbedR binary UMAP [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/mass41/fastembedr_umap_binary/embedding.csv",TRUE
+"mass41","umap","fastEmbedR fuzzy UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/mass41/fastembedr_umap/embedding.csv",TRUE
+"mass41","umap","fastEmbedR binary UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/mass41/fastembedr_umap_binary/embedding.csv",TRUE
+"mass41","umap","umap-learn [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/mass41/python_umap/embedding.csv",TRUE
+"mass41","umap","RAPIDS cuML UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cuda/mass41/cuml_umap/embedding.csv",TRUE
+"TabulaMuris","pca","fastEmbedR PCA [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/TabulaMuris/fastembedr_pca/embedding.csv",TRUE
+"TabulaMuris","pca","irlba [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/TabulaMuris/irlba_pca/embedding.csv",TRUE
+"TabulaMuris","pca","fastEmbedR PCA [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/TabulaMuris/fastembedr_pca/embedding.csv",TRUE
+"TabulaMuris","pca","scikit-learn PCA [Python]",,FALSE
+"TabulaMuris","pca","RAPIDS cuML PCA [CUDA]",,FALSE
+"TabulaMuris","tsne","Rtsne [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/TabulaMuris/rtsne/embedding.csv",TRUE
+"TabulaMuris","tsne","FIt-SNE [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/TabulaMuris/fitsne/embedding.csv",TRUE
+"TabulaMuris","tsne","fastEmbedR t-SNE [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/TabulaMuris/fastembedr_tsne/embedding.csv",TRUE
+"TabulaMuris","tsne","fastEmbedR t-SNE [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/TabulaMuris/fastembedr_tsne/embedding.csv",TRUE
+"TabulaMuris","tsne","scikit-learn t-SNE [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/TabulaMuris/sklearn_tsne/embedding.csv",TRUE
+"TabulaMuris","tsne","openTSNE [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/TabulaMuris/python_opentsne/embedding.csv",TRUE
+"TabulaMuris","tsne","RAPIDS cuML t-SNE [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cuda/TabulaMuris/cuml_tsne/embedding.csv",TRUE
+"TabulaMuris","umap","umap [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/TabulaMuris/r_umap/embedding.csv",TRUE
+"TabulaMuris","umap","uwot [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/TabulaMuris/uwot/embedding.csv",TRUE
+"TabulaMuris","umap","uwot fast SGD [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/TabulaMuris/uwot_fast_sgd/embedding.csv",TRUE
+"TabulaMuris","umap","fastEmbedR fuzzy UMAP [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/TabulaMuris/fastembedr_umap/embedding.csv",TRUE
+"TabulaMuris","umap","fastEmbedR binary UMAP [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/TabulaMuris/fastembedr_umap_binary/embedding.csv",TRUE
+"TabulaMuris","umap","fastEmbedR fuzzy UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/TabulaMuris/fastembedr_umap/embedding.csv",TRUE
+"TabulaMuris","umap","fastEmbedR binary UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/TabulaMuris/fastembedr_umap_binary/embedding.csv",TRUE
+"TabulaMuris","umap","umap-learn [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/TabulaMuris/python_umap/embedding.csv",TRUE
+"TabulaMuris","umap","RAPIDS cuML UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cuda/TabulaMuris/cuml_umap/embedding.csv",TRUE
+"Macosko2015_retina","pca","fastEmbedR PCA [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/Macosko2015_retina/fastembedr_pca/embedding.csv",TRUE
+"Macosko2015_retina","pca","irlba [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/Macosko2015_retina/irlba_pca/embedding.csv",TRUE
+"Macosko2015_retina","pca","fastEmbedR PCA [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/Macosko2015_retina/fastembedr_pca/embedding.csv",TRUE
+"Macosko2015_retina","pca","scikit-learn PCA [Python]",,FALSE
+"Macosko2015_retina","pca","RAPIDS cuML PCA [CUDA]",,FALSE
+"Macosko2015_retina","tsne","Rtsne [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/Macosko2015_retina/rtsne/embedding.csv",TRUE
+"Macosko2015_retina","tsne","FIt-SNE [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/Macosko2015_retina/fitsne/embedding.csv",TRUE
+"Macosko2015_retina","tsne","fastEmbedR t-SNE [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/Macosko2015_retina/fastembedr_tsne/embedding.csv",TRUE
+"Macosko2015_retina","tsne","fastEmbedR t-SNE [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/Macosko2015_retina/fastembedr_tsne/embedding.csv",TRUE
+"Macosko2015_retina","tsne","scikit-learn t-SNE [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/Macosko2015_retina/sklearn_tsne/embedding.csv",TRUE
+"Macosko2015_retina","tsne","openTSNE [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/Macosko2015_retina/python_opentsne/embedding.csv",TRUE
+"Macosko2015_retina","tsne","RAPIDS cuML t-SNE [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cuda/Macosko2015_retina/cuml_tsne/embedding.csv",TRUE
+"Macosko2015_retina","umap","umap [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/Macosko2015_retina/r_umap/embedding.csv",TRUE
+"Macosko2015_retina","umap","uwot [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/Macosko2015_retina/uwot/embedding.csv",TRUE
+"Macosko2015_retina","umap","uwot fast SGD [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/Macosko2015_retina/uwot_fast_sgd/embedding.csv",TRUE
+"Macosko2015_retina","umap","fastEmbedR fuzzy UMAP [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/Macosko2015_retina/fastembedr_umap/embedding.csv",TRUE
+"Macosko2015_retina","umap","fastEmbedR binary UMAP [CPU]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cpu/Macosko2015_retina/fastembedr_umap_binary/embedding.csv",TRUE
+"Macosko2015_retina","umap","fastEmbedR fuzzy UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/Macosko2015_retina/fastembedr_umap/embedding.csv",TRUE
+"Macosko2015_retina","umap","fastEmbedR binary UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/r_cuda/Macosko2015_retina/fastembedr_umap_binary/embedding.csv",TRUE
+"Macosko2015_retina","umap","umap-learn [Python]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cpu/Macosko2015_retina/python_umap/embedding.csv",TRUE
+"Macosko2015_retina","umap","RAPIDS cuML UMAP [CUDA]","/Users/stefano/Documents/fastEmbedR-results/jss_validation/campaigns/20260929T210526Z/results/workflow_comparators/python_cuda/Macosko2015_retina/cuml_umap/embedding.csv",TRUE
