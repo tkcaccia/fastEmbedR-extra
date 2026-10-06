@@ -30,6 +30,8 @@ validation=$(python3 "$suite/validate_input.py" "$input" \
 echo "$validation"
 test -s "$image"
 test -s "$base/benchmark_scripts/massive-data/run_scaling.R"
+singularity exec "$image" /opt/r46/bin/Rscript \
+    "$suite/preflight.R"
 mkdir -p "$base/benchmark_logs"
 stamp=$(date -u +%Y%m%dT%H%M%SZ)
 campaign_dataset=$dataset
@@ -43,7 +45,8 @@ cp "$suite/cases.tsv" "$root/registry.tsv"
 sha256sum "$image" "$suite/cases.tsv" \
     "$base/benchmark_scripts/massive-data/run_scaling.R" \
     "$suite/run_case.sh" "$suite/score.R" \
-    "$suite/validate_input.py" "$suite/submit.sh" \
+    "$suite/validate_input.py" "$suite/preflight.R" \
+    "$suite/submit.sh" \
     "$suite/slurm_case.sbatch" > "$root/source.sha256"
 printf 'dataset=%s\nphase=%s\ninput=%s\nimage=%s\n' \
     "$dataset" "$phase" "$input" "$image" > "$root/launch.txt"

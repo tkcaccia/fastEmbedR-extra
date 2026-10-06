@@ -94,6 +94,10 @@ The default remains Deep1B. Turing results are stored under
 image, and source checksums are saved in each campaign. Wait for the current
 Deep1B campaign to finish before syncing revised scripts to the HPC, so its
 pending GPU jobs use the same source as its completed CPU jobs.
+The launcher first checks that the image accepts checkpointed KNN on a
+file-backed row view. The image used for the 2026-10-06 Deep1B pilot does
+not; it must be rebuilt with the package fix before another pilot launch.
+The preflight fails before submitting jobs when that contract is missing.
 
 Inspect every `status.tsv` and the recorded package DLL hash before moving
 to the next phase. Launch phases separately; no CPU case waits for a GPU
