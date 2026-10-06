@@ -69,7 +69,7 @@ done
 [[ ! -f "$JSS_CAMPAIGN_DIR/cpu_done" ]]
 ! grep -q 'controller_clustering_cuda' "$JSS_LEDGER"
 
-for stage in affinity_scaling support_cpu recall_quality_cpu transform_cpu \
+for stage in affinity_scaling scaling support_cpu recall_quality_cpu transform_cpu \
   landmark_cpu pca_cpu_1 pca_cpu_3 pca_accuracy_cpu \
   clustering_precompute clustering_cpu knn_sensitivity_cpu components_cpu \
   longrun_cpu_1 longrun_cpu_2 longrun_cpu_3 longrun_final_cpu \
@@ -87,6 +87,10 @@ with open(sys.argv[1], newline="") as handle:
     rows = list(csv.DictReader(handle, delimiter="\t"))
 workers = {row["job_id"]: row["stage"] for row in rows
            if row["role"] == "worker"}
+scaling = [row for row in rows if row["label"] == "scaling"]
+assert len(scaling) == 1
+assert scaling[0]["stage"] == "scaling"
+assert scaling[0]["array"] == "0-3%4"
 bundles = {
     "support_cuda": ("run_support_cuda.sh", "0-10%5"),
     "transform_cuda": ("run_transform_landmark_cuda_bundle.sh", "0-10%5"),
@@ -103,7 +107,7 @@ assert not {"landmark_cuda", "pca_accuracy_cuda", "longrun_cuda_2",
             "longrun_cuda_3", "longrun_final_cuda", "timing_cuda"} & {
                 row["stage"] for row in rows
             }
-cpu = {"affinity_scaling", "support_cpu", "recall_quality_cpu",
+cpu = {"affinity_scaling", "scaling", "support_cpu", "recall_quality_cpu",
        "transform_cpu", "landmark_cpu", "pca_cpu_1", "pca_cpu_3",
        "pca_accuracy_cpu", "clustering_precompute", "clustering_cpu",
        "knn_sensitivity_cpu", "components_cpu", "longrun_cpu_1",

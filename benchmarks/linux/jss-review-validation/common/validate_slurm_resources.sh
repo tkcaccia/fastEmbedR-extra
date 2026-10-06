@@ -30,6 +30,10 @@ check_array() {
 }
 
 check_cpus "$SUITE/slurm/run_preflight_cpu.sh" 1
+check_cpus "$SUITE/slurm/run_scaling_cpu12.sh" 12
+check_array "$SUITE/slurm/run_scaling_cpu12.sh" '0-3%4'
+grep -q '^#SBATCH --hint=nomultithread$' \
+  "$SUITE/slurm/run_scaling_cpu12.sh"
 check_array "$SUITE/slurm/run_comparators_r_cpu4.sh" '0-100%40'
 check_array "$SUITE/slurm/run_cuda_pairs.sh" '0-10%2'
 check_array "$SUITE/slurm/run_support_cuda.sh" '0-10%5'

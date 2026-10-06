@@ -1344,6 +1344,45 @@ run_landmark_reconstruction <- function() {
     ), file.path(out, "status.csv"))
 }
 
+run_scaling_trial <- function(x, workers, replicate) {
+    knn_sec <- system.time({
+        knn <- fastEmbedR::precompute_knn(
+            x, k = 30L, backend = "cpu", n.cores = workers
+        )
+    })[["elapsed"]]
+    pca_sec <- system.time({
+        pca_fit <- fastEmbedR::pca(
+            x, ncomp = 2L, backend = "cpu", n.cores = workers,
+            seed = 4L, tsne_init = TRUE
+        )
+    })[["elapsed"]]
+    tsne_sec <- system.time({
+        fastEmbedR::tsne_knn(
+            knn, perplexity = 30, Y_init = pca_fit$tsne_init,
+            seed = 4L, backend = "cpu", n.cores = workers
+        )
+    })[["elapsed"]]
+    umap_sec <- system.time({
+        fastEmbedR::umap_knn(
+            knn, seed = 4L, backend = "cpu", n.cores = workers,
+            graph_mode = "fuzzy"
+        )
+    })[["elapsed"]]
+    data.frame(
+        dataset = dataset, n = nrow(x), p = ncol(x),
+        threads = workers, replicate = replicate,
+        knn_engine = knn$engine %||% NA_character_,
+        knn_method = knn$method %||% NA_character_,
+        knn_m = knn$M %||% NA_integer_,
+        knn_ef_construction = knn$efConstruction %||% NA_integer_,
+        knn_ef_search = knn$efSearch %||% NA_integer_,
+        knn_sec = knn_sec, pca_sec = pca_sec,
+        tsne_embedding_sec = tsne_sec, umap_embedding_sec = umap_sec,
+        total_tsne_sec = knn_sec + pca_sec + tsne_sec,
+        total_umap_sec = knn_sec + umap_sec
+    )
+}
+
 run_scaling <- function() {
     if (backend != "cpu") stop("Scaling mode is CPU-only.")
     loaded <- load_dataset(data_root, dataset)
@@ -1358,51 +1397,42 @@ run_scaling <- function() {
         loaded$labels, nrow(loaded$data), scaling_cap, 1701L
     )
     x <- as_float_matrix(loaded$data[selected_rows, , drop = FALSE])
-    warm <- x[seq_len(min(2000L, nrow(x))), , drop = FALSE]
-    invisible(fastEmbedR::precompute_knn(
-        warm, k = min(30L, nrow(warm) - 1L), backend = "cpu",
-        n.cores = threads
-    ))
+    warm <- x[seq_len(min(6000L, nrow(x))), , drop = FALSE]
+    workers <- c(1L, 2L, 4L, 8L, 12L)
+    workers <- workers[workers <= threads]
     reps <- if (nrow(x) > 100000L) 3L else 5L
-    rows <- list()
+    rows <- vector("list", length(workers) * reps)
     for (replicate in seq_len(reps)) {
-        knn_sec <- system.time({
-            knn <- fastEmbedR::precompute_knn(
-                x, k = 30L, backend = "cpu", n.cores = threads
+        set.seed(20261006L + replicate)
+        for (n_threads in sample(workers)) {
+            invisible(fastEmbedR::precompute_knn(
+                warm, k = min(30L, nrow(warm) - 1L),
+                backend = "cpu", n.cores = n_threads
+            ))
+            index <- (replicate - 1L) * length(workers) +
+                match(n_threads, workers)
+            rows[[index]] <- run_scaling_trial(x, n_threads, replicate)
+            partial <- Filter(Negate(is.null), rows)
+            progress_dir <- dataset_output_dir(
+                "cpu_scaling", dataset, paste0(n_threads, "t")
             )
-        })[["elapsed"]]
-        pca_sec <- system.time({
-            pca_fit <- fastEmbedR::pca(
-                x, ncomp = 2L, backend = "cpu", n.cores = threads,
-                seed = 4L, tsne_init = TRUE
-            )
-        })[["elapsed"]]
-        tsne_sec <- system.time({
-            fastEmbedR::tsne_knn(
-                knn, perplexity = 30, Y_init = pca_fit$tsne_init,
-                seed = 4L, backend = "cpu", n.cores = threads
-            )
-        })[["elapsed"]]
-        umap_sec <- system.time({
-            fastEmbedR::umap_knn(
-                knn, seed = 4L, backend = "cpu", n.cores = threads,
-                graph_mode = "fuzzy"
-            )
-        })[["elapsed"]]
-        rows[[replicate]] <- data.frame(
-            dataset = dataset, n = nrow(x), p = ncol(x),
-            threads = threads, replicate = replicate,
-            knn_sec = knn_sec, pca_sec = pca_sec,
-            tsne_embedding_sec = tsne_sec,
-            umap_embedding_sec = umap_sec,
-            total_tsne_sec = knn_sec + pca_sec + tsne_sec,
-            total_umap_sec = knn_sec + umap_sec,
-            stringsAsFactors = FALSE
-        )
+            selected <- do.call(rbind, partial)
+            selected <- selected[selected$threads == n_threads, ,
+                drop = FALSE]
+            write_csv_atomic(selected,
+                file.path(progress_dir, "scaling.partial.csv"))
+        }
     }
-    out <- dataset_output_dir("cpu_scaling", dataset, paste0(threads, "t"))
-    write_csv_atomic(do.call(rbind, rows), file.path(out, "scaling.csv"))
-    write_status("cpu_scaling", dataset, paste0(threads, "t"), "success")
+    results <- do.call(rbind, rows)
+    for (n_threads in workers) {
+        out <- dataset_output_dir(
+            "cpu_scaling", dataset, paste0(n_threads, "t")
+        )
+        selected <- results[results$threads == n_threads, , drop = FALSE]
+        write_csv_atomic(selected, file.path(out, "scaling.csv"))
+        write_status("cpu_scaling", dataset,
+            paste0(n_threads, "t"), "success")
+    }
 }
 
 run_pca_validation <- function() {

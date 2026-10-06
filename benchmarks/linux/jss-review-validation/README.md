@@ -164,11 +164,14 @@ rebuilt image after changing the package's automatic grid policy.
    in light gray and projected points are colored by the benchmark labels.
 6. `scaling`: measures CPU strong scaling at 1, 2, 4, 8, and 12 threads for
    KNN, PCA, compact-support t-SNE optimization, and fuzzy UMAP optimization
-   on COIL20, MNIST, full flow18, and 100,000 ImageNet rows. Each thread count
-   is submitted through a separate Slurm array with one task and a matching
-   `cpus-per-task` request. The 32 GB memory request avoids converting a small
-   thread-count experiment into a large CPU allocation under memory-per-CPU
-   accounting.
+   on COIL20, MNIST, full flow18, and 100,000 ImageNet rows. One task per data
+   set measures all thread counts on the same node in shuffled order across
+   repetitions. The job requests 12 physical cores and runs only after the
+   affinity stage, avoiding concurrent campaign work during scaling. Results
+   record the actual KNN engine and HNSW parameters. BLAS uses one thread
+   during scaling; 32 GB is requested for each task. Per-thread
+   `scaling.partial.csv` files preserve measurements
+   from a task that fails before its final `scaling.csv` is written.
 7. `pca`: requests PCA ranks 2 and 50 on every dataset. A requested rank is
    reduced to `min(rank, n - 1, p - 1)` when necessary because randomized
    singular value decomposition requires a rank strictly below both matrix

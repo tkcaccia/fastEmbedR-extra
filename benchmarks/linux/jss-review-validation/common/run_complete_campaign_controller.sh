@@ -99,13 +99,12 @@ case "$JSS_STAGE" in
       "$SUITE/slurm/run_cuda_pairs.sh" '0-10%2'
     ;;
   affinity_scaling)
-    NEXT_STAGE=support_cpu
+    NEXT_STAGE=scaling
     add_worker affinity "$SUITE/slurm/run_affinity_cpu12.sh" '0-10%5'
-    add_worker scaling_1t "$SUITE/slurm/run_scaling_cpu1.sh" '0-3%4'
-    add_worker scaling_2t "$SUITE/slurm/run_scaling_cpu2.sh" '0-3%4'
-    add_worker scaling_4t "$SUITE/slurm/run_scaling_cpu4.sh" '0-3%4'
-    add_worker scaling_8t "$SUITE/slurm/run_scaling_cpu8.sh" '0-3%4'
-    add_worker scaling_12t "$SUITE/slurm/run_scaling_cpu12.sh" '0-3%4'
+    ;;
+  scaling)
+    NEXT_STAGE=support_cpu
+    add_worker scaling "$SUITE/slurm/run_scaling_cpu12.sh" '0-3%4'
     ;;
   support_cpu)
     NEXT_STAGE=recall_quality_cpu
