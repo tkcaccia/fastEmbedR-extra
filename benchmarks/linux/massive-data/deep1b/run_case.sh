@@ -27,6 +27,10 @@ IFS=$'\t' read -r name phase backend mode rows cores components \
 [[ "$backend" == "$DEEP1B_BACKEND" ]] || exit 2
 out=$root/results/$name
 mkdir -p "$out"
+output=$out/output
+if [[ "$mode" != knn ]]; then
+    output=$out/output.f32
+fi
 write_status() {
     code=$?
     printf 'case\tphase\tbackend\tmode\texit_code\n' > "$out/status.tsv"
@@ -58,7 +62,7 @@ available=$(df -B1 --output=avail "$out" | tail -n 1)
 cmd=(/opt/r46/bin/Rscript "$suite/run_scaling.R"
     --input "$input" --rows "$rows" --columns "$columns"
     --backend "$backend" --mode "$mode"
-    --output "$out/output" --csv "$out/metrics.csv"
+    --output "$output" --csv "$out/metrics.csv"
     --expected-version "${FASTEMBEDR_EXPECTED_VERSION:-0.1}"
     --n-cores "$cores" --components "$components"
     --landmarks "$landmarks" --neighbors "$neighbors"
@@ -82,7 +86,7 @@ set -e
 [[ "$code" == 0 ]] || exit "$code"
 if [[ "$mode" != knn ]]; then
     singularity exec "${nv[@]}" "$image" /opt/r46/bin/Rscript \
-        "$lane/score.R" "$input" "$out/output.model.rds" \
+        "$lane/score.R" "$input" "$output.model.rds" \
         "$rows" "$out" "$dataset" \
         > "$out/score.out" 2> "$out/score.err"
 fi
