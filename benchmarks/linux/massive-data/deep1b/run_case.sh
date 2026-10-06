@@ -5,7 +5,14 @@ set -euo pipefail
 base=${DEEP1B_BASE:-/scratch/firenze/NN}
 suite=$base/benchmark_scripts/massive-data
 lane=$suite/deep1b
-input=${DEEP1B_INPUT:-$base/Data/BigANN/deep/1000000000/base.1000000000.fbin}
+dataset=${BIGANN_DATASET:-deep}
+case "$dataset" in
+    deep) columns=96 ;;
+    turing) columns=100 ;;
+    *) echo "Unsupported BigANN dataset: $dataset" >&2; exit 2 ;;
+esac
+default_input=$base/Data/BigANN/$dataset/1000000000/base.1000000000.fbin
+input=${DEEP1B_INPUT:-$default_input}
 image=${DEEP1B_IMAGE:-$base/singularity/fastembedr_cuda.sif}
 root=${DEEP1B_CAMPAIGN:?Set DEEP1B_CAMPAIGN}
 index=${SLURM_ARRAY_TASK_ID:?Run as a Slurm array task}
@@ -28,11 +35,13 @@ write_status() {
         >> "$out/status.tsv"
 }
 trap write_status EXIT
-python3 "$lane/validate_input.py" "$input" > "$out/input.json"
+python3 "$lane/validate_input.py" "$input" \
+    --dataset "$dataset" > "$out/input.json"
 sha256sum "$image" "$suite/run_scaling.R" "$case_file" \
     > "$out/code_image.sha256"
-printf 'job=%s node=%s backend=%s mode=%s\n' \
-    "$SLURM_JOB_ID" "$(hostname)" "$backend" "$mode" > "$out/job.txt"
+printf 'job=%s node=%s dataset=%s backend=%s mode=%s\n' \
+    "$SLURM_JOB_ID" "$(hostname)" "$dataset" \
+    "$backend" "$mode" > "$out/job.txt"
 
 # Refuse a case whose projected output cannot leave 20 GiB free.
 if [[ "$mode" == knn ]]; then
@@ -47,7 +56,7 @@ available=$(df -B1 --output=avail "$out" | tail -n 1)
 }
 
 cmd=(/opt/r46/bin/Rscript "$suite/run_scaling.R"
-    --input "$input" --rows "$rows" --columns 96
+    --input "$input" --rows "$rows" --columns "$columns"
     --backend "$backend" --mode "$mode"
     --output "$out/output" --csv "$out/metrics.csv"
     --expected-version "${FASTEMBEDR_EXPECTED_VERSION:-0.1}"
@@ -74,5 +83,6 @@ set -e
 if [[ "$mode" != knn ]]; then
     singularity exec "${nv[@]}" "$image" /opt/r46/bin/Rscript \
         "$lane/score.R" "$input" "$out/output.model.rds" \
-        "$rows" "$out" > "$out/score.out" 2> "$out/score.err"
+        "$rows" "$out" "$dataset" \
+        > "$out/score.out" 2> "$out/score.err"
 fi

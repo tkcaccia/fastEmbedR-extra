@@ -1,7 +1,8 @@
-# Deep1B disk-backed benchmark (experimental)
+# Deep1B and Turing disk-backed benchmark (experimental)
 
-This lane uses the completed Yandex DEEP 1B file directly. It does **not**
-copy prefixes or load the 384 GB matrix into R RAM. `massive_matrix()` opens
+This lane uses the completed Yandex DEEP 1B or Microsoft Turing-ANNS file
+directly. It does **not** copy prefixes or load the full matrix into R RAM.
+`massive_matrix()` opens
 the `.fbin` descriptor; the benchmark selects a disk-backed view of its first
 `rows` observations. The GPU routes stage bounded chunks. The first-row
 prefixes are reproducible but are not independent samples of all 1B vectors.
@@ -13,10 +14,14 @@ Input on Chiamaka/HPC:
 ```
 /scratch/firenze/NN/Data/BigANN/deep/1000000000/base.1000000000.fbin
 /scratch/firenze/NN/Data/BigANN/deep/1000000000/manifest.json
+/scratch/firenze/NN/Data/BigANN/turing/1000000000/base.1000000000.fbin
+/scratch/firenze/NN/Data/BigANN/turing/1000000000/manifest.json
 ```
 
-The input must have a completed manifest, a 1,000,000,000 x 96 header, and
-exactly 384,000,000,008 bytes. `.part` files are rejected. The downloader
+Deep1B has 96 features and 384,000,000,008 bytes; Turing has 100 features
+and 400,000,000,008 bytes. Both have 1,000,000,000 rows. Each input must
+have a matching completed manifest and header. `.part` files are rejected.
+The downloader
 records a whole-file SHA-256 in the manifest. A normal launch checks that
 metadata and the header without rereading 384 GB; `--verify-sha256` performs
 a one-time full rehash when source integrity must be re-established.
@@ -27,7 +32,7 @@ a one-time full rehash when source integrity must be re-established.
 | --- | ---: | --- | --- |
 | `pilot` | 20,000 | CPU/CUDA PCA, KNN, landmark UMAP/t-SNE | Functional and sampled-recall check on the full file's prefix |
 | `scale` | 1 million | CPU/CUDA PCA, KNN, landmark UMAP/t-SNE; 2-GPU PCA and landmarks | Stage time, RSS, disk I/O, GPU placement |
-| `boundary` | 100 million | CPU/CUDA PCA and landmarks; 2-GPU PCA | Test 38.4 GB of input under an 8 GB Slurm RAM cap |
+| `boundary` | 100 million | CPU/CUDA PCA and landmarks; 2-GPU PCA | Test 38.4/40 GB of selected input under an 8 GB Slurm RAM cap |
 | `billion` | 1 billion | 2-GPU PCA and landmark UMAP/t-SNE | Explicit opt-in only; no default billion-row job |
 
 `pilot` and `scale` use `k=30`, 4 CPU workers, seed 4, 2 PCA components,
@@ -41,12 +46,12 @@ observed sample statistic, not a guarantee of 0.99 recall for every row.
 The 512-row quality sample uses the same deterministic, dispersed row IDs
 for every fitting method at a given prefix size. Trustworthiness and local
 neighbor preservation are measured **within that sample**, not against all
-1B neighbors. Deep1B has no labels in this input, so label KNN accuracy is
-not reported. `metrics.csv`, `quality.csv`, `quality_row_ids.csv`,
+1B neighbors. Neither input has labels in this lane, so label KNN accuracy
+is not reported. `metrics.csv`, `quality.csv`, `quality_row_ids.csv`,
 `time.txt`, and `status.tsv` are retained per case. `metrics.csv` includes
 observed process peak RSS and `/proc/self/io`; `/usr/bin/time -v` provides
 an independent MaxRSS. The selected-input byte count is distinct from the
-physical 384 GB file size. Plot/CSV output is small; no dense coordinate
+physical 384/400 GB file size. Plot/CSV output is small; no dense coordinate
 CSV is written. GPU VRAM in the package record is an estimate, not an
 observed peak; this lane does not yet establish GPU peak-memory use.
 
@@ -70,9 +75,25 @@ On the HPC:
 cd /scratch/firenze/NN
 python3 benchmark_scripts/massive-data/deep1b/validate_input.py \
   Data/BigANN/deep/1000000000/base.1000000000.fbin
+python3 benchmark_scripts/massive-data/deep1b/validate_input.py \
+  Data/BigANN/turing/1000000000/base.1000000000.fbin \
+  --dataset turing
 sha256sum singularity/fastembedr_cuda.sif
 bash benchmark_scripts/massive-data/deep1b/submit.sh pilot
 ```
+
+Run Turing separately with the same case registry:
+
+```bash
+bash benchmark_scripts/massive-data/deep1b/submit.sh pilot turing
+```
+
+The default remains Deep1B. Turing results are stored under
+`fastEmbedR-results/massive-data/turing/`, separate from Deep1B's
+`fastEmbedR-results/massive-data/deep1b/`. The input, dataset identity,
+image, and source checksums are saved in each campaign. Wait for the current
+Deep1B campaign to finish before syncing revised scripts to the HPC, so its
+pending GPU jobs use the same source as its completed CPU jobs.
 
 Inspect every `status.tsv` and the recorded package DLL hash before moving
 to the next phase. Launch phases separately; no CPU case waits for a GPU
@@ -90,6 +111,7 @@ bash benchmark_scripts/massive-data/deep1b/submit.sh scale
 bash benchmark_scripts/massive-data/deep1b/submit.sh boundary
 DEEP1B_ALLOW_BILLION=1 \
   bash benchmark_scripts/massive-data/deep1b/submit.sh billion
+# Use the same phase names with "turing" as the second argument.
 ```
 
 The last command is intentionally guarded. Its output and scratch-space

@@ -1,8 +1,8 @@
 #!/usr/bin/env Rscript
 
 args <- commandArgs(trailingOnly = TRUE)
-if (length(args) != 4L) {
-    stop("Usage: score.R INPUT_FBIN MODEL_RDS ROWS OUTPUT_DIR")
+if (length(args) != 5L || !args[[5L]] %in% c("deep", "turing")) {
+    stop("Usage: score.R INPUT_FBIN MODEL_RDS ROWS OUTPUT_DIR DATASET")
 }
 library(fastEmbedR)
 source <- massive_matrix(args[[1L]])
@@ -29,7 +29,7 @@ metrics <- evaluate_embedding(high, low, k = c(15L, 30L),
     sample_size_for_global_metrics = 512L,
     sample_size_for_local_metrics = 512L,
     seed = 4L, backend = "cpu", n.cores = 1L,
-    dataset = "Deep1B_512_row_sample")
+    dataset = paste0(args[[5L]], "_1B_512_row_sample"))
 metrics$quality_scope <- "within_fixed_512_row_sample"
 metrics$rows_fitted <- rows
 write.csv(data.frame(row_id = ids),

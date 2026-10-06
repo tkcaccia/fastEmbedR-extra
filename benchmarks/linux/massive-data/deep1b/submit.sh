@@ -2,9 +2,18 @@
 
 set -euo pipefail
 phase=${1:-pilot}
+dataset=${2:-deep}
+[[ $# -le 2 ]] || {
+    echo "Usage: submit.sh pilot|scale|boundary|billion [deep|turing]" >&2
+    exit 2
+}
 [[ "$phase" == pilot || "$phase" == scale || \
     "$phase" == boundary || "$phase" == billion ]] || {
-    echo "Usage: submit.sh pilot|scale|boundary|billion" >&2
+    echo "Usage: submit.sh pilot|scale|boundary|billion [deep|turing]" >&2
+    exit 2
+}
+[[ "$dataset" == deep || "$dataset" == turing ]] || {
+    echo "Dataset must be deep or turing." >&2
     exit 2
 }
 if [[ "$phase" == billion && "${DEEP1B_ALLOW_BILLION:-0}" != 1 ]]; then
@@ -13,21 +22,31 @@ if [[ "$phase" == billion && "${DEEP1B_ALLOW_BILLION:-0}" != 1 ]]; then
 fi
 base=${DEEP1B_BASE:-/scratch/firenze/NN}
 suite=$base/benchmark_scripts/massive-data/deep1b
-input=${DEEP1B_INPUT:-$base/Data/BigANN/deep/1000000000/base.1000000000.fbin}
+default_input=$base/Data/BigANN/$dataset/1000000000/base.1000000000.fbin
+input=${DEEP1B_INPUT:-$default_input}
 image=${DEEP1B_IMAGE:-$base/singularity/fastembedr_cuda.sif}
-python3 "$suite/validate_input.py" "$input"
+validation=$(python3 "$suite/validate_input.py" "$input" \
+    --dataset "$dataset")
+echo "$validation"
 test -s "$image"
 test -s "$base/benchmark_scripts/massive-data/run_scaling.R"
 mkdir -p "$base/benchmark_logs"
 stamp=$(date -u +%Y%m%dT%H%M%SZ)
-root=$base/fastEmbedR-results/massive-data/deep1b/${stamp}_${phase}
+campaign_dataset=$dataset
+if [[ "$dataset" == deep ]]; then
+    campaign_dataset=deep1b
+fi
+root=$base/fastEmbedR-results/massive-data/$campaign_dataset/${stamp}_${phase}
 mkdir -p "$root/results"
+printf '%s\n' "$validation" > "$root/input.json"
 cp "$suite/cases.tsv" "$root/registry.tsv"
 sha256sum "$image" "$suite/cases.tsv" \
     "$base/benchmark_scripts/massive-data/run_scaling.R" \
-    "$suite/run_case.sh" "$suite/score.R" > "$root/source.sha256"
-printf 'phase=%s\ninput=%s\nimage=%s\n' \
-    "$phase" "$input" "$image" > "$root/launch.txt"
+    "$suite/run_case.sh" "$suite/score.R" \
+    "$suite/validate_input.py" "$suite/submit.sh" \
+    "$suite/slurm_case.sbatch" > "$root/source.sha256"
+printf 'dataset=%s\nphase=%s\ninput=%s\nimage=%s\n' \
+    "$dataset" "$phase" "$input" "$image" > "$root/launch.txt"
 printf 'kind\tjob_id\tcase_count\n' > "$root/jobs.tsv"
 
 case "$phase" in
@@ -72,10 +91,12 @@ for kind in cpu cuda cuda2; do
     export DEEP1B_IMAGE="$image" DEEP1B_CAMPAIGN="$root"
     export DEEP1B_PHASE="$phase" DEEP1B_BACKEND="$backend"
     export DEEP1B_CASE_FILE="$case_file"
+    export BIGANN_DATASET="$dataset"
     job=$(sbatch --parsable --account="$account" \
         --partition="$partition" --chdir="$base" \
-        --output="$base/benchmark_logs/feR_deep1b_%A_%a.out" \
-        --error="$base/benchmark_logs/feR_deep1b_%A_%a.err" \
+        --job-name="feR_${dataset}" \
+        --output="$base/benchmark_logs/feR_${dataset}_%A_%a.out" \
+        --error="$base/benchmark_logs/feR_${dataset}_%A_%a.err" \
         --cpus-per-task=4 --mem=8G \
         --time="$limit" --array="0-$((count - 1))%$throttle" \
         "${gres[@]}" --export=ALL \
