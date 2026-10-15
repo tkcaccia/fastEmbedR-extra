@@ -57,8 +57,9 @@ are independent; 50M/100M cases wait for earlier same-lane jobs to finish
 and release scratch. These storage-only dependencies use `afterany`, so a
 failed smaller case does not suppress larger independent evidence. The
 16-CPU 100M case also waits for the 4-CPU
-100M case, and the 4-GPU 100M case waits for the 2-GPU 100M case. These
-two cross-lane dependencies cap concurrent large payloads under the
+100M case. The 2-GPU 100M case waits for the 1-GPU 100M case, and the
+4-GPU 100M case waits for the 2-GPU 100M case. These cross-lane
+dependencies cap concurrent large payloads under the
 explicit quota reserve. Jobs, identities, dependencies, and launch failures
 are recorded in `fastEmbedR-results/unified/` and the Deep1B matrix ledger.
 After jobs finish, make a compact `methods.csv`:

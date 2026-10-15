@@ -47,6 +47,8 @@ class MatrixPlanTest(unittest.TestCase):
                 else:
                     self.assertTrue(all(item == "-" or
                                         item.startswith(lane + "_") or
+                                        (lane == "cuda2" and
+                                         item == "cuda1_100000000") or
                                         (lane == "cuda4" and
                                          item == "cuda2_100000000")
                                         for item in dependencies))
@@ -55,6 +57,11 @@ class MatrixPlanTest(unittest.TestCase):
                            row["rows"] == "100000000")
         self.assertEqual(largest_cpu["depends_on"],
                          "cpu16_50000000,cpu4_100000000")
+        two_gpu = next(row for row in rows
+                       if row["lane"] == "cuda2" and
+                       row["rows"] == "100000000")
+        self.assertEqual(two_gpu["depends_on"],
+                         "cuda2_50000000,cuda1_100000000")
         largest_gpu = next(row for row in rows
                            if row["lane"] == "cuda4" and
                            row["rows"] == "100000000")
@@ -153,6 +160,10 @@ class MatrixPlanTest(unittest.TestCase):
                     self.assertNotIn(
                         lookup[("full", "10000000", "cuda1")]["job"],
                         row["dependency"].split(":"))
+            two_gpu = lookup[("full", "100000000", "cuda2")]
+            self.assertEqual(two_gpu["dependency"], ":".join((
+                lookup[("full", "50000000", "cuda2")]["job"],
+                lookup[("full", "100000000", "cuda1")]["job"])))
 
 
 if __name__ == "__main__":

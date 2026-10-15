@@ -45,6 +45,9 @@ print_plan() {
             if [[ "$lane" == cpu16 && "$rows" == 100000000 ]]; then
                 depends+=,cpu4_100000000
             fi
+            if [[ "$lane" == cuda2 && "$rows" == 100000000 ]]; then
+                depends+=,cuda1_100000000
+            fi
             if [[ "$lane" == cuda4 && "$rows" == 100000000 ]]; then
                 depends+=,cuda2_100000000
             fi
@@ -99,7 +102,7 @@ large = storage_plan(100_000_000, "full", 10**15,
                      rebuild_knn=True)["worst_case_bytes"]
 medium = storage_plan(50_000_000, "full", 10**15)[
     "worst_case_bytes"]
-peak = 4 * large + 2 * medium + 20_000_000_000
+peak = 3 * large + 3 * medium + 20_000_000_000
 peak += 3 * 30_000_000_000  # CPU graph and clustering reserve.
 peak += 200_000_000_000  # Two independent JSS campaign reserves.
 print(peak, (peak * 20 + 16) // 17)
@@ -179,6 +182,9 @@ for lane in "${lanes[@]}"; do
         fi
         if [[ "$lane" == cpu16 && "$rows" == 100000000 ]]; then
             dependency+=:${job_for_case[cpu4_100000000]}
+        fi
+        if [[ "$lane" == cuda2 && "$rows" == 100000000 ]]; then
+            dependency+=:${job_for_case[cuda1_100000000]}
         fi
         if [[ "$lane" == cuda4 && "$rows" == 100000000 ]]; then
             dependency+=:${job_for_case[cuda2_100000000]}
