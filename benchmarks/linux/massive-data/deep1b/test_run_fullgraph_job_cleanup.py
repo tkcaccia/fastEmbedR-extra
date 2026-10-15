@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import subprocess
 import tempfile
 import unittest
@@ -12,6 +13,19 @@ SCRIPT = Path(__file__).with_name("run_fullgraph_job.sh")
 
 
 class FullGraphCleanupTest(unittest.TestCase):
+    def test_classic_audit_expects_only_classic_runner_outputs(self):
+        script = SCRIPT.read_text()
+        classic = re.search(
+            r'if \[\[ "\$mode" == classic \]\]; then(.*?)\nelif',
+            script, re.DOTALL).group(1)
+        expected = re.search(r'methods=\(([^)]+)\)', classic)
+        self.assertIsNotNone(expected)
+        runner = SCRIPT.with_name("run_classic_1m.R").read_text()
+        produced = re.search(r'methods <- c\(([^)]+)\)', runner)
+        self.assertIsNotNone(produced)
+        self.assertEqual(set(expected.group(1).split()),
+                         set(re.findall(r'"([^"]+)"', produced.group(1))))
+
     def test_source_lock_failure_preserves_payloads(self):
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)

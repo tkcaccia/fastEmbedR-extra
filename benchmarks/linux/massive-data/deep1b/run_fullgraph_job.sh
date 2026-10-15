@@ -25,6 +25,7 @@ methods=(pca tsne umap leiden louvain)
 if [[ "$mode" == classic ]]; then
     label=classic
     runner=run_classic_1m.R
+    methods=(pca tsne umap)
 elif [[ "$mode" == pca ]]; then
     methods=(pca)
 elif [[ "$mode" == full_tsne ]]; then
