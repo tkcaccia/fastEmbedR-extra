@@ -49,6 +49,6 @@ for dataset in "${DATASETS[@]}"; do
       run_one "$dataset" "$grid" "$iterations" 42
     done
   done
-  run_one "$dataset" 256 750 4
-  run_one "$dataset" 256 750 17
+  run_one "$dataset" 256 1000 4
+  run_one "$dataset" 256 1000 17
 done

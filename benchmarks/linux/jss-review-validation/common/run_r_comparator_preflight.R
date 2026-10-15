@@ -7,6 +7,12 @@ script_dir <- dirname(normalizePath(script_file, mustWork = TRUE))
 source(file.path(script_dir, "common.R"))
 
 args <- commandArgs(trailingOnly = TRUE)
+base_arg <- args[startsWith(args, "--base-dir=")]
+base_dir <- if (length(base_arg)) {
+    sub("--base-dir=", "", tail(base_arg, 1L), fixed = TRUE)
+} else {
+    "/scratch/firenze/NN"
+}
 backend_arg <- args[startsWith(args, "--backend=")]
 backend <- if (length(backend_arg)) {
     sub("--backend=", "", tail(backend_arg, 1L), fixed = TRUE)
@@ -58,6 +64,7 @@ smoke_production_calls <- function(methods, backend) {
         output <- suppressWarnings(system2(
             rscript,
             c(shQuote(script), "--smoke=TRUE",
+              paste0("--base-dir=", shQuote(base_dir)),
               paste0("--backend=", backend),
               paste0("--method=", method)),
             stdout = TRUE, stderr = TRUE
@@ -79,6 +86,23 @@ if (backend == "cuda") {
         x_float, ncomp = rank, backend = "cuda", seed = 4L
     )
     stopifnot(grepl("cuda", pca_fit$backend, fixed = TRUE))
+    scores <- as_double_matrix(pca_fit$scores)
+    loadings <- as_double_matrix(pca_fit$loadings)
+    stopifnot(identical(dim(scores), c(nrow(x), rank)))
+    stopifnot(identical(dim(loadings), c(ncol(x), rank)))
+    stopifnot(all(is.finite(scores)), all(is.finite(loadings)))
+    fitted <- sweep(scores %*% t(loadings), 2L,
+        as.numeric(pca_fit$center), "+")
+    center <- colMeans(x)
+    reference <- svd(sweep(x, 2L, center, "-"),
+                     nu = rank, nv = rank)
+    optimal <- tcrossprod(
+        sweep(reference$u, 2L, reference$d[seq_len(rank)], "*"),
+        reference$v
+    )
+    optimal <- sweep(optimal, 2L, center, "+")
+    stopifnot(sum((x - fitted)^2) <=
+        1.25 * sum((x - optimal)^2))
     tsne_fit <- fastEmbedR::tsne(
         x_float, perplexity = 5, backend = "cuda", seed = 4L,
         early_exaggeration_iter = 5L, n_iter = 5L,
@@ -93,20 +117,15 @@ if (backend == "cuda") {
     assert_layout_backend(umap_fit, "cuda")
     verify_output_contract(embedding_result_matrix(umap_fit))
     smoke_production_calls(
-        c("fastembedr_pca", "fastembedr_tsne", "fastembedr_umap"),
+        c("fastembedr_pca", "fastembedr_tsne", "fastembedr_umap",
+          "fastembedr_umap_binary"),
         "cuda"
     )
     writeLines("R CUDA comparator smoke: PASS")
     quit(save = "no", status = 0L)
 }
 
-assert_matrix(stats::prcomp(x, rank. = rank), nrow(x), rank, "x")
 assert_matrix(irlba::prcomp_irlba(x, n = rank), nrow(x), rank, "x")
-assert_matrix(Rtsne::Rtsne(
-    x, dims = 2L, perplexity = 5, pca = TRUE, max_iter = 10L,
-    num_threads = 2L, check_duplicates = FALSE, verbose = FALSE
-), nrow(x), field = "Y")
-
 fitsne_environment <- new.env(parent = globalenv())
 sys.source(
     "/opt/fit-sne/bin/fast_tsne.R", envir = fitsne_environment,
@@ -138,7 +157,9 @@ assert_matrix(
 )
 verify_output_contract(x[, 1:2, drop = FALSE])
 smoke_production_calls(
-    c("stats_prcomp", "fitsne", "uwot", "uwot_fast_sgd"),
+    c("fastembedr_pca", "irlba_pca", "rtsne", "fitsne",
+      "uwot", "uwot_fast_sgd",
+      "fastembedr_umap", "fastembedr_umap_binary"),
     "cpu"
 )
 

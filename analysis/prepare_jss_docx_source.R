@@ -60,8 +60,13 @@ body <- gsub(
   "\\\\end{tabular}", body, perl = TRUE
 )
 body <- gsub("L\\{[0-9.]+\\\\textwidth\\}", "l", body, perl = TRUE)
-for (family in c("tsne", "umap")) {
+for (family in c("pca", "tsne", "umap")) {
   stem <- paste0("figures/diagnostic_runtime_", family)
+  body <- gsub(paste0(stem, ".pdf"), paste0(stem, ".png"),
+               body, fixed = TRUE)
+}
+for (name in c("cpu_scaling_comparison", "landmark_comparison")) {
+  stem <- paste0("generated/secondary/", name)
   body <- gsub(paste0(stem, ".pdf"), paste0(stem, ".png"),
                body, fixed = TRUE)
 }

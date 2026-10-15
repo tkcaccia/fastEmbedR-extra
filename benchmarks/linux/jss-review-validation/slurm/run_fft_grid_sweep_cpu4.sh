@@ -12,5 +12,6 @@
 #SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_JSS_grid_c_%A_%a.out
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_JSS_grid_c_%A_%a.err
 set -euo pipefail
-bash benchmark_scripts/fastembedr_jss_review_validation/common/run_array_task.sh \
+SUITE="${SUITE:-benchmark_scripts/fastembedr_jss_review_validation}"
+bash "$SUITE/common/run_array_task.sh" \
   fft_grid_sweep cpu

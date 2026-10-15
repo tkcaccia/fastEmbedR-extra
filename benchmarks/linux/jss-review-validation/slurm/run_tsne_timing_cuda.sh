@@ -13,6 +13,7 @@
 #SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_JSS_tm_g_%A_%a.out
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_JSS_tm_g_%A_%a.err
 set -euo pipefail
+SUITE="${SUITE:-benchmark_scripts/fastembedr_jss_review_validation}"
 TIMING_REPS=10 bash \
-  benchmark_scripts/fastembedr_jss_review_validation/common/run_array_task.sh \
+  "$SUITE/common/run_array_task.sh" \
   longrun_timing cuda

@@ -13,7 +13,10 @@ OUTPUT_ROOT="${OUTPUT_ROOT:-$BASE_DIR/fastEmbedR-results/jss_validation}"
   exit 2
 }
 case "$BUNDLE" in
-  support|transform_landmark|pca_accuracy) max_task=10 ;;
+  transform_landmark|pca_accuracy) max_task=10 ;;
+  support) max_task=3 ;;
+  landmark_memory) max_task=10 ;;
+  support_sweep) max_task=3 ;;
   tsne_longrun) max_task=3 ;;
   *) echo "Unknown CUDA bundle: $BUNDLE" >&2; exit 2 ;;
 esac
@@ -55,6 +58,16 @@ case "$BUNDLE" in
   support)
     for ((offset = 0; offset < 2; offset++)); do
       run_one support "$((TASK_ID * 2 + offset))"
+    done
+    ;;
+  support_sweep)
+    for ((offset = 0; offset < 4; offset++)); do
+      run_one support_sweep "$((TASK_ID * 4 + offset))"
+    done
+    ;;
+  landmark_memory)
+    for ((offset = 0; offset < 4; offset++)); do
+      run_one landmark_memory "$((TASK_ID * 4 + offset))"
     done
     ;;
   transform_landmark|pca_accuracy)

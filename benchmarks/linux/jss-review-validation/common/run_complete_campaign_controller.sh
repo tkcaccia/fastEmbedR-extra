@@ -9,6 +9,7 @@ INPUT_ROOT="${INPUT_ROOT:?INPUT_ROOT is required}"
 OUTPUT_ROOT="${OUTPUT_ROOT:?OUTPUT_ROOT is required}"
 EXPECTED_VERSION="${EXPECTED_VERSION:-0.1}"
 FASTEMBEDR_IMAGE_SHA256="${FASTEMBEDR_IMAGE_SHA256:?image checksum required}"
+: "${FASTEMBEDR_DLL_SHA256:?package DLL checksum required}"
 : "${FASTEMBEDR_SUITE_MANIFEST_SHA256:?suite checksum required}"
 JSS_CAMPAIGN_ID="${JSS_CAMPAIGN_ID:?campaign ID required}"
 JSS_CAMPAIGN_DIR="${JSS_CAMPAIGN_DIR:?campaign directory required}"
@@ -21,7 +22,7 @@ campaign_require_environment
 campaign_verify_suite_revision
 campaign_init_ledger
 trap 'campaign_record_controller_failure "$?"' ERR
-if [[ "$JSS_STAGE" != cuda_pairs ]]; then
+if [[ "$JSS_STAGE" != comparators_cuda ]]; then
   campaign_record_previous_stage
 fi
 campaign_record_stage "$JSS_STAGE" started \
@@ -29,6 +30,7 @@ campaign_record_stage "$JSS_STAGE" started \
 
 NEXT_STAGE=""
 PARALLEL_STAGE=""
+SECOND_PARALLEL_STAGE=""
 WORKER_LABELS=()
 WORKER_SCRIPTS=()
 WORKER_ARRAYS=()
@@ -53,9 +55,9 @@ case "$JSS_STAGE" in
   full_pairs)
     NEXT_STAGE=full_quality
     if [[ "${INCLUDE_NOMAD:-FALSE}" == TRUE ]]; then
-      full_array='0-18%2'
+      full_array='0-20%2'
     else
-      full_array='0-16%2'
+      full_array='0-18%2'
     fi
     add_worker full_pairs \
       "$SUITE/slurm/run_full_pairs_cuda.sh" "$full_array"
@@ -89,9 +91,32 @@ case "$JSS_STAGE" in
     ;;
   comparator_inputs)
     NEXT_STAGE=affinity_scaling
-    PARALLEL_STAGE=cuda_pairs
+    PARALLEL_STAGE=comparators_cuda
+    SECOND_PARALLEL_STAGE=file_backed
     add_worker comparator_inputs \
       "$SUITE/slurm/run_comparator_inputs_cpu12.sh" '0-10%11'
+    ;;
+  file_backed)
+    NEXT_STAGE=file_backed_audit
+    add_worker file_backed_matched \
+      "$SUITE/slurm/run_file_backed_matched_cpu4.sh" '0-3%4'
+    add_worker file_backed_scaling \
+      "$SUITE/slurm/run_file_backed_scaling_cuda.sh" '0-5%2'
+    add_worker file_backed_boundary \
+      "$SUITE/slurm/run_file_backed_boundary_cpu4.sh" '0-1%2'
+    add_worker file_backed_full \
+      "$SUITE/slurm/run_file_backed_full_cuda.sh"
+    add_worker file_backed_multi \
+      "$SUITE/slurm/run_file_backed_multi_cuda.sh"
+    add_worker file_backed_recovery \
+      "$SUITE/slurm/run_file_backed_recovery_cpu4.sh"
+    add_worker file_backed_recovery_cuda \
+      "$SUITE/slurm/run_file_backed_recovery_cuda.sh"
+    ;;
+  file_backed_audit)
+    NEXT_STAGE=file_backed_done
+    add_worker file_backed_audit \
+      "$SUITE/slurm/run_file_backed_audit_cpu1.sh"
     ;;
   cuda_pairs)
     NEXT_STAGE=support_cuda
@@ -99,21 +124,30 @@ case "$JSS_STAGE" in
       "$SUITE/slurm/run_cuda_pairs.sh" '0-10%2'
     ;;
   affinity_scaling)
-    NEXT_STAGE=support_cpu
+    NEXT_STAGE=scaling
     add_worker affinity "$SUITE/slurm/run_affinity_cpu12.sh" '0-10%5'
-    add_worker scaling_1t "$SUITE/slurm/run_scaling_cpu1.sh" '0-3%4'
-    add_worker scaling_2t "$SUITE/slurm/run_scaling_cpu2.sh" '0-3%4'
-    add_worker scaling_4t "$SUITE/slurm/run_scaling_cpu4.sh" '0-3%4'
-    add_worker scaling_8t "$SUITE/slurm/run_scaling_cpu8.sh" '0-3%4'
-    add_worker scaling_12t "$SUITE/slurm/run_scaling_cpu12.sh" '0-3%4'
+    ;;
+  scaling)
+    NEXT_STAGE=support_cpu
+    add_worker scaling "$SUITE/slurm/run_scaling_cpu12.sh" '0-3%4'
     ;;
   support_cpu)
-    NEXT_STAGE=recall_quality_cpu
-    add_worker support_cpu "$SUITE/slurm/run_support_cpu4.sh" '0-21%22'
+    NEXT_STAGE=support_sweep_cpu
+    add_worker support_cpu "$SUITE/slurm/run_support_cpu4.sh" '0-7%8'
     ;;
   support_cuda)
+    NEXT_STAGE=support_sweep_cuda
+    add_worker support_cuda "$SUITE/slurm/run_support_cuda.sh" '0-3%4'
+    ;;
+  support_sweep_cpu)
+    NEXT_STAGE=recall_quality_cpu
+    add_worker support_sweep_cpu \
+      "$SUITE/slurm/run_support_sweep_cpu4.sh" '0-15%16'
+    ;;
+  support_sweep_cuda)
     NEXT_STAGE=recall_quality_cuda
-    add_worker support_cuda "$SUITE/slurm/run_support_cuda.sh" '0-10%5'
+    add_worker support_sweep_cuda \
+      "$SUITE/slurm/run_support_sweep_cuda.sh" '0-3%4'
     ;;
   recall_quality_cpu)
     NEXT_STAGE=transform_cpu
@@ -130,14 +164,24 @@ case "$JSS_STAGE" in
     add_worker transform_cpu "$SUITE/slurm/run_transform_cpu4.sh" '0-21%22'
     ;;
   transform_cuda)
-    NEXT_STAGE=pca_cuda
+    NEXT_STAGE=landmark_memory_cuda
     add_worker transform_landmark_cuda \
       "$SUITE/slurm/run_transform_landmark_cuda_bundle.sh" '0-10%5'
     ;;
   landmark_cpu)
-    NEXT_STAGE=pca_cpu_1
+    NEXT_STAGE=landmark_memory_cpu
     add_worker landmark_cpu \
       "$SUITE/slurm/run_landmark_reconstruction_cpu4.sh" '0-21%22'
+    ;;
+  landmark_memory_cpu)
+    NEXT_STAGE=pca_cpu_1
+    add_worker landmark_memory_cpu \
+      "$SUITE/slurm/run_landmark_memory_cpu4.sh" '0-43%40'
+    ;;
+  landmark_memory_cuda)
+    NEXT_STAGE=pca_cuda
+    add_worker landmark_memory_cuda \
+      "$SUITE/slurm/run_landmark_memory_cuda.sh" '0-10%4'
     ;;
   pca_cpu_1)
     NEXT_STAGE=pca_cpu_3
@@ -165,17 +209,27 @@ case "$JSS_STAGE" in
   clustering_precompute)
     NEXT_STAGE=clustering_cpu
     add_worker clustering_precompute \
-      "$SUITE/slurm/run_clustering_precompute_cpu4.sh" '0-10%11'
+      "$SUITE/slurm/run_clustering_precompute_cpu4.sh" '0-3%4'
     ;;
   clustering_cpu)
-    NEXT_STAGE=knn_sensitivity_cpu
+    NEXT_STAGE=clustering_scale_cpu
     add_worker clustering_cpu \
-      "$SUITE/slurm/run_clustering_cpu4.sh" '0-10%11'
+      "$SUITE/slurm/run_clustering_cpu4.sh" '0-3%4'
+    ;;
+  clustering_scale_cpu)
+    NEXT_STAGE=knn_sensitivity_cpu
+    add_worker clustering_scale_cpu \
+      "$SUITE/slurm/run_clustering_scale_cpu4.sh"
     ;;
   clustering_cuda)
-    NEXT_STAGE=aggregate
+    NEXT_STAGE=clustering_scale_cuda
     add_worker clustering_cuda \
-      "$SUITE/slurm/run_clustering_cuda.sh" '0-10%4'
+      "$SUITE/slurm/run_clustering_cuda.sh" '0-3%4'
+    ;;
+  clustering_scale_cuda)
+    NEXT_STAGE=aggregate
+    add_worker clustering_scale_cuda \
+      "$SUITE/slurm/run_clustering_scale_cuda.sh"
     ;;
   knn_sensitivity_cpu)
     NEXT_STAGE=components_cpu
@@ -196,22 +250,12 @@ case "$JSS_STAGE" in
     add_worker components_cuda "$SUITE/slurm/run_components_cuda.sh"
     ;;
   longrun_cpu_1)
-    NEXT_STAGE=longrun_cpu_2
-    add_worker longrun_cpu_1 \
-      "$SUITE/slurm/run_tsne_longrun_cpu4.sh" '0-23%24'
-    ;;
-  longrun_cpu_2)
-    NEXT_STAGE=longrun_cpu_3
-    add_worker longrun_cpu_2 \
-      "$SUITE/slurm/run_tsne_longrun_cpu4.sh" '24-47%24'
-    ;;
-  longrun_cpu_3)
     NEXT_STAGE=longrun_final_cpu
-    add_worker longrun_cpu_3 \
-      "$SUITE/slurm/run_tsne_longrun_cpu4.sh" '48-71%24'
+    add_worker longrun_cpu_1 \
+      "$SUITE/slurm/run_tsne_longrun_cpu4.sh" '0-71%24'
     ;;
   longrun_cuda_1)
-    NEXT_STAGE=comparators_cuda
+    NEXT_STAGE=gpu_done
     add_worker longrun_cuda_bundle \
       "$SUITE/slurm/run_tsne_longrun_cuda_bundle.sh" '0-3%4'
     ;;
@@ -241,22 +285,23 @@ case "$JSS_STAGE" in
   comparators_cpu)
     NEXT_STAGE=cpu_done
     add_worker comparators_r \
-      "$SUITE/slurm/run_comparators_r_cpu4.sh" '0-100%40'
+      "$SUITE/slurm/run_comparators_r_cpu4.sh" '0-109%40'
     add_worker comparators_python_cpu \
       "$SUITE/slurm/run_comparators_python_cpu4.sh" '0-43%40'
     ;;
   comparators_cuda)
-    NEXT_STAGE=gpu_done
+    NEXT_STAGE=cuda_pairs
     add_worker comparators_cuda_pca \
       "$SUITE/slurm/run_comparators_cuda_pca.sh" '0-10%2'
     ;;
-  cpu_done|gpu_done)
+  cpu_done|gpu_done|file_backed_done)
     campaign_record_stage "$JSS_STAGE" completed 'workers=finished'
     exec 9> "$JSS_CAMPAIGN_DIR/lane_join.lock"
     flock 9
     touch "$JSS_CAMPAIGN_DIR/$JSS_STAGE"
     if [[ -f "$JSS_CAMPAIGN_DIR/cpu_done" && \
-          -f "$JSS_CAMPAIGN_DIR/gpu_done" ]]; then
+          -f "$JSS_CAMPAIGN_DIR/gpu_done" && \
+          -f "$JSS_CAMPAIGN_DIR/file_backed_done" ]]; then
       JOIN_JOB="$(campaign_submit_job controller \
         controller_clustering_cuda '' "$CONTROLLER" '' clustering_cuda)"
       campaign_record_stage "$JSS_STAGE" joined \
@@ -304,6 +349,13 @@ if [[ -n "$PARALLEL_STAGE" ]]; then
     "$CONTROLLER" '' "$PARALLEL_STAGE")"
   campaign_record_stage "$JSS_STAGE" forked \
     "cpu=$NEXT_JOB cuda=$PARALLEL_JOB dependency=$DEPENDENCY"
+fi
+if [[ -n "$SECOND_PARALLEL_STAGE" ]]; then
+  SECOND_JOB="$(campaign_submit_job \
+    controller "controller_$SECOND_PARALLEL_STAGE" "$DEPENDENCY" \
+    "$CONTROLLER" '' "$SECOND_PARALLEL_STAGE")"
+  campaign_record_stage "$JSS_STAGE" forked \
+    "file_backed=$SECOND_JOB dependency=$DEPENDENCY"
 fi
 
 echo "Stage $JSS_STAGE submitted workers: ${WORKER_IDS[*]}"

@@ -12,4 +12,5 @@
 #SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_JSS_lr_py_%A_%a.out
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_JSS_lr_py_%A_%a.err
 set -euo pipefail
-THREADS=4 bash benchmark_scripts/fastembedr_jss_review_validation/common/run_python_longrun_task.sh
+SUITE="${SUITE:-benchmark_scripts/fastembedr_jss_review_validation}"
+THREADS=4 bash "$SUITE/common/run_python_longrun_task.sh"

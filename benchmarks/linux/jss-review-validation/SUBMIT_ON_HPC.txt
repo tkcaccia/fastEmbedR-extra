@@ -1,5 +1,15 @@
 cd /scratch/firenze/NN
 
+# The source-locked 2D campaign requires the image recorded in
+# common/image_source_identity.csv. If the image checksum differs, do not
+# edit the identity record to force a run: validate and record the new build.
+# This image does not provide the new 3D GPU FFT route. Run the separate 3D
+# lane only after rebuilding and validating an image that actually has it.
+# The campaign records its stages, failures, source archive, and checksums.
+
+(cd benchmark_scripts/fastembedr_jss_review_validation &&
+  sha256sum -c FILES.sha256 >/dev/null)
+
 # Optional NOMAD comparison: use only after the image contains CUDA PyTorch
 # and NOMAD installed from a pinned Git commit. NOMAD shares the full-dataset
 # CUDA campaign's per-dataset jobs and visual summary; it keeps a distinct
@@ -14,11 +24,17 @@ cd /scratch/firenze/NN
 # sbatch benchmark_scripts/fastembedr_jss_review_validation/slurm/run_fft_grid_sweep_cpu4.sh
 # sbatch benchmark_scripts/fastembedr_jss_review_validation/slurm/run_fft_grid_sweep_cuda.sh
 
-# Recommended after replacing singularity/fastembedr_cuda.sif. This submits
-# fresh strict CPU and CUDA preflights. A small afterany verification job then
-# starts the staged campaign only when both preflights pass.
-bash \
+# Recommended CPU/CUDA campaign with PCA, clustering, graph, and R/Python
+# embedding comparators. One command queues strict preflights and starts the
+# independent CPU/CUDA lanes when both pass. Timed-out methods remain failed;
+# they are not repeated to fill missing rows.
+# Comparator methods have a fixed two-hour limit (7,200 seconds).
+CAMPAIGN_MODE=complete INCLUDE_NOMAD=FALSE bash \
   benchmark_scripts/fastembedr_jss_review_validation/submit_after_new_image.sh
+
+# For a separate full-dataset CUDA comparison including NOMAD, use:
+# CAMPAIGN_MODE=full_cuda INCLUDE_NOMAD=TRUE bash \
+#   benchmark_scripts/fastembedr_jss_review_validation/submit_after_new_image.sh
 
 # The following three commands are the manual equivalent. Do not run them
 # after submit_after_new_image.sh, because that would duplicate the preflights

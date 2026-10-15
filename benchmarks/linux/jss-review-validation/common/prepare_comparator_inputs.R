@@ -56,36 +56,39 @@ main <- function() {
     }
     shared <- readRDS(shared_path)
     loaded <- load_dataset(data_root, dataset)
-    if (full_dataset && length(shared$rows) != nrow(loaded$data)) {
-        stop("Full-dataset input does not include every source row.")
+    if (full_dataset && shared$source_n != nrow(loaded$data)) {
+        stop("Full-dataset source row count changed.")
     }
     x <- if (full_dataset) loaded$data else {
         loaded$data[shared$rows, , drop = FALSE]
     }
+    source_rows <- if (full_dataset) seq_len(nrow(x)) else shared$rows
+    quality_rows <- if (full_dataset) {
+        shared$rows[shared$quality_rows]
+    } else shared$quality_rows
     directory <- file.path(input_root, dataset, "workflow_comparators")
     dir.create(directory, recursive = TRUE, showWarnings = FALSE)
     write_float32_matrix(x, file.path(directory, "data_float32.bin"))
-    labels <- if (is.null(shared$labels)) {
+    source_labels <- if (full_dataset) loaded$labels else shared$labels
+    labels <- if (is.null(source_labels)) {
         rep.int(NA_character_, nrow(x))
     } else {
-        as.character(shared$labels)
+        as.character(source_labels)
     }
     write_csv_atomic(data.frame(
-        row = seq_len(nrow(x)), source_row = shared$rows,
+        row = seq_len(nrow(x)), source_row = source_rows,
         label = labels,
-        quality_sample = seq_len(nrow(x)) %in% shared$quality_rows
+        quality_sample = seq_len(nrow(x)) %in% quality_rows
     ), file.path(directory, "rows_labels.csv"))
-    if (!full_dataset) {
-        affinity <- prepare_quality_affinity(
-            x, shared$quality_rows, shared$perplexity
-        )
-        write_csv_atomic(
-            affinity, file.path(directory, "quality_compact_affinity.csv")
-        )
-    }
+    affinity <- prepare_quality_affinity(
+        x, quality_rows, shared$perplexity
+    )
+    write_csv_atomic(
+        affinity, file.path(directory, "quality_compact_affinity.csv")
+    )
     write_csv_atomic(data.frame(
         dataset = dataset, n = nrow(x), p = ncol(x),
-        quality_n = length(shared$quality_rows),
+        source_n = nrow(loaded$data), quality_n = length(quality_rows),
         perplexity = shared$perplexity,
         n_neighbors = ceiling(shared$perplexity),
         full_source = full_dataset,
@@ -96,7 +99,7 @@ main <- function() {
     ), file.path(directory, "manifest.csv"))
     status <- status_row(
         "comparator_inputs", dataset, "cpu", "success",
-        n = nrow(x), p = ncol(x), quality_n = length(shared$quality_rows)
+        n = nrow(x), p = ncol(x), quality_n = length(quality_rows)
     )
     write_csv_atomic(status, file.path(
         output_root, "comparator_inputs", dataset, "cpu", "status.csv"

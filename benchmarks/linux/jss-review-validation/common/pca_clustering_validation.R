@@ -102,8 +102,12 @@ clustering_input_path <- function(name) {
     file.path(dataset_input_dir(name), "clustering_inputs.rds")
 }
 
-prepare_clustering_dataset <- function(loaded, cap, seed) {
-    rows <- stratified_rows(loaded$labels, nrow(loaded$data), cap, seed)
+prepare_clustering_dataset <- function(loaded, cap = NULL) {
+    rows <- if (is.null(cap)) {
+        full_benchmark_rows(loaded)
+    } else {
+        stratified_rows(loaded$labels, nrow(loaded$data), cap, 1701L)
+    }
     selected <- subset_dataset(loaded, rows)
     list(
         x = as_float_matrix(selected$data),
@@ -144,22 +148,25 @@ clustering_manifest_row <- function(name, kind, value) {
 run_clustering_precompute <- function() {
     require_expected_version()
     loaded <- load_dataset(data_root, dataset)
-    main <- prepare_clustering_dataset(
-        loaded, min(10000L, nrow(loaded$data)), 1701L
-    )
-    walktrap <- prepare_clustering_dataset(
-        loaded, min(1500L, nrow(loaded$data)), 1701L
-    )
-    inputs <- list(
-        main = build_clustering_graph(main, threads),
-        walktrap = build_clustering_graph(walktrap, threads)
-    )
+    prepared <- prepare_clustering_dataset(loaded)
+    walktrap <- if (nrow(prepared$x) <= 3000L) {
+        prepared
+    } else {
+        prepare_clustering_dataset(loaded, 3000L)
+    }
+    main_graph <- build_clustering_graph(prepared, threads)
+    walktrap_graph <- if (identical(prepared$rows, walktrap$rows)) {
+        main_graph
+    } else {
+        build_clustering_graph(walktrap, threads)
+    }
+    inputs <- list(main = main_graph, walktrap = walktrap_graph)
     path <- clustering_input_path(dataset)
     dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
     saveRDS(inputs, path, compress = FALSE)
     manifest <- rbind(
-        clustering_manifest_row(dataset, "main", inputs$main),
-        clustering_manifest_row(dataset, "walktrap", inputs$walktrap)
+        clustering_manifest_row(dataset, "full", inputs$main),
+        clustering_manifest_row(dataset, "walktrap_subset", inputs$walktrap)
     )
     out <- dataset_output_dir("clustering_precompute", dataset, "cpu")
     write_csv_atomic(manifest, file.path(out, "clustering_precompute.csv"))
@@ -194,7 +201,7 @@ run_igraph_cluster <- function(graph, method, seed) {
     }
     args <- list(
         graph = graph, objective_function = "modularity",
-        weights = weights, n_iterations = 10L
+        weights = weights, n_iterations = 20L
     )
     parameters <- names(formals(igraph::cluster_leiden))
     resolution_name <- if ("resolution" %in% parameters) {
@@ -217,7 +224,8 @@ clustering_label_ari <- function(membership, labels) {
 
 clustering_result_row <- function(method, implementation, used_backend,
                                   seed, elapsed, result, labels,
-                                  reference = NULL) {
+                                  reference = NULL,
+                                  graph_scope = "full") {
     reference_ari <- if (is.null(reference)) {
         NA_real_
     } else {
@@ -226,6 +234,8 @@ clustering_result_row <- function(method, implementation, used_backend,
     data.frame(
         dataset = dataset, method = method,
         implementation = implementation, backend = used_backend,
+        observed_backend = result$backend %||% used_backend,
+        graph_scope = graph_scope,
         seed = seed, elapsed_sec = elapsed,
         n_vertices = length(result$membership),
         n_communities = length(unique(result$membership)),
@@ -286,14 +296,13 @@ clustering_cpu_reference_path <- function(name) {
     )
 }
 
-clustering_methods <- function(backend) {
-    if (backend == "cpu") c("louvain", "leiden", "walktrap") else {
-        c("louvain", "leiden")
+clustering_methods <- function(backend, n_vertices) {
+    methods <- c("louvain", "leiden")
+    if (backend == "cpu" &&
+            as.double(n_vertices)^2 <= 16000000) {
+        methods <- c(methods, "walktrap")
     }
-}
-
-clustering_graph_for_method <- function(inputs, method) {
-    if (method == "walktrap") inputs$walktrap else inputs$main
+    methods
 }
 
 run_clustering_validation <- function() {
@@ -306,7 +315,7 @@ run_clustering_validation <- function() {
     inputs <- readRDS(input_path)
     out <- dataset_output_dir("clustering", dataset, backend)
     dir.create(out, recursive = TRUE, showWarnings = FALSE)
-    cpu_reference <- if (backend == "cuda") {
+    cpu_reference <- if (backend %in% c("cuda", "metal")) {
         reference_path <- clustering_cpu_reference_path(dataset)
         if (!file.exists(reference_path)) {
             stop("Missing CPU clustering reference: ", reference_path,
@@ -319,12 +328,28 @@ run_clustering_validation <- function() {
     }
     rows <- list()
     memberships <- list()
-    for (method in clustering_methods(backend)) {
-        current <- clustering_graph_for_method(inputs, method)
+    walktrap <- inputs$walktrap %||% inputs$main
+    methods <- clustering_methods(backend, walktrap$graph$n_vertices)
+    if (backend == "cpu" && !"walktrap" %in% methods) {
+        write_csv_atomic(data.frame(
+            dataset = dataset, backend = backend, method = "walktrap",
+            status = "unsupported",
+            reason = "transition matrix exceeds 16 million entries"
+        ), file.path(out, "clustering_skipped.csv"))
+    }
+    for (method in methods) {
+        current <- if (method == "walktrap") walktrap else inputs$main
+        scope <- if (method == "walktrap" &&
+                current$graph$n_vertices <
+                inputs$main$graph$n_vertices) {
+            "fixed_subset"
+        } else {
+            "full"
+        }
         graph <- current$graph
         igraph_graph <- if (backend == "cpu") as_igraph_graph(graph) else NULL
         for (seed in seeds) {
-            reference <- if (backend == "cuda") {
+            reference <- if (backend %in% c("cuda", "metal")) {
                 cpu_reference[[paste(method, seed, sep = "_")]]
             } else {
                 NULL
@@ -332,20 +357,22 @@ run_clustering_validation <- function() {
             native <- run_fastembedr_cluster(graph, method, backend, seed)
             key <- paste(method, seed, sep = "_")
             memberships[[key]] <- native$fit$membership
-            rows[[length(rows) + 1L]] <- clustering_result_row(
-                method, "fastEmbedR", backend, seed,
-                native$elapsed, native$fit, current$labels, reference
-            )
             if (backend == "cpu") {
                 oracle <- run_igraph_cluster_timed(
                     igraph_graph, method, seed
                 )
+                reference <- oracle$fit$membership
                 rows[[length(rows) + 1L]] <- clustering_result_row(
                     method, "igraph", "cpu", seed,
                     oracle$elapsed, oracle$fit, current$labels,
-                    native$fit$membership
+                    native$fit$membership, scope
                 )
             }
+            rows[[length(rows) + 1L]] <- clustering_result_row(
+                method, "fastEmbedR", backend, seed,
+                native$elapsed, native$fit, current$labels, reference,
+                scope
+            )
         }
     }
     write_csv_atomic(

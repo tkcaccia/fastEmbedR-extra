@@ -78,3 +78,11 @@ bash benchmarks/linux/jss-review-validation/sync_to_hpc.sh
 
 The synchronization step does not run Apptainer/Singularity and does not
 submit Slurm jobs.
+
+## Experimental massive-data scaling
+
+`massive-data/` contains a chunked synthetic input generator and a small
+CPU/CUDA PCA or landmark UMAP scaling runner. It records package identity,
+runtime, process RSS, algorithm-buffer estimates, and output checks in a
+per-run CSV. See [`massive-data/README.md`](massive-data/README.md). This is
+functional stress testing, not a replacement for the JSS quality benchmark.

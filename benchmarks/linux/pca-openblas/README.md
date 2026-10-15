@@ -88,3 +88,31 @@ suitable as the default. Increasing sketch width and power improves agreement
 but costs more; it requires broader shape and end-to-end evaluation before a
 new accuracy-oriented policy is chosen. These millisecond timings on 512 rows
 are diagnostic, not a full-ImageNet performance comparison.
+
+### Larger ImageNet sample
+
+To check whether the 512-row result was sample-specific, we also drew 4,096
+fixed rows from the same 1,281,167-row ImageNet source. The row identifiers
+are in `data/imagenet_rows_4096.csv` (R seed 1701, sorted simple random
+sample). `test_tuning.R` computed an independent dense SVD on those rows;
+`results/imagenet_tuning_4096.csv` contains all 96 fits. Selected medians
+across seeds 4, 17, and 29 are:
+
+| Rank | Oversampling | Power | R call | Cosine | Variance gap |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 2 | 10 | 1 | 0.008 s | 0.730 | 0.00357 |
+| 2 | 20 | 1 (current) | 0.012 s | 0.856 | 0.00213 |
+| 2 | 20 | 2 | 0.015 s | 0.965 | 0.00040 |
+| 50 | 10 | 1 | 0.022 s | 0.627 | 0.03612 |
+| 50 | 20 | 1 | 0.027 s | 0.665 | 0.03217 |
+| 50 | 20 | 2 (current) | 0.034 s | 0.792 | 0.01488 |
+| 50 | 80 | 3 | 0.072 s | 0.968 | 0.00214 |
+
+The rank-50 boundary relative singular-value gap is only 0.000615, so the
+exact rank-50 subspace is sensitive near its boundary. Nonetheless, the
+cheaper rank-50 setting with 10 oversampling vectors and one power iteration
+also misses 0.0361 of total variance, versus 0.0149 for the current policy.
+The dense reference captures 0.1811 of total variance at rank 50. Thus the
+cheaper setting is faster on this diagnostic sample but loses materially more
+signal. No randomized-SVD tuning default was changed. These are 4,096-row
+diagnostic timings, not full-ImageNet production runtimes.

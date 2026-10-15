@@ -9,16 +9,16 @@ DATASETS=(
 PRIORITY=(7 1 0 5 2 8 9 10 4 3 6)
 ARRAY_ID="${SLURM_ARRAY_TASK_ID:?array task ID required}"
 [[ "$ARRAY_ID" =~ ^[0-9]+$ ]] || exit 2
-methods_per_large=4
+methods_per_large=5
 if [[ "${INCLUDE_NOMAD:-FALSE}" == TRUE ]]; then
-  methods_per_large=5
+  methods_per_large=6
 fi
 (( ARRAY_ID < 9 + 2 * methods_per_large )) || exit 2
 if (( ARRAY_ID < 9 )); then
   DATASET_INDEX="${PRIORITY[$ARRAY_ID]}"
-  method_indices=(0 1 2 3)
-  if (( methods_per_large == 5 )); then
-    method_indices+=(4)
+  method_indices=(0 1 2 3 4)
+  if (( methods_per_large == 6 )); then
+    method_indices+=(5)
   fi
 else
   large_offset="$((ARRAY_ID - 9))"
@@ -34,17 +34,15 @@ printf 'dataset,mode,method,task_id,status,exit_code,elapsed_sec\n' \
 failures=0
 
 for method_index in "${method_indices[@]}"; do
-  if (( method_index == 4 )); then
-    task_id="$DATASET_INDEX"
-    mode=python_nomad
-    method=nomad
-  else
-    task_id="$((DATASET_INDEX * 2 + method_index / 2))"
-    mode=r_cuda
-    (( method_index % 2 == 0 )) || mode=python_cuda
-    method=tsne
-    (( method_index < 2 )) || method=umap
-  fi
+  case "$method_index" in
+    0) task_id="$((DATASET_INDEX * 3))"; mode=r_cuda; method=tsne ;;
+    1) task_id="$((DATASET_INDEX * 2))"; mode=python_cuda; method=tsne ;;
+    2) task_id="$((DATASET_INDEX * 3 + 1))"; mode=r_cuda; method=umap ;;
+    3) task_id="$((DATASET_INDEX * 2 + 1))"; mode=python_cuda; method=umap ;;
+    4) task_id="$((DATASET_INDEX * 3 + 2))"; mode=r_cuda
+       method=umap_binary ;;
+    5) task_id="$DATASET_INDEX"; mode=python_nomad; method=nomad ;;
+  esac
   started="$(date +%s)"
   echo "Full-source CUDA: $DATASET $mode $method"
   if COMPARATOR_TASK_ID="$task_id" FULL_CUDA_PAIR=TRUE \

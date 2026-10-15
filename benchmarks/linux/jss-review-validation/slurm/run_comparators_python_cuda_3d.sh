@@ -13,6 +13,7 @@
 #SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_JSS_3d_g_%A_%a.out
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_JSS_3d_g_%A_%a.err
 set -euo pipefail
-N_COMPONENTS=3 bash \
-  benchmark_scripts/fastembedr_jss_review_validation/common/run_comparator_task.sh \
+SUITE="${SUITE:-benchmark_scripts/fastembedr_jss_review_validation}"
+bash \
+  "$SUITE/common/run_comparator_pair_task.sh" \
   python_cuda

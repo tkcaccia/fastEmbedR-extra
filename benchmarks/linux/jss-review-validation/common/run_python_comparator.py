@@ -3,6 +3,7 @@
 import argparse
 import csv
 import gc
+import gzip
 import importlib.metadata
 import os
 import sys
@@ -16,7 +17,10 @@ from sklearn.neighbors import NearestNeighbors
 TSNE_EARLY_ITERATIONS = 250
 TSNE_TOTAL_ITERATIONS = 1000
 TSNE_NORMAL_ITERATIONS = TSNE_TOTAL_ITERATIONS - TSNE_EARLY_ITERATIONS
+CUML_TSNE_DEFAULT_NEIGHBORS = 90
 CUML_TSNE_MIN_GRAD_NORM = 0.0
+CUML_TSNE_PROGRESS_PATIENCE = TSNE_TOTAL_ITERATIONS + 1
+TSNE_BARNES_HUT_ANGLE = 0.2
 NOMAD_EPOCHS = 100
 NOMAD_MAX_BATCH = 8192
 NOMAD_NEIGHBORS = 8
@@ -60,7 +64,7 @@ def read_inputs(args):
     labels = np.asarray(rows["label"]).astype(str)
     source_rows = np.asarray(rows["source_row"], dtype=np.int64)
     edge = None
-    if not args.defer_quality:
+    if not args.defer_quality and family(args.method) == "tsne":
         edge = np.genfromtxt(
             os.path.join(args.input_dir, "quality_compact_affinity.csv"),
             delimiter=",", names=True, dtype=None, encoding="utf-8",
@@ -83,6 +87,14 @@ def family(name):
     if "tsne" in name:
         return "tsne"
     return "umap"
+
+
+def opentsne_grid_cells(n):
+    return 90 if n >= 40000 else 50
+
+
+def cuml_tsne_learning_rate(n):
+    return min(200.0, max(50.0, n / 48.0))
 
 
 def synchronize(backend):
@@ -115,7 +127,7 @@ def fit_cpu(method, data, rank, seed, threads, components):
             n_components=components, perplexity=30,
             max_iter=TSNE_TOTAL_ITERATIONS,
             init="pca", learning_rate="auto", early_exaggeration=12,
-            method="barnes_hut",
+            method="barnes_hut", angle=TSNE_BARNES_HUT_ANGLE,
             random_state=seed, n_jobs=threads,
         )
     elif method == "python_opentsne":
@@ -128,6 +140,10 @@ def fit_cpu(method, data, rank, seed, threads, components):
             early_exaggeration=12, exaggeration=1,
             initial_momentum=0.5, final_momentum=0.8,
             negative_gradient_method=("fft" if components == 2 else "bh"),
+            theta=TSNE_BARNES_HUT_ANGLE,
+            n_interpolation_points=3,
+            min_num_intervals=opentsne_grid_cells(len(data)),
+            ints_in_interval=1,
             n_jobs=threads,
             random_state=seed,
         )
@@ -174,14 +190,16 @@ def fit_cuda(method, data, rank, seed, components):
     elif method == "cuml_tsne":
         from cuml.manifold import TSNE
         model = TSNE(
-            n_components=components, perplexity=30, n_neighbors=91,
+            n_components=components, perplexity=30,
             max_iter=TSNE_TOTAL_ITERATIONS,
             method="fft", init="pca", random_state=seed,
             early_exaggeration=12, late_exaggeration=1,
             exaggeration_iter=TSNE_EARLY_ITERATIONS,
             pre_momentum=0.5, post_momentum=0.8,
-            learning_rate=200, learning_rate_method="none",
+            learning_rate=cuml_tsne_learning_rate(len(data)),
+            learning_rate_method="none",
             min_grad_norm=CUML_TSNE_MIN_GRAD_NORM,
+            n_iter_without_progress=CUML_TSNE_PROGRESS_PATIENCE,
             output_type="cupy",
         )
     elif method == "cuml_umap":
@@ -195,7 +213,38 @@ def fit_cuda(method, data, rank, seed, components):
         )
     else:
         raise ValueError(f"Unsupported CUDA comparator: {method}")
-    return model, model.fit_transform(data)
+    values = model.fit_transform(data)
+    if method == "cuml_pca":
+        import cupy as cp
+        if not isinstance(values, cp.ndarray):
+            raise RuntimeError("cuML PCA did not return CUDA-resident scores")
+    return model, values
+
+
+def check_cuml_tsne(model, n):
+    actual = getattr(model, "n_iter_", None)
+    if actual != TSNE_TOTAL_ITERATIONS:
+        raise RuntimeError(
+            f"cuML t-SNE stopped at {actual} of "
+            f"{TSNE_TOTAL_ITERATIONS} requested iterations"
+        )
+    if str(getattr(model, "method", "")).lower() != "fft":
+        raise RuntimeError("cuML t-SNE did not use FFT optimization")
+    if getattr(model, "max_iter", None) != TSNE_TOTAL_ITERATIONS:
+        raise RuntimeError("cuML t-SNE iteration request changed")
+    if getattr(model, "n_neighbors", None) != CUML_TSNE_DEFAULT_NEIGHBORS:
+        raise RuntimeError("cuML t-SNE default neighbor count changed")
+    if getattr(model, "learning_rate_method", None) != "none":
+        raise RuntimeError("cuML t-SNE rate policy changed")
+    rate = getattr(model, "learning_rate", np.nan)
+    if not np.isclose(rate, cuml_tsne_learning_rate(n)):
+        raise RuntimeError("cuML t-SNE learning rate changed")
+    kl = float(getattr(model, "kl_divergence_", np.nan))
+    return {
+        "observed_iterations": int(actual),
+        "fitted_kl": kl,
+        "fitted_kl_valid": bool(np.isfinite(kl) and kl > 0),
+    }
 
 
 def fit_once(args, data, rank):
@@ -210,15 +259,13 @@ def fit_once(args, data, rank):
             args.n_components
         )
     if args.method == "cuml_tsne":
-        actual = getattr(model, "n_iter_", None)
-        if actual != TSNE_TOTAL_ITERATIONS:
-            raise RuntimeError(
-                f"cuML t-SNE stopped at {actual} of "
-                f"{TSNE_TOTAL_ITERATIONS} requested iterations"
-            )
+        check_cuml_tsne(model, len(data))
     host_values = to_numpy(values)
     synchronize(args.backend)
-    if host_values.shape != (len(data), args.n_components):
+    expected_columns = rank if family(args.method) == "pca" else (
+        args.n_components
+    )
+    if host_values.shape != (len(data), expected_columns):
         raise RuntimeError("Comparator returned the wrong embedding shape")
     if not np.isfinite(host_values).all():
         raise RuntimeError("Comparator returned non-finite coordinates")
@@ -272,11 +319,17 @@ def layout_quality(data, layout, labels, quality, edge, method_family):
     used_labels = labels[quality]
     high_knn = neighbor_indices(high, 30)
     low_knn = neighbor_indices(low, 30)
+    trust = float(trustworthiness(high, low, n_neighbors=30))
+    preserve = preservation(high_knn, low_knn)
+    if not (0 <= trust <= 1 and 0 <= preserve <= 1):
+        raise ValueError("Neighborhood metrics must be in [0, 1]")
+    score = 0.0 if trust + preserve == 0 else (
+        2 * trust * preserve / (trust + preserve)
+    )
     return {
-        "trustworthiness": float(
-            trustworthiness(high, low, n_neighbors=30)
-        ),
-        "preserve_at_30": preservation(high_knn, low_knn),
+        "trustworthiness": trust,
+        "preserve_at_30": preserve,
+        "neighborhood_quality_score": score,
         "label_knn_accuracy": label_accuracy(low_knn, used_labels),
         "sampled_kl": (
             compact_kl(low, edge) if method_family == "tsne" else np.nan
@@ -299,6 +352,7 @@ def pca_quality(model, data, scores, quality):
     return {
         "trustworthiness": np.nan,
         "preserve_at_30": np.nan,
+        "neighborhood_quality_score": np.nan,
         "label_knn_accuracy": np.nan,
         "sampled_kl": np.nan,
         "reconstruction_relative_l2": float(ratio),
@@ -312,7 +366,12 @@ def write_csv(path, rows):
         rows = [rows]
     rows = iter(rows)
     first = next(rows)
-    with open(path, "w", newline="", encoding="utf-8") as handle:
+    if path.endswith(".gz"):
+        handle = gzip.open(path, "wt", compresslevel=1,
+                           newline="", encoding="utf-8")
+    else:
+        handle = open(path, "w", newline="", encoding="utf-8")
+    with handle:
         writer = csv.DictWriter(handle, fieldnames=list(first))
         writer.writeheader()
         writer.writerow(first)
@@ -340,13 +399,13 @@ def parameter_metadata(args, n):
     row.pop("method")
     row.pop("family")
     if args.n_components == 3 and args.method == "python_opentsne":
-        row["optimizer"] = "Barnes-Hut"
+        row["optimizer"] = "barnes_hut_theta_0.2"
     row["learning_rate_value"] = {
         "sklearn_tsne": max(n / 48, 50),
         "python_opentsne": max(n / 12, 200),
         "python_umap": 1,
         "cuml_umap": 1,
-        "cuml_tsne": 200,
+        "cuml_tsne": cuml_tsne_learning_rate(n),
     }.get(args.method, "")
     row["epochs_value"] = (
         NOMAD_EPOCHS if args.method == "nomad" else
@@ -365,7 +424,8 @@ def can_fit_repetitions(args, observed, count):
     return remaining >= reserve + 1.2 * max(observed) * count
 
 
-def result_row(args, manifest, elapsed, metrics, model, warmup_excluded):
+def result_row(args, manifest, elapsed, metrics, model, warmup_excluded,
+               iteration_counts, rank):
     versions = {
         "python_version": sys.version.split()[0],
         "numpy_version": package_version("numpy"),
@@ -380,11 +440,28 @@ def result_row(args, manifest, elapsed, metrics, model, warmup_excluded):
             "nomad": "nomad_projection",
         }[args.method]),
     }
+    grid_locked = (
+        args.method == "cuml_tsne"
+        and args.n_components == 2
+        and versions["implementation_version"] == "26.6.0"
+    )
+    open_grid = args.method == "python_opentsne" and args.n_components == 2
+    grid_cells = 50 if grid_locked else (
+        opentsne_grid_cells(int(manifest["n"])) if open_grid else ""
+    )
+    grid_policy = (
+        "fixed_cuml_26.06_source" if grid_locked else
+        "internal_unverified" if args.method == "cuml_tsne" else
+        "minimum_cells_cpu_policy" if open_grid else
+        "not_applicable_barnes_hut" if args.method in (
+            "sklearn_tsne", "python_opentsne") else ""
+    )
     row = {
         "dataset": args.dataset,
         "family": family(args.method),
         "method": args.method,
         "n_components": args.n_components,
+        "pca_rank": rank if family(args.method) == "pca" else "",
         "language": "Python",
         "backend": args.backend,
         "timing_scope": "direct_Python_fit",
@@ -402,6 +479,7 @@ def result_row(args, manifest, elapsed, metrics, model, warmup_excluded):
             "complete_repeated"
         ),
         "method_timeout_seconds": args.timeout_seconds,
+        "quality_sample_n": int(manifest["quality_n"]),
         "device_synchronized": args.backend == "cuda",
         "output_materialized_on_host_before_timer": True,
         "n": int(manifest["n"]),
@@ -417,6 +495,7 @@ def result_row(args, manifest, elapsed, metrics, model, warmup_excluded):
         "perplexity": 30 if family(args.method) == "tsne" else "",
         "n_neighbors": (
             NOMAD_NEIGHBORS if args.method == "nomad" else
+            CUML_TSNE_DEFAULT_NEIGHBORS if args.method == "cuml_tsne" else
             30 if family(args.method) == "umap" else ""
         ),
         "iterations_policy": {
@@ -468,9 +547,25 @@ def result_row(args, manifest, elapsed, metrics, model, warmup_excluded):
             getattr(model, "n_iter_", "")
             if args.method == "cuml_tsne" else ""
         ),
+        "cuml_tsne_min_observed_iterations": (
+            min(iteration_counts) if iteration_counts else ""
+        ),
+        "cuml_tsne_progress_patience": (
+            CUML_TSNE_PROGRESS_PATIENCE if args.method == "cuml_tsne"
+            else ""
+        ),
         "fitted_kl_divergence": float(getattr(
             model, "kl_divergence_", np.nan
         )) if args.method == "cuml_tsne" else np.nan,
+        "fft_grid_policy": grid_policy,
+        "fft_grid_min_boxes_per_axis": grid_cells,
+        "fft_grid_min_nodes_per_axis": (
+            3 * grid_cells if grid_cells != "" else ""
+        ),
+        "fft_grid_interpolation_points": (
+            3 if grid_cells != "" else ""
+        ),
+        "fft_grid_padded_axis_min": 300 if grid_locked else "",
     }
     parameters = parameter_metadata(args, int(manifest["n"]))
     return row | parameters | metrics | versions
@@ -498,6 +593,8 @@ def main(args):
     manifest, data, quality, labels, source_rows, edge = read_inputs(args)
     rank = min(50, data.shape[0] - 1, data.shape[1] - 1)
     pilot_model, pilot_values, pilot_seconds = fit_once(args, data, rank)
+    pilot_evidence = (check_cuml_tsne(pilot_model, len(data))
+                      if args.method == "cuml_tsne" else {})
     print(f"Pilot completed: {pilot_seconds:.3f} seconds", flush=True)
     warmup_excluded = can_fit_repetitions(
         args, [pilot_seconds], args.timing_reps
@@ -507,6 +604,7 @@ def main(args):
         if args.defer_quality:
             gc.collect()
         elapsed = []
+        fit_evidence = []
         model, values = None, None
         for index in range(args.timing_reps):
             if index and not can_fit_repetitions(
@@ -518,17 +616,21 @@ def main(args):
                 gc.collect()
             model, values, seconds = fit_once(args, data, rank)
             elapsed.append(seconds)
+            fit_evidence.append(check_cuml_tsne(model, len(data))
+                                if args.method == "cuml_tsne" else {})
             print(f"Timing repetition {index + 1}/{args.timing_reps}: "
                   f"{seconds:.3f} seconds", flush=True)
     else:
         model, values = pilot_model, pilot_values
         elapsed = [pilot_seconds]
+        fit_evidence = [pilot_evidence]
         print("Skipping timing repeats: method time budget", flush=True)
     used_family = family(args.method)
     if args.defer_quality:
         metrics = dict.fromkeys((
             "trustworthiness", "preserve_at_30", "label_knn_accuracy",
-            "sampled_kl", "reconstruction_relative_l2",
+            "sampled_kl", "neighborhood_quality_score",
+            "reconstruction_relative_l2",
             "retained_variance_fraction",
         ), np.nan)
     else:
@@ -538,11 +640,26 @@ def main(args):
                 data, values, labels, quality, edge, used_family
             )
         )
-    write_csv(
-        os.path.join(args.output_dir, "result.csv"),
-        result_row(args, manifest, elapsed, metrics, model,
-                   warmup_excluded),
+    invalid_kl = args.method == "cuml_tsne" and not all(
+        item["fitted_kl_valid"] for item in [pilot_evidence, *fit_evidence]
     )
+    if used_family == "tsne" and not args.defer_quality:
+        if not np.isfinite(metrics["sampled_kl"]):
+            raise RuntimeError("t-SNE sampled KL is not finite")
+    result = result_row(
+        args, manifest, elapsed, metrics, model, warmup_excluded,
+        [pilot_evidence["observed_iterations"], *(
+            item["observed_iterations"] for item in fit_evidence
+        )] if args.method == "cuml_tsne" else [], rank,
+    )
+    if args.method == "cuml_tsne":
+        result["fitted_kl_status"] = (
+            "invalid" if invalid_kl else "valid"
+        )
+        result["timing_eligible"] = (
+            result["timing_eligible"] and not invalid_kl
+        )
+    write_csv(os.path.join(args.output_dir, "result.csv"), result)
     write_csv(os.path.join(args.output_dir, "timing_repetitions.csv"), [
         {
             "dataset": args.dataset,
@@ -559,12 +676,17 @@ def main(args):
                 TSNE_TOTAL_ITERATIONS
                 if family(args.method) == "tsne" else ""
             ),
+            "observed_iterations": evidence.get("observed_iterations", ""),
+            "fitted_kl_divergence": evidence.get("fitted_kl", ""),
+            "fitted_kl_valid": evidence.get("fitted_kl_valid", ""),
             "elapsed_sec": seconds,
         }
-        for index, seconds in enumerate(elapsed, start=1)
+        for index, (seconds, evidence) in enumerate(
+            zip(elapsed, fit_evidence), start=1
+        )
     ])
     if values.shape[1] >= 2:
-        write_csv(os.path.join(args.output_dir, "embedding.csv"), (
+        write_csv(os.path.join(args.output_dir, "embedding.csv.gz"), (
             {
                 "benchmark_row": int(index + 1),
                 "source_row": int(source_rows[index]),
@@ -593,8 +715,11 @@ def main(args):
         "experiment": "workflow_comparator",
         "dataset": args.dataset,
         "backend": f"python_{args.backend}",
-        "status": "success",
-        "error": "",
+        "status": "invalid_fitted_kl" if invalid_kl else "success",
+        "error": (
+            "cuML reported nonpositive or nonfinite fitted KL"
+            if invalid_kl else ""
+        ),
         "method": args.method,
     })
 

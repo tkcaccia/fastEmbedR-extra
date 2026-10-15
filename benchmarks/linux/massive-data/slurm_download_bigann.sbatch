@@ -3,9 +3,9 @@
 #SBATCH --account=immunology
 #SBATCH --partition=ada
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=2G
-#SBATCH --time=12:00:00
-#SBATCH --array=0-1%1
+#SBATCH --mem=16G
+#SBATCH --time=48:00:00
+#SBATCH --array=0-1%2
 #SBATCH --chdir=/scratch/firenze/NN
 #SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_bigann_%A_%a.out
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_bigann_%A_%a.err

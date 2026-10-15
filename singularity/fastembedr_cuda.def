@@ -1,0 +1,83 @@
+Bootstrap: localimage
+From: /mnt/sata_ssd/fastEmbedR/singularity/fastembedr_cuda.sif
+
+%files
+    /mnt/sata_ssd/fastEmbedR/singularity/release_inputs/gpuinfo_0.2.0.tar.gz /opt/fastembedr-source/gpuinfo_0.2.0.tar.gz
+    /mnt/sata_ssd/fastEmbedR/singularity/release_inputs/faissR_0.99.52.tar.gz /opt/fastembedr-source/faissR_0.99.52.tar.gz
+    /mnt/sata_ssd/fastEmbedR/singularity/release_inputs/fastEmbedR_0.1.tar.gz /opt/fastembedr-source/fastEmbedR_0.1.tar.gz
+    /mnt/sata_ssd/fastEmbedR/singularity/release_inputs/SHA256SUMS /opt/fastembedr-source/SHA256SUMS
+    /mnt/sata_ssd/fastEmbedR/singularity/release_inputs/source-identity.txt /opt/fastembedr-manifest/source-identity.txt
+
+%post
+    set -eu
+    export R_HOME=/opt/r46/lib/R
+    export PATH=/opt/r46/bin:/usr/local/cuda/bin:/opt/fastembedr-toolchain/bin:/usr/local/bin:/usr/bin:/bin
+    export R_LIBS=/opt/r46/lib/R/library
+    export R_LIBS_USER=/opt/r46/lib/R/library
+    export R_LIBS_SITE=/opt/r46/lib/R/library
+    export LD_LIBRARY_PATH=/opt/r46/lib/R/lib:/opt/r46/lib:/opt/rapids/lib:/usr/local/cuda/lib:/usr/local/cuda/lib64:/opt/conda/lib:/opt/conda/targets/x86_64-linux/lib
+    export LIBRARY_PATH=/opt/r46/lib/R/lib:/opt/r46/lib:/opt/rapids/lib:/usr/local/cuda/lib:/usr/local/cuda/lib64:/opt/conda/lib:/opt/conda/targets/x86_64-linux/lib
+    export CPATH=/opt/cccl/targets/x86_64-linux/include/cccl:/opt/r46/include:/opt/rapids/include:/opt/conda/include:/opt/conda/targets/x86_64-linux/include
+    export PKG_CONFIG_PATH=/opt/r46/lib/pkgconfig:/opt/rapids/lib/pkgconfig:/opt/conda/lib/pkgconfig
+    export CUDA_HOME=/usr/local/cuda
+    export NVCC=/opt/fastembedr-toolchain/bin/nvcc
+    export CCCL_HOME=/opt/cccl
+    export CUVS_HOME=/opt/rapids
+    export RAFT_HOME=/opt/conda
+    export RMM_HOME=/opt/conda
+    export CUDAHOSTCXX=/usr/bin/g++
+    export FASTEMBEDR_USE_CUDA=1
+    export FASTEMBEDR_REQUIRE_CUDA=1
+    export FASTEMBEDR_USE_CUVS=1
+    export FASTEMBEDR_USE_RAFT=1
+    export FASTEMBEDR_CUDA_ARCH='89 120'
+    export FASTEMBEDR_CUDA_FLAGS='-I/opt/cccl/targets/x86_64-linux/include/cccl'
+    export FAISS_HOME=/opt/conda
+    export FAISSR_REQUIRE_CUDA=1
+    export FAISSR_REQUIRE_CUVS=1
+    export FAISSR_SKIP_CUDA_RUNTIME_CHECK=1
+    export FAISSR_CUDA_ARCH='89 120'
+    export FAISSR_CUDA_PTX_ARCH=120
+    export MAKEFLAGS=-j4
+
+    cd /opt/fastembedr-source
+    sha256sum -c SHA256SUMS
+    /opt/r46/bin/R CMD INSTALL --preclean --install-tests \
+        --library=/opt/r46/lib/R/library gpuinfo_0.2.0.tar.gz
+    /opt/r46/bin/R CMD INSTALL --preclean --install-tests \
+        --library=/opt/r46/lib/R/library faissR_0.99.52.tar.gz
+    /opt/r46/bin/R CMD INSTALL --preclean --install-tests \
+        --library=/opt/r46/lib/R/library fastEmbedR_0.1.tar.gz
+    /opt/r46/bin/Rscript -e 'stopifnot(as.character(packageVersion("gpuinfo")) == "0.2.0", as.character(packageVersion("faissR")) == "0.99.52", as.character(packageVersion("fastEmbedR")) == "0.1")'
+    sha256sum /opt/r46/lib/R/library/fastEmbedR/libs/fastEmbedR.so \
+        > /opt/fastembedr-manifest/fastEmbedR-shared-library.sha256
+
+    /opt/conda/bin/python - <<'PY'
+import json
+from pathlib import Path
+
+identity = {}
+for line in Path('/opt/fastembedr-manifest/source-identity.txt').read_text().splitlines():
+    key, value = line.split('=', 1)
+    identity[key] = value
+required = {'FastEmbedRCommit', 'FaissRCommit', 'GPUInfoCommit',
+            'BaseImageSHA256', 'FastEmbedRSourceSHA256'}
+if not required.issubset(identity):
+    raise SystemExit('Incomplete release identity')
+labels_path = Path('/.singularity.d/labels.json')
+labels = json.loads(labels_path.read_text())
+for key in list(labels):
+    if key.startswith('PreviousFastEmbedR'):
+        labels.pop(key)
+labels.update(identity)
+labels['org.opencontainers.image.revision'] = identity['FastEmbedRCommit']
+labels['org.opencontainers.image.version'] = '0.1-source-locked'
+labels_path.write_text(json.dumps(labels, indent=2, sort_keys=True) + '\n')
+PY
+
+%test
+    cd /opt/fastembedr-source
+    sha256sum -c SHA256SUMS
+    /opt/r46/bin/Rscript -e 'stopifnot(as.character(packageVersion("gpuinfo")) == "0.2.0", as.character(packageVersion("faissR")) == "0.99.52", as.character(packageVersion("fastEmbedR")) == "0.1", is.function(fastEmbedR::massive_matrix))'
+    /opt/conda/bin/python -c 'import cugraph, dask_cuda, cudf'
+    /opt/nomad/bin/python -c 'import nomad_projection'

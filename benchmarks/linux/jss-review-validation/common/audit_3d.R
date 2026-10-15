@@ -10,20 +10,40 @@ datasets <- c(
 )
 methods <- list(
     r_cpu = c("fastembedr_tsne", "rtsne", "fitsne",
-              "fastembedr_umap", "uwot", "uwot_fast_sgd", "r_umap"),
-    r_cuda = c("fastembedr_tsne", "fastembedr_umap"),
+              "fastembedr_umap", "fastembedr_umap_binary", "uwot",
+              "uwot_fast_sgd", "r_umap"),
+    r_cuda = c("fastembedr_tsne", "fastembedr_umap",
+               "fastembedr_umap_binary"),
     python_cpu = c("sklearn_tsne", "python_opentsne", "python_umap"),
     python_cuda = c("cuml_tsne", "cuml_umap")
 )
 expected_unsupported <- function(mode, method) {
-    mode == "r_cuda" ||
-        (mode == "python_cuda" && method == "cuml_tsne")
+    mode == "python_cuda" && method == "cuml_tsne"
 }
 records <- list()
 metrics <- list()
 for (mode in names(methods)) {
     for (dataset in datasets) {
         for (method in methods[[mode]]) {
+            baseline_dir <- file.path(
+                root, "workflow_comparators", mode, dataset, method
+            )
+            baseline_status_file <- file.path(baseline_dir, "status.csv")
+            baseline_result_file <- file.path(baseline_dir, "result.csv")
+            baseline_status <- if (file.exists(baseline_status_file)) {
+                utils::read.csv(baseline_status_file, check.names = FALSE)
+            } else NULL
+            baseline_state <- if (is.null(baseline_status) ||
+                    !nrow(baseline_status)) {
+                "missing"
+            } else as.character(baseline_status$status[[1L]])
+            baseline_valid <- baseline_state == "success" &&
+                file.exists(baseline_result_file)
+            baseline <- if (baseline_valid) {
+                utils::read.csv(baseline_result_file)
+            } else NULL
+            baseline_valid <- baseline_valid && nrow(baseline) == 1L &&
+                baseline$n_components[[1L]] == 2L
             directory <- file.path(
                 root, "workflow_comparators_3d", mode, dataset, method
             )
@@ -36,12 +56,12 @@ for (mode in names(methods)) {
             } else as.character(status$status[[1L]])
             expected <- expected_unsupported(mode, method)
             valid <- if (expected) {
-                state == "unsupported"
+                baseline_valid && state == "unsupported"
             } else {
-                state == "success"
+                baseline_valid && state == "success"
             }
             result_file <- file.path(directory, "result.csv")
-            embedding_file <- file.path(directory, "embedding.csv")
+            embedding_file <- embedding_csv_path(directory)
             plot_file <- file.path(directory, "embedding.png")
             if (state == "success") {
                 valid <- valid && file.exists(result_file) &&
@@ -52,7 +72,20 @@ for (mode in names(methods)) {
                     result <- utils::read.csv(result_file)
                     valid <- "dimension_3" %in% header &&
                         nrow(result) == 1L &&
-                        result$n_components[[1L]] == 3L
+                        result$n_components[[1L]] == 3L &&
+                        result$n[[1L]] == baseline$n[[1L]] &&
+                        result$seed[[1L]] == baseline$seed[[1L]] &&
+                        result$timing_scope[[1L]] ==
+                            baseline$timing_scope[[1L]] &&
+                        isTRUE(as.logical(result$timing_eligible[[1L]])) &&
+                        isTRUE(as.logical(baseline$timing_eligible[[1L]]))
+                    if (valid && method == "fastembedr_tsne" &&
+                            mode == "r_cuda") {
+                        valid <- identical(
+                            result$optimizer[[1L]],
+                            "fft_grid_3d_cuda_cufft"
+                        )
+                    }
                     if (valid) {
                         metrics[[length(metrics) + 1L]] <- result
                     }
@@ -60,6 +93,7 @@ for (mode in names(methods)) {
             }
             records[[length(records) + 1L]] <- data.frame(
                 dataset = dataset, mode = mode, method = method,
+                baseline_status = baseline_state,
                 status = state, expected_unsupported = expected,
                 valid = valid, directory = directory
             )

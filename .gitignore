@@ -10,6 +10,9 @@ results/runs/
 *.RData
 *.rds
 *.npz
+*.fbin
+*.fbin.part
+*.f32
 *.sif
 *.tar.gz
 *.log

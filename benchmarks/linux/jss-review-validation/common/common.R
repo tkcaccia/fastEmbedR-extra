@@ -229,6 +229,12 @@ draw_embedding_csv <- function(input) {
     invisible(input)
 }
 
+embedding_csv_path <- function(directory) {
+    compressed <- file.path(directory, "embedding.csv.gz")
+    if (file.exists(compressed)) return(compressed)
+    file.path(directory, "embedding.csv")
+}
+
 read_embedding_csv <- function(input) {
     table <- utils::read.csv(
         input, stringsAsFactors = FALSE, check.names = FALSE
@@ -257,7 +263,7 @@ read_embedding_csv <- function(input) {
 
 write_embedding_artifacts <- function(layout, labels, source_rows,
                                       directory) {
-    csv <- file.path(directory, "embedding.csv")
+    csv <- file.path(directory, "embedding.csv.gz")
     png <- file.path(directory, "embedding.png")
     write_csv_atomic(
         embedding_output_table(layout, labels, source_rows), csv
@@ -325,7 +331,16 @@ stratified_rows <- function(labels, n, size, seed) {
     sort(rows)
 }
 
+full_benchmark_rows <- function(dataset) {
+    seq_len(nrow(dataset$data))
+}
+
 subset_dataset <- function(dataset, rows) {
+    if (length(rows) == nrow(dataset$data) &&
+            identical(rows, full_benchmark_rows(dataset))) {
+        return(list(data = dataset$data, labels = dataset$labels,
+            rows = rows))
+    }
     list(
         data = dataset$data[rows, , drop = FALSE],
         labels = if (is.null(dataset$labels)) NULL else dataset$labels[rows],
@@ -581,6 +596,17 @@ query_label_accuracy <- function(indices, reference_labels, query_labels, k) {
     mean(predicted == query_labels)
 }
 
+neighborhood_quality_score <- function(trustworthiness, preserve) {
+    if (anyNA(c(trustworthiness, preserve))) return(NA_real_)
+    if (any(!is.finite(c(trustworthiness, preserve))) ||
+            any(c(trustworthiness, preserve) < 0) ||
+            any(c(trustworthiness, preserve) > 1)) {
+        stop("Neighborhood metrics must be finite values in [0, 1].")
+    }
+    if (trustworthiness + preserve == 0) return(0)
+    2 * trustworthiness * preserve / (trustworthiness + preserve)
+}
+
 quality_metrics <- function(x, layout, labels, perplexity, support_multiplier,
                             k = 30L) {
     x <- as_double_matrix(x)
@@ -594,7 +620,7 @@ quality_metrics <- function(x, layout, labels, perplexity, support_multiplier,
         indices = high_knn$indices[, seq_len(max_support), drop = FALSE],
         distances = high_knn$distances[, seq_len(max_support), drop = FALSE]
     )
-    data.frame(
+    quality <- data.frame(
         trustworthiness = trustworthiness_from_distances(
             high_distance, low_distance, k
         ),
@@ -607,6 +633,10 @@ quality_metrics <- function(x, layout, labels, perplexity, support_multiplier,
         sampled_kl = sampled_tsne_kl(layout, support_knn, perplexity),
         stringsAsFactors = FALSE
     )
+    quality$neighborhood_quality_score <- neighborhood_quality_score(
+        quality$trustworthiness, quality$preserve_at_30
+    )
+    quality
 }
 
 procrustes_correlation <- function(reference, candidate) {
@@ -644,7 +674,13 @@ principal_angle_summary <- function(reference, candidate) {
 write_csv_atomic <- function(x, path) {
     dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
     temporary <- paste0(path, ".tmp.", Sys.getpid())
-    utils::write.csv(x, temporary, row.names = FALSE, na = "")
+    if (endsWith(path, ".gz")) {
+        connection <- gzfile(temporary, "wt", compression = 1L)
+        tryCatch(utils::write.csv(x, connection, row.names = FALSE,
+            na = ""), finally = close(connection))
+    } else {
+        utils::write.csv(x, temporary, row.names = FALSE, na = "")
+    }
     if (!file.rename(temporary, path)) {
         file.copy(temporary, path, overwrite = TRUE)
         unlink(temporary)

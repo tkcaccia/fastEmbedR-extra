@@ -6,7 +6,11 @@ if (length(args) != 4L) {
 library(fastEmbedR)
 library(float)
 rows <- utils::read.csv(args[[2L]])$source_row
-saved <- utils::read.csv(args[[3L]])$singular_value
+saved <- if (identical(args[[3L]], "none")) {
+    NULL
+} else {
+    utils::read.csv(args[[3L]])$singular_value
+}
 source <- new.env(parent = emptyenv())
 load(args[[1L]], envir = source)
 object <- get(ls(source)[[1L]], envir = source)
@@ -24,9 +28,12 @@ reference <- svd(centered, nu = 50L, nv = 50L)
 reference_scores <- reference$u %*% diag(reference$d[seq_len(50L)])
 reference_loadings <- reference$v[, seq_len(50L), drop = FALSE]
 total_ss <- sum(centered^2)
-reference_match <- max(abs(reference$d[seq_len(50L)] -
-    saved)) / max(saved)
-if (reference_match > 1e-5) {
+reference_match <- if (is.null(saved)) {
+    NA_real_
+} else {
+    max(abs(reference$d[seq_len(50L)] - saved)) / max(saved)
+}
+if (is.finite(reference_match) && reference_match > 1e-5) {
     stop("ImageNet input differs from the archived accuracy sample: ",
         reference_match)
 }
@@ -43,6 +50,9 @@ score_fit <- function(fit, rank, oversample, power, seed, elapsed) {
     variance <- sum(fit$singular_values^2) / total_ss
     data.frame(
         rank = rank, oversample = oversample, power = power, seed = seed,
+        reference_boundary_gap = (
+            reference$d[[rank]] - reference$d[[rank + 1L]]
+        ) / reference$d[[rank]],
         elapsed_sec = elapsed, native_sec = fit$timing$total,
         sketch_sec = fit$timing$sketch,
         project_sec = fit$timing$project,

@@ -11,5 +11,6 @@
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_JSS_ctl_%j.err
 
 set -euo pipefail
+SUITE="${SUITE:-benchmark_scripts/fastembedr_jss_review_validation}"
 bash \
-  benchmark_scripts/fastembedr_jss_review_validation/common/run_complete_campaign_controller.sh
+  "$SUITE/common/run_complete_campaign_controller.sh"

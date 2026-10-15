@@ -12,5 +12,6 @@
 #SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_JSS_tm_py_%A_%a.out
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_JSS_tm_py_%A_%a.err
 set -euo pipefail
+SUITE="${SUITE:-benchmark_scripts/fastembedr_jss_review_validation}"
 THREADS=4 TIMING_REPS=5 bash \
-  benchmark_scripts/fastembedr_jss_review_validation/common/run_python_timing_task.sh
+  "$SUITE/common/run_python_timing_task.sh"

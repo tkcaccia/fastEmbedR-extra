@@ -23,9 +23,11 @@ CONTAINER="$(command -v apptainer || command -v singularity)"
 FAILED=0
 
 run_method() {
-  local mode="$1" offset="$2" task_id
-  task_id="$((DATASET_INDEX * 3 + offset))"
-  echo "[$(date --iso-8601=seconds)] $DATASET $mode task=$task_id"
+  local mode="$1" offset="$2" task_id stride
+  stride=3
+  [[ "$mode" != r_cuda ]] || stride=4
+  task_id="$((DATASET_INDEX * stride + offset))"
+  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $DATASET $mode task=$task_id"
   if ! COMPARATOR_TASK_ID="$task_id" \
       bash "$SUITE/common/run_comparator_task.sh" "$mode"; then
     FAILED=1
@@ -48,6 +50,7 @@ run_method r_cuda 1
 run_method python_cuda 1
 publish_pair tsne
 run_method r_cuda 2
+run_method r_cuda 3
 run_method python_cuda 2
 publish_pair umap
 exit "$FAILED"

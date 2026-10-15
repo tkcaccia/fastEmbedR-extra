@@ -12,8 +12,8 @@
 #SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_JSS_full_quality_%A_%a.out
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_JSS_full_quality_%A_%a.err
 set -euo pipefail
-SUITE="${SUITE:-/scratch/firenze/NN/benchmark_scripts/fastembedr_jss_review_validation}"
 BASE_DIR="${BASE_DIR:-/scratch/firenze/NN}"
+SUITE="${SUITE:-$BASE_DIR/benchmark_scripts/fastembedr_jss_review_validation}"
 IMAGE="${IMAGE:-$BASE_DIR/singularity/fastembedr_cuda.sif}"
 DATA_ROOT="${DATA_ROOT:-$BASE_DIR/Data}"
 DATASETS=(

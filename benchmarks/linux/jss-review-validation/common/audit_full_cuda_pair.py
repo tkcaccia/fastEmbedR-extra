@@ -15,6 +15,7 @@ METHODS = (
     ("r_cuda", "fastembedr_tsne"),
     ("python_cuda", "cuml_tsne"),
     ("r_cuda", "fastembedr_umap"),
+    ("r_cuda", "fastembedr_umap_binary"),
     ("python_cuda", "cuml_umap"),
 )
 
@@ -52,16 +53,49 @@ def audit(campaign, inputs, outputs):
                     raise ValueError("fit did not use every source row")
                 if result["quality_analysis"] != "posthoc_R":
                     raise ValueError("quality was not calculated after fit")
+                if method in ("fastembedr_umap",
+                              "fastembedr_umap_binary"):
+                    expected_mode = ("binary" if method.endswith("binary")
+                                     else "fuzzy")
+                    if result.get("graph_mode") != expected_mode:
+                        raise ValueError("incorrect UMAP graph mode")
+                if method == "cuml_tsne":
+                    if (int(result.get("n_neighbors", 0)) != 90 or
+                            int(result.get(
+                                "cuml_tsne_reported_neighbors", 0)) != 90 or
+                            result.get("affinity_support") !=
+                            "cuml_default_90"):
+                        raise ValueError("incorrect cuML neighbor support")
+                    if int(result.get(
+                            "cuml_tsne_min_observed_iterations", 0)) != 1000:
+                        raise ValueError("cuML t-SNE stopped before 1000 fits")
+                    with (directory / "timing_repetitions.csv").open(
+                            newline="", encoding="utf-8") as handle:
+                        repetitions = list(csv.DictReader(handle))
+                    if not repetitions or any(
+                            int(row.get("observed_iterations", 0)) != 1000
+                            for row in repetitions):
+                        raise ValueError("cuML t-SNE repetition stopped early")
                 for field in ("elapsed_median_sec", "trustworthiness",
-                              "preserve_at_30"):
+                              "preserve_at_30",
+                              "neighborhood_quality_score"):
                     if not math.isfinite(float(result[field])):
                         raise ValueError(f"non-finite {field}")
+                trust = float(result["trustworthiness"])
+                preserve = float(result["preserve_at_30"])
+                score = float(result["neighborhood_quality_score"])
+                expected = (2 * trust * preserve / (trust + preserve)
+                            if trust + preserve else 0)
+                if not (0 <= score <= 1) or abs(score - expected) > 1e-6:
+                    raise ValueError("inconsistent neighborhood quality score")
                 if result["timing_eligible"].lower() != "true":
                     failures.append(
                         f"{dataset}/{method}: fit succeeded but "
                         "timing was not fully replicated"
                     )
-                if not (directory / "embedding.csv").is_file():
+                if not any((directory / name).is_file() and
+                           (directory / name).stat().st_size > 0 for name in
+                           ("embedding.csv.gz", "embedding.csv")):
                     raise ValueError("missing full embedding CSV")
                 if not (directory / "quality.csv").is_file():
                     raise ValueError("missing R quality CSV")

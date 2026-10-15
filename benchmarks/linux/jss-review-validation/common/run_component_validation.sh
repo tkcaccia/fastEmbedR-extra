@@ -4,7 +4,7 @@ set -euo pipefail
 
 BACKEND="${1:?backend is required}"
 BASE_DIR="${BASE_DIR:-/scratch/firenze/NN}"
-SUITE="$BASE_DIR/benchmark_scripts/fastembedr_jss_review_validation"
+SUITE="${SUITE:-$BASE_DIR/benchmark_scripts/fastembedr_jss_review_validation}"
 IMAGE="${IMAGE:-$BASE_DIR/singularity/fastembedr_cuda.sif}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-$BASE_DIR/fastEmbedR-results/jss_validation}"
 CONTAINER="$(command -v apptainer || command -v singularity || true)"

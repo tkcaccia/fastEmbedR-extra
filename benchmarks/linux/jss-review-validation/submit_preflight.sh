@@ -3,7 +3,8 @@
 set -euo pipefail
 
 BASE_DIR="${BASE_DIR:-/scratch/firenze/NN}"
-SUITE="$BASE_DIR/benchmark_scripts/fastembedr_jss_review_validation"
+SUITE="${SUITE:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+export SUITE
 cd "$BASE_DIR"
 mkdir -p benchmark_logs fastEmbedR-results/jss_validation
 

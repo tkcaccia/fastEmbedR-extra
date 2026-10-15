@@ -1,0 +1,28 @@
+name: BigANN downloader
+
+on:
+  push:
+    paths:
+      - .github/workflows/bigann-downloader.yml
+      - benchmarks/linux/massive-data/download_bigann_subset.py
+      - benchmarks/linux/massive-data/slurm_download_bigann.sbatch
+      - benchmarks/linux/massive-data/tests/test_download_bigann_subset.py
+  pull_request:
+    paths:
+      - .github/workflows/bigann-downloader.yml
+      - benchmarks/linux/massive-data/download_bigann_subset.py
+      - benchmarks/linux/massive-data/slurm_download_bigann.sbatch
+      - benchmarks/linux/massive-data/tests/test_download_bigann_subset.py
+
+jobs:
+  downloader:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test range and resume behavior without external downloads
+        run: |
+          python3 -m unittest discover \
+            benchmarks/linux/massive-data/tests \
+            -p 'test_download_*.py' -v
+      - name: Check Slurm shell syntax
+        run: bash -n benchmarks/linux/massive-data/slurm_download_bigann.sbatch

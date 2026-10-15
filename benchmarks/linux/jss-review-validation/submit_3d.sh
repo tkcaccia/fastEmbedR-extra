@@ -3,7 +3,7 @@
 set -euo pipefail
 
 BASE_DIR="${BASE_DIR:-/scratch/firenze/NN}"
-SUITE="${SUITE:-$BASE_DIR/benchmark_scripts/fastembedr_jss_review_validation}"
+SUITE="${SUITE:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 IMAGE="${IMAGE:-$BASE_DIR/singularity/fastembedr_cuda.sif}"
 : "${INPUT_ROOT:?Set INPUT_ROOT to a completed campaign input directory.}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-$BASE_DIR/fastEmbedR-results/jss_validation/three_d/$(date -u +%Y%m%dT%H%M%SZ)}"

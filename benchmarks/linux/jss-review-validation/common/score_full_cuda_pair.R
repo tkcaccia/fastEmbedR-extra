@@ -14,9 +14,10 @@ stopifnot(nzchar(dataset), nzchar(data_root), nzchar(input_root),
     nzchar(output_root))
 
 methods <- data.frame(
-    mode = c("r_cuda", "python_cuda", "r_cuda", "python_cuda"),
+    mode = c("r_cuda", "python_cuda", "r_cuda", "r_cuda",
+        "python_cuda"),
     method = c("fastembedr_tsne", "cuml_tsne",
-        "fastembedr_umap", "cuml_umap")
+        "fastembedr_umap", "fastembedr_umap_binary", "cuml_umap")
 )
 if (identical(Sys.getenv("INCLUDE_NOMAD"), "TRUE")) {
     methods <- rbind(methods, data.frame(
@@ -35,7 +36,7 @@ score_method <- function(index, high, labels, quality_rows, source_n,
         return(data.frame(method = method, status = "fit_unavailable",
             error = NA_character_))
     }
-    embedding <- utils::read.csv(file.path(directory, "embedding.csv"),
+    embedding <- utils::read.csv(embedding_csv_path(directory),
         colClasses = c("integer", "NULL", "NULL", "numeric", "numeric"))
     if (nrow(embedding) != source_n ||
             any(embedding$benchmark_row != seq_len(source_n))) {

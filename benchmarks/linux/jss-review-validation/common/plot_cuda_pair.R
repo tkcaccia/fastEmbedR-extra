@@ -14,10 +14,12 @@ if (is.null(plot_root)) plot_root <- output_root
 stopifnot(family %in% c("tsne", "umap"))
 stopifnot(nzchar(dataset), nzchar(input_root), nzchar(output_root))
 
-methods <- c(
-    paste0("fastembedr_", family), paste0("cuml_", family)
-)
-modes <- c("r_cuda", "python_cuda")
+methods <- if (family == "umap") {
+    c("fastembedr_umap", "fastembedr_umap_binary", "cuml_umap")
+} else c("fastembedr_tsne", "cuml_tsne")
+modes <- if (family == "umap") {
+    c("r_cuda", "r_cuda", "python_cuda")
+} else c("r_cuda", "python_cuda")
 if (family == "tsne" && Sys.getenv("INCLUDE_NOMAD") == "TRUE") {
     methods <- c(methods, "nomad")
     modes <- c(modes, "python_cuda")
@@ -37,13 +39,14 @@ read_method <- function(index) {
     } else {
         "missing"
     }
-    result <- if (identical(status, "success") &&
+    result <- if (status %in% c("success", "invalid_fitted_kl") &&
             file.exists(result_file)) {
         utils::read.csv(result_file, check.names = FALSE)
     } else {
         NULL
     }
-    if (identical(status, "success") && is.null(result)) {
+    if (status %in% c("success", "invalid_fitted_kl") &&
+            is.null(result)) {
         status <- "missing_result"
     }
     list(path = path, status = status, result = result)
@@ -61,8 +64,9 @@ metric <- function(method, name) {
 }
 
 read_layout <- function(method, benchmark_rows) {
-    path <- file.path(method$path, "embedding.csv")
-    if (!identical(method$status, "success") || !file.exists(path)) {
+    path <- embedding_csv_path(method$path)
+    if (!method$status %in% c("success", "invalid_fitted_kl") ||
+            !file.exists(path)) {
         return(NULL)
     }
     layout <- utils::read.csv(path)
@@ -105,12 +109,18 @@ draw_panel <- function(method, layout, labels, heading, quality_n,
     }
     trust <- format_metric(metric(method, "trustworthiness"))
     preserve <- format_metric(metric(method, "preserve_at_30"))
-    quality <- paste0("T=", trust, "  Preserve@30=", preserve)
+    score <- format_metric(metric(method,
+        "neighborhood_quality_score"))
+    quality <- paste0("Q=", score, "  T=", trust,
+        "  Preserve@30=", preserve)
     if (family == "tsne" && show_kl) {
         quality <- paste0(quality, "  compact-KL=",
             format_metric(metric(method, "sampled_kl")))
     }
     details <- paste0("n=", nrow(layout), "; quality n=", quality_n)
+    if (method$status != "success") {
+        details <- paste0(details, "; ", method$status)
+    }
     reps <- metric(method, "timing_reps")
     if (is.finite(reps)) details <- paste0(details, "; reps=", reps)
     graphics::mtext(paste0(elapsed, " s", timing_note, "  |  ", quality,
@@ -128,6 +138,9 @@ main <- function() {
     summary <- data.frame(
         dataset = dataset, family = family, method = methods,
         method_family = ifelse(methods == "nomad", "nomad", family),
+        graph_mode = if (family == "umap") {
+            ifelse(methods == "fastembedr_umap_binary", "binary", "fuzzy")
+        } else NA_character_,
         status = vapply(results, `[[`, character(1L), "status"),
         timing_scope = vapply(results, function(x) {
             as.character(metric(x, "timing_scope"))
@@ -149,6 +162,8 @@ main <- function() {
             name = "trustworthiness"),
         preserve_at_30 = vapply(results, metric, numeric(1L),
             name = "preserve_at_30"),
+        neighborhood_quality_score = vapply(results, metric,
+            numeric(1L), name = "neighborhood_quality_score"),
         sampled_kl = vapply(results, metric, numeric(1L),
             name = "sampled_kl"),
         quality_sample_n = sum(sample$quality_sample),
@@ -162,14 +177,19 @@ main <- function() {
         height = 1100L, res = 180L)
     on.exit(grDevices::dev.off(), add = TRUE)
     graphics::par(mfrow = c(1L, length(methods)))
-    draw_panel(results[[1L]], layouts[[1L]], sample$label,
-        "fastEmbedR CUDA (R public call)", sum(sample$quality_sample))
-    draw_panel(results[[2L]], layouts[[2L]], sample$label,
-        "cuML CUDA (direct Python fit)", sum(sample$quality_sample))
-    if (length(methods) == 3L) {
-        draw_panel(results[[3L]], layouts[[3L]], sample$label,
-            "NOMAD CUDA (distinct objective)",
-            sum(sample$quality_sample), show_kl = FALSE)
+    headings <- if (family == "umap") {
+        c("fastEmbedR fuzzy UMAP (R public call)",
+          "fastEmbedR binary UMAP (R public call)",
+          "cuML UMAP (direct Python fit)")
+    } else c("fastEmbedR t-SNE (R public call)",
+             "cuML t-SNE (direct Python fit)")
+    if (length(methods) > length(headings)) {
+        headings <- c(headings, "NOMAD (distinct objective)")
+    }
+    for (index in seq_along(methods)) {
+        draw_panel(results[[index]], layouts[[index]], sample$label,
+            headings[[index]], sum(sample$quality_sample),
+            show_kl = methods[[index]] != "nomad")
     }
     state <- if (all(summary$status == "success") &&
             all(vapply(layouts, Negate(is.null), logical(1L)))) {

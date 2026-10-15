@@ -12,4 +12,5 @@
 #SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_JSS_num_g_%j.out
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_JSS_num_g_%j.err
 set -euo pipefail
-bash benchmark_scripts/fastembedr_jss_review_validation/common/run_component_validation.sh cuda
+SUITE="${SUITE:-benchmark_scripts/fastembedr_jss_review_validation}"
+bash "$SUITE/common/run_component_validation.sh" cuda

@@ -12,5 +12,6 @@
 #SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_JSS_lr_th_%A_%a.out
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_JSS_lr_th_%A_%a.err
 set -euo pipefail
+SUITE="${SUITE:-benchmark_scripts/fastembedr_jss_review_validation}"
 export LONGRUN_THREADS_OVERRIDE=12
-bash benchmark_scripts/fastembedr_jss_review_validation/common/run_array_task.sh longrun_threads cpu
+bash "$SUITE/common/run_array_task.sh" longrun_threads cpu

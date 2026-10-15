@@ -11,9 +11,9 @@ INPUT_ROOT="${INPUT_ROOT:?INPUT_ROOT is required}"
 OUTPUT_ROOT="${OUTPUT_ROOT:?OUTPUT_ROOT is required}"
 TASK_ID="${COMPARATOR_TASK_ID:-${SLURM_ARRAY_TASK_ID:-0}}"
 THREADS="${SLURM_CPUS_PER_TASK:-4}"
-METHOD_TIMEOUT_SECONDS="${METHOD_TIMEOUT_SECONDS:-7200}"
 N_COMPONENTS="${N_COMPONENTS:-2}"
 FULL_CUDA_PAIR="${FULL_CUDA_PAIR:-FALSE}"
+COMPARATOR_FULL_SOURCE="${COMPARATOR_FULL_SOURCE:-TRUE}"
 TIMING_REPS="${TIMING_REPS:-5}"
 COMPARISON_DIR=workflow_comparators
 if [[ "$N_COMPONENTS" == 3 ]]; then
@@ -25,8 +25,17 @@ fi
 CONTAINER="$(command -v apptainer || command -v singularity || true)"
 
 source "$SUITE/common/container_runtime.sh"
+[[ -f "$SUITE/common/campaign_submit.sh" ]] || {
+  echo "Missing campaign submission helpers in $SUITE" >&2
+  exit 1
+}
 source "$SUITE/common/campaign_submit.sh"
+campaign_require_method_timeout || exit $?
 campaign_verify_suite_revision
+[[ "$COMPARATOR_FULL_SOURCE" == TRUE ]] || {
+  echo "JSS comparator fits require every source row." >&2
+  exit 2
+}
 
 DATASETS=(
   COIL20 USPS FashionMNIST FlowRepository_FR-FCM-ZYRM_files flow18 MNIST
@@ -34,33 +43,35 @@ DATASETS=(
 )
 R_METHODS=(
   fastembedr_pca irlba_pca fastembedr_tsne rtsne fitsne
-  fastembedr_umap uwot uwot_fast_sgd r_umap
+  fastembedr_umap fastembedr_umap_binary uwot uwot_fast_sgd r_umap
 )
-R_CUDA_METHODS=(fastembedr_pca fastembedr_tsne fastembedr_umap)
-PRCOMP_DATASETS=(USPS MetRef)
+R_CUDA_METHODS=(
+  fastembedr_pca fastembedr_tsne fastembedr_umap
+  fastembedr_umap_binary
+)
 PYTHON_CPU_METHODS=(
   sklearn_pca sklearn_tsne python_opentsne python_umap
 )
 PYTHON_CUDA_METHODS=(cuml_pca cuml_tsne cuml_umap)
 if [[ "$FULL_CUDA_PAIR" == TRUE ]]; then
-  R_CUDA_METHODS=(fastembedr_tsne fastembedr_umap)
+  R_CUDA_METHODS=(
+    fastembedr_tsne fastembedr_umap fastembedr_umap_binary
+  )
   PYTHON_CUDA_METHODS=(cuml_tsne cuml_umap)
 fi
-if [[ "$N_COMPONENTS" == 3 ]]; then
+if [[ "$N_COMPONENTS" == 3 || "${PAIR_3D:-FALSE}" == TRUE ]]; then
   R_METHODS=(fastembedr_tsne rtsne fitsne fastembedr_umap
+             fastembedr_umap_binary
              uwot uwot_fast_sgd r_umap)
-  R_CUDA_METHODS=(fastembedr_tsne fastembedr_umap)
+  R_CUDA_METHODS=(
+    fastembedr_tsne fastembedr_umap fastembedr_umap_binary
+  )
   PYTHON_CPU_METHODS=(sklearn_tsne python_opentsne python_umap)
   PYTHON_CUDA_METHODS=(cuml_tsne cuml_umap)
-  PRCOMP_DATASETS=()
 fi
 
 [[ -n "$CONTAINER" ]] || { echo "container runtime not found" >&2; exit 1; }
 [[ -f "$IMAGE" ]] || { echo "missing image: $IMAGE" >&2; exit 1; }
-[[ "$METHOD_TIMEOUT_SECONDS" =~ ^[1-9][0-9]*$ ]] || {
-  echo "METHOD_TIMEOUT_SECONDS must be a positive integer" >&2
-  exit 2
-}
 METHOD_DEADLINE_EPOCH="$(( $(date +%s) + METHOD_TIMEOUT_SECONDS ))"
 
 BACKEND=cpu
@@ -75,23 +86,18 @@ case "$MODE" in
       "--base-dir=$BASE_DIR" "--data-root=$DATA_ROOT"
       "--input-root=$INPUT_ROOT" "--output-root=$OUTPUT_ROOT"
       "--dataset=$DATASET"
+      "--full-dataset=TRUE"
     )
     ;;
   r_cpu)
     COUNT="${#R_METHODS[@]}"
-    GENERAL_TASKS=$(( ${#DATASETS[@]} * COUNT ))
-    if (( TASK_ID < GENERAL_TASKS )); then
-      DATASET="${DATASETS[$((TASK_ID / COUNT))]}"
-      METHOD="${R_METHODS[$((TASK_ID % COUNT))]}"
-    else
-      PRCOMP_INDEX=$(( TASK_ID - GENERAL_TASKS ))
-      if (( PRCOMP_INDEX >= ${#PRCOMP_DATASETS[@]} )); then
-        echo "R comparator task index is out of range: $TASK_ID" >&2
-        exit 2
-      fi
-      DATASET="${PRCOMP_DATASETS[$PRCOMP_INDEX]}"
-      METHOD=stats_prcomp
+    MAX_TASKS=$(( ${#DATASETS[@]} * COUNT ))
+    if (( TASK_ID >= MAX_TASKS )); then
+      echo "R comparator task index is out of range: $TASK_ID" >&2
+      exit 2
     fi
+    DATASET="${DATASETS[$((TASK_ID / COUNT))]}"
+    METHOD="${R_METHODS[$((TASK_ID % COUNT))]}"
     COMMAND=(
       "$CONTAINER" exec --cleanenv --bind "$BASE_DIR:$BASE_DIR"
       --pwd "$BASE_DIR" "${FASTEMBEDR_CONTAINER_R_ENV[@]}"
@@ -103,6 +109,7 @@ case "$MODE" in
       "--input-root=$INPUT_ROOT" "--output-root=$OUTPUT_ROOT"
       "--dataset=$DATASET" "--method=$METHOD" "--threads=$THREADS"
       "--backend=cpu" "--n-components=$N_COMPONENTS"
+      "--full-dataset=TRUE"
       "--timing-reps=$TIMING_REPS"
       "--timeout-seconds=$METHOD_TIMEOUT_SECONDS"
       "--deadline-epoch=$METHOD_DEADLINE_EPOCH"
@@ -129,6 +136,7 @@ case "$MODE" in
       "--input-root=$INPUT_ROOT" "--output-root=$OUTPUT_ROOT"
       "--dataset=$DATASET" "--method=$METHOD" "--threads=$THREADS"
       "--backend=cuda" "--n-components=$N_COMPONENTS"
+      "--full-dataset=TRUE"
       "--timing-reps=$TIMING_REPS"
       "--timeout-seconds=$METHOD_TIMEOUT_SECONDS"
       "--deadline-epoch=$METHOD_DEADLINE_EPOCH"
@@ -181,9 +189,9 @@ esac
 
 if [[ "$FULL_CUDA_PAIR" == TRUE ]]; then
   case "$MODE" in
-    inputs) COMMAND+=("--full-dataset=TRUE") ;;
+    inputs) ;;
     r_cuda)
-      COMMAND+=("--full-dataset=TRUE" "--defer-quality=TRUE") ;;
+      COMMAND+=("--defer-quality=TRUE") ;;
     python_cuda|python_nomad)
       COMMAND+=("--defer-quality") ;;
     *) echo "Full campaign accepts only inputs and CUDA methods" >&2
@@ -192,6 +200,18 @@ if [[ "$FULL_CUDA_PAIR" == TRUE ]]; then
 fi
 
 METHOD="${METHOD:-inputs}"
+if [[ "$MODE" != inputs ]]; then
+  OUTPUT_DIR="$OUTPUT_ROOT/$COMPARISON_DIR/${OUTPUT_MODE:-$MODE}"
+  OUTPUT_DIR+="/$DATASET/$METHOD"
+  mkdir -p "$OUTPUT_DIR"
+  JOB_KEY="${SLURM_JOB_ID:-local}"
+  if [[ -n "${SLURM_ARRAY_JOB_ID:-}" ]]; then
+    JOB_KEY="${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}"
+  fi
+  printf 'job_key,mode,dataset,method,timeout_seconds\n%s,%s,%s,%s,%s\n' \
+    "$JOB_KEY" "${OUTPUT_MODE:-$MODE}" "$DATASET" "$METHOD" \
+    "$METHOD_TIMEOUT_SECONDS" > "$OUTPUT_DIR/task_identity.csv"
+fi
 MEASURE_DIR="$OUTPUT_ROOT/measurement/$COMPARISON_DIR/$MODE"
 MEASURE_DIR+="/$DATASET/$METHOD"
 PREFIX="$MEASURE_DIR/${SLURM_JOB_ID:-local}_${TASK_ID}"
@@ -215,22 +235,40 @@ bash "$SUITE/common/run_measured.sh" "$BACKEND" "$PREFIX" -- \
 STATUS=$?
 set -e
 
-if [[ "$STATUS" == 124 || "$STATUS" == 137 ]]; then
-  OUTPUT_DIR="$OUTPUT_ROOT/$COMPARISON_DIR/${OUTPUT_MODE:-$MODE}/$DATASET/$METHOD"
-  mkdir -p "$OUTPUT_DIR"
-  {
-    echo 'experiment,dataset,backend,status,error,method,timeout_seconds'
-    printf 'workflow_comparator,%s,%s,timeout,' "$DATASET" "$MODE"
-    printf '"exceeded %s seconds",%s,%s\n' \
-      "$METHOD_TIMEOUT_SECONDS" "$METHOD" "$METHOD_TIMEOUT_SECONDS"
-  } > "$OUTPUT_DIR/status.csv"
+if (( STATUS != 0 )); then
+  if [[ "$MODE" != inputs ]] && {
+    [[ "$STATUS" == 124 || "$STATUS" == 137 ]] ||
+      [[ ! -s "$OUTPUT_DIR/status.csv" ]]
+  }; then
+    OUTCOME=failed
+    DETAIL="process exited with code $STATUS"
+    if [[ "$STATUS" == 124 ]]; then
+      OUTCOME=timeout
+      DETAIL="GNU timeout reached ${METHOD_TIMEOUT_SECONDS}s"
+    elif [[ "$STATUS" == 137 ]]; then
+      OUTCOME=killed_unclassified
+      DETAIL="SIGKILL; inspect Slurm state for memory or time limit"
+    fi
+    {
+      echo 'experiment,dataset,backend,status,error,method,'\
+'timeout_seconds,exit_code'
+      printf 'workflow_comparator,%s,%s,%s,"%s",%s,%s,%s\n' \
+        "$DATASET" "${OUTPUT_MODE:-$MODE}" "$OUTCOME" "$DETAIL" \
+        "$METHOD" "$METHOD_TIMEOUT_SECONDS" "$STATUS"
+    } > "$OUTPUT_DIR/status.csv"
+  fi
   exit "$STATUS"
 fi
-(( STATUS == 0 )) || exit "$STATUS"
+
+if [[ "$MODE" != inputs && ! -s "$OUTPUT_DIR/status.csv" ]]; then
+  echo "Comparator exited without a status file: $OUTPUT_DIR" >&2
+  exit 1
+fi
 
 if [[ "$MODE" != inputs ]]; then
-  OUTPUT_DIR="$OUTPUT_ROOT/$COMPARISON_DIR/${OUTPUT_MODE:-$MODE}/$DATASET/$METHOD"
-  if [[ ! -f "$OUTPUT_DIR/embedding.csv" ]] &&
+  EMBEDDING="$OUTPUT_DIR/embedding.csv.gz"
+  [[ -f "$EMBEDDING" ]] || EMBEDDING="$OUTPUT_DIR/embedding.csv"
+  if [[ ! -f "$EMBEDDING" ]] &&
       grep -q 'unsupported' "$OUTPUT_DIR/status.csv"; then
     exit 0
   fi
@@ -239,7 +277,7 @@ if [[ "$MODE" != inputs ]]; then
     --pwd "$BASE_DIR" "${FASTEMBEDR_CONTAINER_R_ENV[@]}"
     "$IMAGE" "$FASTEMBEDR_RSCRIPT"
     "$SUITE/common/plot_method_output.R"
-    "--input=$OUTPUT_DIR/embedding.csv"
+    "--input=$EMBEDDING"
     "--output=$OUTPUT_DIR/embedding.png"
   )
   "${PLOT[@]}"

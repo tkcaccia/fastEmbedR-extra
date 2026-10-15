@@ -34,10 +34,12 @@ DATASETS=(
 )
 SUPPORTS=(1 3)
 METHODS=(tsne umap)
-THREADS=(1 2 4 8 12)
 PCA_THREADS=(1 4 12)
 PCA_RANKS=(2 50)
 SCALING_DATASETS=(COIL20 MNIST flow18 imagenet)
+SUPPORT_SWEEP_DATASETS=(COIL20 USPS MNIST MetRef)
+CLUSTERING_DATASETS=(COIL20 MetRef MNIST flow18)
+SUPPORT_SWEEP_PERPLEXITIES=(10 20)
 GRID_SWEEP_DATASETS=(COIL20 MNIST Macosko2015_retina)
 LONGRUN_DATASETS=(USPS FashionMNIST MNIST MetRef)
 LONGRUN_GRIDS=(128 256 512)
@@ -92,7 +94,7 @@ case "$MODE" in
     SEED="${LONGRUN_FINAL_SEEDS[$((TASK_ID % 2))]}"
     DATASET="${LONGRUN_DATASETS[$DATASET_INDEX]}"
     THREAD_COUNT=4
-    EXTRA+=("--grid-size=256" "--normal-iterations=750")
+    EXTRA+=("--grid-size=256" "--normal-iterations=1000")
     EXTRA+=("--run-seed=$SEED")
     MODE=longrun
     ;;
@@ -124,9 +126,16 @@ case "$MODE" in
     MODE=longrun
     ;;
   support)
-    DATASET="${DATASETS[$((TASK_ID / 2))]}"
+    DATASET="${SUPPORT_SWEEP_DATASETS[$((TASK_ID / 2))]}"
     SUPPORT="${SUPPORTS[$((TASK_ID % 2))]}"
     EXTRA+=("--support-multiplier=$SUPPORT")
+    ;;
+  support_sweep)
+    DATASET="${SUPPORT_SWEEP_DATASETS[$((TASK_ID / 4))]}"
+    PERPLEXITY="${SUPPORT_SWEEP_PERPLEXITIES[$(((TASK_ID % 4) / 2))]}"
+    SUPPORT="${SUPPORTS[$((TASK_ID % 2))]}"
+    EXTRA+=("--support-multiplier=$SUPPORT")
+    MODE=support
     ;;
   backend_quality)
     DATASET_INDEX=$((TASK_ID / 12))
@@ -143,14 +152,16 @@ case "$MODE" in
     METHOD="${METHODS[$((TASK_ID % 2))]}"
     EXTRA+=("--method=$METHOD")
     ;;
+  landmark_memory)
+    DATASET="${DATASETS[$((TASK_ID / 4))]}"
+    METHOD="${METHODS[$(((TASK_ID % 4) / 2))]}"
+    VARIANT=full
+    (( TASK_ID % 2 == 1 )) && VARIANT=landmark
+    EXTRA+=("--method=$METHOD" "--variant=$VARIANT")
+    ;;
   scaling)
-    if [[ -n "${SCALING_THREADS:-}" ]]; then
-      DATASET="${SCALING_DATASETS[$TASK_ID]}"
-      THREAD_COUNT="$SCALING_THREADS"
-    else
-      DATASET="${SCALING_DATASETS[$((TASK_ID / 5))]}"
-      THREAD_COUNT="${THREADS[$((TASK_ID % 5))]}"
-    fi
+    DATASET="${SCALING_DATASETS[$TASK_ID]}"
+    THREAD_COUNT=12
     ;;
   pca)
     if [[ "$BACKEND" == "cpu" && -n "${PCA_THREADS_OVERRIDE:-}" ]]; then
@@ -178,7 +189,7 @@ case "$MODE" in
     EXTRA+=("--rank=$RANK")
     ;;
   clustering_precompute|clustering)
-    DATASET="${DATASETS[$TASK_ID]}"
+    DATASET="${CLUSTERING_DATASETS[$TASK_ID]}"
     THREAD_COUNT="${CLUSTERING_THREADS:-4}"
     ;;
   aggregate)
@@ -198,10 +209,13 @@ if [[ "$ALLOCATED_CPUS" =~ ^[0-9]+$ ]] && \
   exit 2
 fi
 
-export OMP_NUM_THREADS="$THREAD_COUNT"
-export OPENBLAS_NUM_THREADS="$THREAD_COUNT"
-export MKL_NUM_THREADS="$THREAD_COUNT"
-export RCPP_PARALLEL_NUM_THREADS="$THREAD_COUNT"
+BLAS_THREADS="$THREAD_COUNT"
+if [[ "$MODE" == "scaling" ]]; then BLAS_THREADS=1; fi
+OMP_THREADS="$BLAS_THREADS"
+export OMP_NUM_THREADS="$OMP_THREADS"
+export OPENBLAS_NUM_THREADS="$BLAS_THREADS"
+export MKL_NUM_THREADS="$BLAS_THREADS"
+export RCPP_PARALLEL_NUM_THREADS="$OMP_THREADS"
 
 MEASURE_DIR="$OUTPUT_ROOT/measurement/$MODE/$DATASET/$BACKEND"
 PREFIX="$MEASURE_DIR/${SLURM_JOB_ID:-local}_${TASK_ID}"
@@ -235,10 +249,10 @@ COMMAND=(
   --pwd "$BASE_DIR"
   "${FASTEMBEDR_CONTAINER_R_ENV[@]}"
   --env "FASTEMBEDR_IMAGE_SHA256=$IMAGE_SHA256"
-  --env "OMP_NUM_THREADS=$THREAD_COUNT"
-  --env "OPENBLAS_NUM_THREADS=$THREAD_COUNT"
-  --env "MKL_NUM_THREADS=$THREAD_COUNT"
-  --env "RCPP_PARALLEL_NUM_THREADS=$THREAD_COUNT"
+  --env "OMP_NUM_THREADS=$OMP_THREADS"
+  --env "OPENBLAS_NUM_THREADS=$BLAS_THREADS"
+  --env "MKL_NUM_THREADS=$BLAS_THREADS"
+  --env "RCPP_PARALLEL_NUM_THREADS=$OMP_THREADS"
   "$IMAGE" "$FASTEMBEDR_RSCRIPT"
   "$R_SCRIPT"
   "--mode=$MODE"
@@ -253,7 +267,6 @@ COMMAND=(
   "--perplexity=${PERPLEXITY:-30}"
   "--timing-reps=${TIMING_REPS:-5}"
   "--seeds=${SEEDS:-4,17,29}"
-  "--max-n=${MAX_N:-70000}"
   "--quality-n=${QUALITY_N:-2000}"
   "--longrun-n=${LONGRUN_N:-2000}"
   "--landmark-fraction=${LANDMARK_FRACTION:-0.2}"

@@ -13,6 +13,7 @@
 #SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_JSS_knno_g_%A_%a.out
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_JSS_knno_g_%A_%a.err
 set -euo pipefail
+SUITE="${SUITE:-benchmark_scripts/fastembedr_jss_review_validation}"
 export MAX_N=2147483647
-bash benchmark_scripts/fastembedr_jss_review_validation/common/run_array_task.sh \
+bash "$SUITE/common/run_array_task.sh" \
   knn_observed cuda

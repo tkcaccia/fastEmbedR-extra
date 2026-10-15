@@ -3,7 +3,7 @@
 set -euo pipefail
 
 BASE_DIR="${BASE_DIR:-/scratch/firenze/NN}"
-SUITE="$BASE_DIR/benchmark_scripts/fastembedr_jss_review_validation"
+SUITE="${SUITE:-$BASE_DIR/benchmark_scripts/fastembedr_jss_review_validation}"
 IMAGE="${IMAGE:-$BASE_DIR/singularity/fastembedr_cuda.sif}"
 INPUT_ROOT="${INPUT_ROOT:-$BASE_DIR/fastEmbedR-input/jss_validation}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-$BASE_DIR/fastEmbedR-results/jss_validation}"
@@ -27,7 +27,7 @@ if (( REMAINDER < 6 )); then
   ITERATION="${ITERATIONS[$REMAINDER]}"
   SEED=42
 else
-  ITERATION=750
+  ITERATION=1000
   SEED="${SEEDS[$((REMAINDER - 6))]}"
 fi
 

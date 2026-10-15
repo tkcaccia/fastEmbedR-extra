@@ -14,8 +14,11 @@ or large replicate-level result archives.
 | `benchmarks/macos/` | Native macOS CPU and Metal launchers |
 | `benchmarks/linux/` | Linux CPU and CUDA launchers, including Slurm and Apptainer/Singularity setup |
 | `benchmarks/shared/` | Platform-independent measurement engine and quality metrics |
+| `benchmarks/linux/unified/` | Source-locked JSS plus Deep1B launcher and local smoke instructions |
+| `singularity/fastembedr_cuda.def` | Pinned CUDA image update definition |
 | `benchmarks/legacy/fastEmbedR-benchmark/` | Complete migrated source and history of the former standalone benchmark repository |
 | `analysis/` | Raw-result aggregation and deterministic table/figure builders |
+| `manual/TECHNICAL_MANUAL.md` | Companion implementation and public-function manual for the software article |
 | `results/aggregate/` | Compact machine-readable benchmark summaries |
 | `results/figures/` | Figures generated from the aggregate CSV files |
 | `results/tables/` | Tables generated from the aggregate CSV files |
@@ -28,6 +31,11 @@ measurement engine but do not share launchers, hardware assumptions, thread
 configuration, accelerator checks, or output roots.
 
 ## Integrated benchmark repository
+
+The [technical manual](manual/TECHNICAL_MANUAL.md) maps every exported
+fastEmbedR function to its implementation, backend and storage contracts,
+and the distinction between production and experimental routes. It is a
+companion to, not a substitute for, the source-locked manuscript evidence.
 
 The former `tkcaccia/fastEmbedR-benchmark` repository was merged here on
 2026-09-23. Its complete source tree, including release-validation,
@@ -65,12 +73,18 @@ HPC_ROOT=/path/to/hpc/mirror \
 bash benchmarks/linux/sync_to_hpc.sh
 ```
 
-On the Linux HPC login node:
+On the Linux HPC login node, after the source-locked image and identity
+manifest pass preflight:
 
 ```bash
 cd /scratch/firenze/NN
-bash current_fastembedr_validation/submit_current_validation_hpc.sh
+bash benchmark_scripts/unified/submit_from_login.sh
 ```
+
+The unified launcher submits the JSS and Deep1B lanes independently.
+Its [runbook](benchmarks/linux/unified/README.md) also gives a local,
+non-Slurm smoke test. Do not infer that a GPU allocation means every
+requested method completed; inspect the per-method audit.
 
 ## Billion-vector data acquisition
 
@@ -101,8 +115,7 @@ After strict CPU and CUDA preflights pass, start it on the HPC with:
 
 ```bash
 cd /scratch/firenze/NN
-bash \
-  benchmark_scripts/fastembedr_jss_review_validation/submit_complete_campaign.sh
+bash benchmark_scripts/jss-review-validation/submit_complete_campaign.sh
 ```
 
 Each launch has an isolated campaign manifest, input cache, result tree,

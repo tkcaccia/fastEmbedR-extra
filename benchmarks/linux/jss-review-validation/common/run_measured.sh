@@ -16,8 +16,10 @@ shift
 mkdir -p "$(dirname "$PREFIX")"
 TIME_FILE="${PREFIX}.time.txt"
 GPU_FILE="${PREFIX}.gpu_memory.csv"
+GPU_ERROR="${PREFIX}.gpu_monitor.err"
+GPU_READY="${PREFIX}.gpu_monitor.ready"
 EXIT_FILE="${PREFIX}.exit_status"
-BASELINE=0
+declare -A BASELINES=()
 MONITOR_PID=""
 
 gnu_time_bin() {
@@ -88,23 +90,71 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-if [[ "$BACKEND" == "cuda" ]] && command -v nvidia-smi >/dev/null 2>&1; then
-  BASELINE="$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits \
-    | head -n 1 | tr -d ' ')"
-  echo 'timestamp_utc,memory_used_mib,baseline_mib,incremental_mib' > "$GPU_FILE"
+GPU_IDS="${SLURM_JOB_GPUS:-${CUDA_VISIBLE_DEVICES:-}}"
+if [[ "${FASTEMBEDR_MONITOR_ALL_GPUS:-FALSE}" != TRUE ]]; then
+  GPU_IDS="${GPU_IDS%%,*}"
+fi
+if [[ "$BACKEND" == "cuda" ]]; then
+  command -v nvidia-smi >/dev/null 2>&1 || {
+    echo "CUDA memory measurement requires nvidia-smi" >&2
+    exit 1
+  }
+  [[ -n "$GPU_IDS" ]] || {
+    echo "CUDA memory measurement needs a visible GPU ID" >&2
+    exit 1
+  }
+  : > "$GPU_ERROR"
+  rm -f "$GPU_READY"
+  for GPU_ID in ${GPU_IDS//,/ }; do
+    BASELINES["$GPU_ID"]="$(nvidia-smi -i "$GPU_ID" \
+      --query-gpu=memory.used --format=csv,noheader,nounits \
+      2>> "$GPU_ERROR" | tr -d '[:space:]')"
+    [[ "${BASELINES[$GPU_ID]}" =~ ^[0-9]+$ ]] || {
+      echo "Invalid GPU memory baseline for device $GPU_ID" \
+        >> "$GPU_ERROR"
+      cat "$GPU_ERROR" >&2
+      exit 1
+    }
+  done
+  if [[ -s "$GPU_ERROR" ]]; then
+    cat "$GPU_ERROR" >&2
+    exit 1
+  fi
+  echo 'timestamp_utc,gpu_id,memory_used_mib,baseline_mib,incremental_mib' \
+    > "$GPU_FILE"
   (
     while true; do
-      USED="$(nvidia-smi --query-gpu=memory.used \
-        --format=csv,noheader,nounits 2>/dev/null | head -n 1 | tr -d ' ')"
-      if [[ "$USED" =~ ^[0-9]+$ ]]; then
-        printf '%s,%s,%s,%s\n' \
+      for GPU_ID in ${GPU_IDS//,/ }; do
+        USED="$(nvidia-smi -i "$GPU_ID" --query-gpu=memory.used \
+          --format=csv,noheader,nounits 2>> "$GPU_ERROR" |
+          tr -d '[:space:]')"
+        BASELINE="${BASELINES[$GPU_ID]}"
+        [[ "$USED" =~ ^[0-9]+$ ]] || {
+          echo "Invalid GPU memory sample for device $GPU_ID" \
+            >> "$GPU_ERROR"
+          exit 1
+        }
+        printf '%s,%s,%s,%s,%s\n' \
           "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-          "$USED" "$BASELINE" "$((USED - BASELINE))" >> "$GPU_FILE"
-      fi
-      sleep 0.2
+          "$GPU_ID" "$USED" "$BASELINE" \
+          "$((USED > BASELINE ? USED - BASELINE : 0))" \
+          >> "$GPU_FILE"
+      done
+      touch "$GPU_READY"
+      sleep 0.05
     done
   ) &
   MONITOR_PID=$!
+  for ((attempt = 0; attempt < 50; attempt++)); do
+    [[ -f "$GPU_READY" ]] && break
+    kill -0 "$MONITOR_PID" 2>/dev/null || break
+    sleep 0.1
+  done
+  [[ -f "$GPU_READY" ]] || {
+    echo "GPU memory monitor failed before the measured command" >&2
+    cat "$GPU_ERROR" >&2
+    exit 1
+  }
 fi
 
 TIME_BIN="$(gnu_time_bin || true)"
@@ -124,5 +174,11 @@ else
   write_fallback_measurement "$START_NS" "$END_NS" "$RAW_RSS" "$SOURCE"
 fi
 set -e
+if [[ -n "$MONITOR_PID" && -s "$GPU_ERROR" ]]; then
+  cat "$GPU_ERROR" >&2
+  if (( STATUS == 0 )); then
+    STATUS=1
+  fi
+fi
 printf '%s\n' "$STATUS" > "$EXIT_FILE"
 exit "$STATUS"

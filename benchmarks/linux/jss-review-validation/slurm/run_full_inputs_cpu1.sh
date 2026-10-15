@@ -12,6 +12,7 @@
 #SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_JSS_full_binary_%A_%a.out
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_JSS_full_binary_%A_%a.err
 set -euo pipefail
+SUITE="${SUITE:-benchmark_scripts/fastembedr_jss_review_validation}"
 FULL_CUDA_PAIR=TRUE bash \
-  benchmark_scripts/fastembedr_jss_review_validation/common/run_comparator_task.sh \
+  "$SUITE/common/run_comparator_task.sh" \
   inputs

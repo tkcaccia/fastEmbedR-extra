@@ -1,0 +1,177 @@
+Bootstrap: localimage
+From: /mnt/sata_ssd/fastEmbedR/singularity/fastembedr_cuda.sif
+
+%files
+    /tmp/fastembedr-turing-fix-20261007/build_current/fastEmbedR_0.1.tar.gz /opt/fastembedr-source/fastEmbedR_0.1.tar.gz
+    /tmp/fastembedr-turing-fix-20261007/faiss50/faissR_0.99.50.tar.gz /opt/fastembedr-source/faissR_0.99.50.tar.gz
+    /tmp/fastembedr_faiss50_source_identity.txt /opt/fastembedr-manifest/source-identity.txt
+    /mnt/sata_ssd/fastEmbedR/singularity/build_20261006T220100Z_fastEmbedR_612cdc0_densvis_nomad_rebuild/densvis-d65bb313.tar.gz /opt/fastembedr-source/densvis-d65bb313.tar.gz
+
+%post
+    set -eu
+
+    export R_HOME=/opt/r46/lib/R
+    export PATH=/opt/r46/bin:/usr/local/cuda/bin:/opt/fastembedr-toolchain/bin:/opt/fit-sne/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    export R_LIBS=/opt/r46/lib/R/library
+    export R_LIBS_USER=/opt/r46/lib/R/library
+    export R_LIBS_SITE=/opt/r46/lib/R/library
+    export LD_LIBRARY_PATH=/opt/r46/lib/R/lib:/opt/r46/lib:/opt/rapids/lib:/usr/local/cuda/lib:/usr/local/cuda/lib64:/opt/conda/lib:/opt/conda/targets/x86_64-linux/lib
+    export LIBRARY_PATH=/opt/r46/lib/R/lib:/opt/r46/lib:/opt/rapids/lib:/usr/local/cuda/lib:/usr/local/cuda/lib64:/opt/conda/lib:/opt/conda/targets/x86_64-linux/lib
+    export CPATH=/opt/cccl/targets/x86_64-linux/include/cccl:/opt/r46/include:/opt/rapids/include:/opt/conda/include:/opt/conda/targets/x86_64-linux/include
+    export PKG_CONFIG_PATH=/opt/r46/lib/pkgconfig:/opt/rapids/lib/pkgconfig:/opt/conda/lib/pkgconfig
+    export CUDA_HOME=/usr/local/cuda
+    export NVCC=/opt/fastembedr-toolchain/bin/nvcc
+    export CCCL_HOME=/opt/cccl
+    export CUVS_HOME=/opt/rapids
+    export RAFT_HOME=/opt/conda
+    export RMM_HOME=/opt/conda
+    export CUDAHOSTCXX=/usr/bin/g++
+    export FASTEMBEDR_USE_CUDA=1
+    export FASTEMBEDR_REQUIRE_CUDA=1
+    export FASTEMBEDR_USE_CUVS=1
+    export FASTEMBEDR_USE_RAFT=1
+    export FASTEMBEDR_CUDA_ARCH='89 120'
+    export FASTEMBEDR_CUDA_FLAGS='-I/opt/cccl/targets/x86_64-linux/include/cccl'
+    export FAISS_HOME=/opt/conda
+    export FAISSR_REQUIRE_CUDA=1
+    export FAISSR_REQUIRE_CUVS=1
+    export FAISSR_SKIP_CUDA_RUNTIME_CHECK=1
+    export FAISSR_CUDA_ARCH='89 120'
+    export FAISSR_CUDA_PTX_ARCH=120
+    export MAKEFLAGS=-j4
+
+    /opt/r46/bin/Rscript - <<'EOF_R_DEPS'
+options(repos = c(CRAN = "https://cloud.r-project.org"), Ncpus = 4L)
+required <- c("Rcpp", "withr", "gpuinfo", "BiocManager")
+missing <- required[
+    !vapply(required, requireNamespace, logical(1L), quietly = TRUE)
+]
+if (length(missing)) {
+    install.packages(
+        missing,
+        lib = "/opt/r46/lib/R/library",
+        dependencies = c("Depends", "Imports", "LinkingTo")
+    )
+}
+missing <- required[
+    !vapply(required, requireNamespace, logical(1L), quietly = TRUE)
+]
+if (length(missing)) {
+    stop("Missing required R packages: ", paste(missing, collapse = ", "))
+}
+if (!requireNamespace("Biobase", quietly = TRUE)) {
+    BiocManager::install(
+        "Biobase",
+        lib = "/opt/r46/lib/R/library",
+        ask = FALSE,
+        update = FALSE
+    )
+}
+if (!requireNamespace("Biobase", quietly = TRUE)) {
+    stop("Missing required Bioconductor package: Biobase")
+}
+EOF_R_DEPS
+
+    rm -rf /opt/r46/lib/R/library/faissR
+    /opt/r46/bin/R CMD INSTALL --preclean --install-tests \
+        --library=/opt/r46/lib/R/library \
+        /opt/fastembedr-source/faissR_0.99.50.tar.gz
+
+    rm -rf /opt/r46/lib/R/library/fastEmbedR
+    /opt/r46/bin/R CMD INSTALL --preclean --install-tests \
+        --library=/opt/r46/lib/R/library \
+        /opt/fastembedr-source/fastEmbedR_0.1.tar.gz
+
+    mkdir -p /opt/fastembedr-manifest
+    printf '%s\n' 'uncommitted-source-archive' \
+        > /opt/fastembedr-manifest/fastembedr-commit.txt
+    sha256sum /opt/fastembedr-source/fastEmbedR_0.1.tar.gz \
+        > /opt/fastembedr-manifest/fastembedr-source.sha256
+    sha256sum /opt/r46/lib/R/library/fastEmbedR/libs/fastEmbedR.so \
+        > /opt/fastembedr-manifest/fastEmbedR-shared-library.sha256
+
+    rm -rf /opt/densvis
+    tar -xzf /opt/fastembedr-source/densvis-d65bb313.tar.gz -C /opt
+    cd /opt/densvis/densne
+    /usr/bin/g++ -std=c++17 -O3 -DNDEBUG \
+        sptree.cpp densne.cpp densne_main.cpp -o den_sne
+    chmod 0755 den_sne densne.py
+    ln -sf /opt/densvis/densne/den_sne /usr/local/bin/den_sne
+    printf '%s\n' '#!/bin/sh' \
+        'exec /opt/conda/bin/python /opt/densvis/densne/densne.py "$@"' \
+        > /usr/local/bin/densne
+    chmod 0755 /usr/local/bin/densne
+    printf '%s\n' 'd65bb3133a5072356f45d2d6f4f0d16ad33032fd' \
+        > /opt/fastembedr-manifest/densvis-commit.txt
+    sha256sum /opt/fastembedr-source/densvis-d65bb313.tar.gz \
+        > /opt/fastembedr-manifest/densvis-source.sha256
+    sha256sum /opt/densvis/densne/den_sne \
+        > /opt/fastembedr-manifest/den-sne-executable.sha256
+
+    /opt/conda/bin/python - <<'EOF_DENSMAP_IMPORT'
+import umap
+assert hasattr(umap, "UMAP")
+EOF_DENSMAP_IMPORT
+
+    /opt/conda/bin/python - <<'EOF_LABELS'
+import json
+from pathlib import Path
+
+labels_path = Path("/.singularity.d/labels.json")
+labels = json.loads(labels_path.read_text(encoding="utf-8"))
+for stale_key in (
+    "PreviousFastEmbedRBaseCommit",
+    "PreviousFastEmbedRCommit",
+    "PreviousFastEmbedRSourceSHA256",
+    "PreviousFastEmbedRVersion",
+):
+    labels.pop(stale_key, None)
+labels.update({
+    "DensMAPProvider": "umap-learn",
+    "DensVisCommit": "d65bb3133a5072356f45d2d6f4f0d16ad33032fd",
+    "DensVisSourceSHA256": "f163279bcf5f67a16e6c418f07907395cba7496c6229382a7ee4db78c531ad7c",
+    "FaissRCommit": "9fc79ce",
+    "FaissRSourceSHA256": "a5931d81aa69dca96fbac1d015fed88ba8412d7167df6bb979b7beeb1a25c377",
+    "FaissRVersion": "0.99.50",
+    "FastEmbedRBaseCommit": "e35c4a40e38e02d9cc3a4394ae3cd0d66b0721e4",
+    "FastEmbedRCommit": "uncommitted",
+    "FastEmbedRSourceIdentity": "source-sha256:0c6c1fcce2147ceb11dcaeb465ac5e15d5de237ceec744233f38131a720fc9ce",
+    "FastEmbedRSourceSHA256": "0c6c1fcce2147ceb11dcaeb465ac5e15d5de237ceec744233f38131a720fc9ce",
+    "FastEmbedRVersion": "0.1",
+    "org.opencontainers.image.revision": "uncommitted",
+    "org.opencontainers.image.version": "0.1-r461-faissR09950",
+})
+labels_path.write_text(
+    json.dumps(labels, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+)
+EOF_LABELS
+
+%environment
+    export R_HOME=/opt/r46/lib/R
+    export PATH=/opt/r46/bin:/usr/local/cuda/bin:/opt/fastembedr-toolchain/bin:/opt/fit-sne/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    export R_LIBS=/opt/r46/lib/R/library
+    export R_LIBS_USER=/opt/r46/lib/R/library
+    export R_LIBS_SITE=/opt/r46/lib/R/library
+    export MAMBA_ROOT_PREFIX=/opt/conda
+    export CONDA_PREFIX=/opt/conda
+    export CUDA_HOME=/usr/local/cuda
+    export CCCL_HOME=/opt/cccl
+    export CUVS_HOME=/opt/rapids
+    export RAFT_HOME=/opt/conda
+    export RMM_HOME=/opt/conda
+    export DENSVIS_HOME=/opt/densvis
+    export NOMAD_HOME=/opt/nomad
+    export NOMAD_PYTHON=/opt/nomad/bin/python
+    export PYTHONPATH=/opt/densvis/densne:${PYTHONPATH:-}
+    export LD_LIBRARY_PATH=/opt/r46/lib/R/lib:/opt/r46/lib:/opt/rapids/lib:/usr/local/cuda/lib:/usr/local/cuda/lib64:/opt/conda/lib:/opt/conda/targets/x86_64-linux/lib
+    export OMP_NUM_THREADS=${OMP_NUM_THREADS:-4}
+    export OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS:-4}
+
+%labels
+    org.opencontainers.image.title "fastembedr_cuda"
+    org.opencontainers.image.source "https://github.com/tkcaccia/fastEmbedR"
+    org.opencontainers.image.revision "uncommitted"
+    org.opencontainers.image.version "0.1-r461-faissR09950"
+    org.opencontainers.image.r.version "4.6.1"
+    org.opencontainers.image.cuda.architectures "89,120"

@@ -4,6 +4,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=12
+#SBATCH --hint=nomultithread
 #SBATCH --mem=32G
 #SBATCH --time=48:00:00
 #SBATCH --array=0-3%4
@@ -12,5 +13,5 @@
 #SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_JSS_scale_%A_%a.out
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_JSS_scale_%A_%a.err
 set -euo pipefail
-export SCALING_THREADS=12
-bash benchmark_scripts/fastembedr_jss_review_validation/common/run_array_task.sh scaling cpu
+SUITE="${SUITE:-benchmark_scripts/fastembedr_jss_review_validation}"
+bash "$SUITE/common/run_array_task.sh" scaling cpu

@@ -15,7 +15,7 @@
 set -uo pipefail
 
 BASE_DIR="${BASE_DIR:-/scratch/firenze/NN}"
-SUITE="$BASE_DIR/benchmark_scripts/fastembedr_jss_review_validation"
+SUITE="${SUITE:-$BASE_DIR/benchmark_scripts/fastembedr_jss_review_validation}"
 DATASET_TASK_ID="${SLURM_ARRAY_TASK_ID:?missing Slurm array task ID}"
 FAILURES=0
 
@@ -34,14 +34,12 @@ run_case() {
 
 run_case "observed KNN recall" env \
   SLURM_ARRAY_TASK_ID="$DATASET_TASK_ID" \
-  MAX_N=2147483647 \
   bash "$SUITE/common/run_array_task.sh" knn_observed cpu
 
 for QUALITY_OFFSET in $(seq 0 11); do
   QUALITY_TASK_ID=$((DATASET_TASK_ID * 12 + QUALITY_OFFSET))
   run_case "backend quality configuration $QUALITY_OFFSET" env \
     SLURM_ARRAY_TASK_ID="$QUALITY_TASK_ID" \
-    MAX_N=70000 \
     bash "$SUITE/common/run_array_task.sh" backend_quality cpu
 done
 

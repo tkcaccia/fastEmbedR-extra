@@ -42,7 +42,10 @@ perplexity <- as_num(arg_value("perplexity"), 30)
 support_multiplier <- as_num(arg_value("support-multiplier"), 1)
 timing_reps <- as_int(arg_value("timing-reps"), 5L)
 seeds <- csv_values(arg_value("seeds", "4,17,29"), "integer")
-max_n <- as_int(arg_value("max-n"), 70000L)
+if (!is.null(arg_value("max-n"))) {
+    stop("Row caps are not supported; fits use every source row.",
+        call. = FALSE)
+}
 quality_n <- as_int(arg_value("quality-n"), 2000L)
 expected_version <- arg_value("expected-version", "0.1")
 longrun_n <- as_int(arg_value("longrun-n"), 2000L)
@@ -195,9 +198,7 @@ run_preflight <- function() {
 run_precompute <- function() {
     require_expected_version()
     loaded <- load_dataset(data_root, dataset)
-    rows <- stratified_rows(
-        loaded$labels, nrow(loaded$data), max_n, seed = 1701L
-    )
+    rows <- full_benchmark_rows(loaded)
     selected <- subset_dataset(loaded, rows)
     x <- as_float_matrix(selected$data)
     max_k <- min(nrow(x) - 1L, ceiling(3 * perplexity))
@@ -625,9 +626,12 @@ run_support <- function() {
     loaded <- load_dataset(data_root, dataset)
     selected <- subset_dataset(loaded, shared$rows)
     x <- as_float_matrix(selected$data)
-    out <- dataset_output_dir(
-        paste0("support_", support_multiplier, "P"), dataset, backend
-    )
+    support_mode <- if (perplexity == 30) {
+        paste0("support_", support_multiplier, "P")
+    } else {
+        paste0("support_P", perplexity, "_", support_multiplier, "P")
+    }
+    out <- dataset_output_dir(support_mode, dataset, backend)
     dir.create(out, recursive = TRUE, showWarnings = FALSE)
 
     invisible(run_tsne_once(
@@ -645,6 +649,7 @@ run_support <- function() {
         timings[[replicate]] <- data.frame(
             dataset = dataset, backend = backend,
             support_multiplier = support_multiplier,
+            perplexity = perplexity,
             support_k = ceiling(perplexity * support_multiplier),
             timing_seed = 4L, timing_replicate = replicate,
             elapsed_sec = elapsed, warmup_excluded = TRUE,
@@ -687,6 +692,7 @@ run_support <- function() {
     seed_times$dataset <- dataset
     seed_times$backend <- backend
     seed_times$support_multiplier <- support_multiplier
+    seed_times$perplexity <- perplexity
     write_csv_atomic(seed_times, file.path(out, "seed_runs.csv"))
 
     quality <- list()
@@ -704,16 +710,14 @@ run_support <- function() {
         row$backend <- backend
         row$seed <- as.integer(seed)
         row$support_multiplier <- support_multiplier
+        row$perplexity <- perplexity
         row$quality_n <- nrow(layout)
         quality[[length(quality) + 1L]] <- row
     }
     write_csv_atomic(do.call(rbind, quality),
         file.path(out, "quality.csv")
     )
-    write_status(
-        paste0("support_", support_multiplier, "P"), dataset, backend,
-        "success"
-    )
+    write_status(support_mode, dataset, backend, "success")
 }
 
 quality_knn <- function(shared) {
@@ -1131,6 +1135,49 @@ fit_reconstruction_model <- function(method, x, selection, seed) {
     )
 }
 
+run_landmark_memory <- function() {
+    require_expected_version()
+    assert_backend(backend)
+    method <- arg_value("method", "tsne")
+    variant <- arg_value("variant", "full")
+    if (!method %in% c("tsne", "umap") ||
+            !variant %in% c("full", "landmark")) {
+        stop("Invalid landmark memory comparison.")
+    }
+    shared <- readRDS(shared_input_path(dataset))
+    loaded <- load_dataset(data_root, dataset)
+    x <- as_float_matrix(loaded$data[shared$rows, , drop = FALSE])
+    selection <- if (variant == "landmark") {
+        fastEmbedR::select_landmarks(
+            x, landmarks = landmark_fraction, seed = 4L,
+            n.cores = threads
+        )
+    } else NULL
+    elapsed <- system.time({
+        fit <- if (variant == "landmark") {
+            fit_reconstruction_model(method, x, selection$indices, 4L)
+        } else run_full_embedding(method, x, 4L)
+    })[["elapsed"]]
+    assert_layout_backend(fit, backend)
+    layout <- layout_matrix(fit)
+    if (!identical(nrow(layout), nrow(x)) || any(!is.finite(layout))) {
+        stop("Landmark memory fit returned an invalid layout.")
+    }
+    out <- file.path(
+        dataset_output_dir("landmark_memory", dataset, backend),
+        method, variant
+    )
+    write_csv_atomic(data.frame(
+        dataset = dataset, backend = backend, method = method,
+        variant = variant, n = nrow(x), p = ncol(x),
+        landmarks = if (is.null(selection)) nrow(x) else {
+            length(selection$indices)
+        }, elapsed_sec = elapsed, seed = 4L
+    ), file.path(out, "result.csv"))
+    write_status(paste0("landmark_memory_", method, "_", variant),
+        dataset, backend, "success")
+}
+
 landmark_timing_value <- function(fit, name) {
     metrics <- fit$metrics
     if (!name %in% names(metrics)) return(NA_real_)
@@ -1344,74 +1391,234 @@ run_landmark_reconstruction <- function() {
     ), file.path(out, "status.csv"))
 }
 
+prepare_scaling_graphs <- function(x, labels, workers) {
+    cluster_rows <- stratified_rows(
+        labels, nrow(x), min(100000L, nrow(x)), 1701L
+    )
+    walk_rows <- stratified_rows(
+        labels, nrow(x), min(3000L, nrow(x)), 1701L
+    )
+    cluster_x <- x[cluster_rows, , drop = FALSE]
+    cluster_knn <- fastEmbedR::precompute_knn(
+        cluster_x, k = 30L, backend = "cpu", n.cores = workers
+    )
+    same_input <- identical(cluster_rows, walk_rows)
+    walk_knn <- if (same_input) cluster_knn else {
+        fastEmbedR::precompute_knn(
+            x[walk_rows, , drop = FALSE], k = 30L,
+            backend = "cpu", n.cores = workers
+        )
+    }
+    list(cluster_x = cluster_x, cluster_knn = cluster_knn,
+        walk_knn = walk_knn,
+        same_input = same_input, cluster_rows = cluster_rows,
+        walk_rows = walk_rows)
+}
+
+run_scaling_clusters <- function(fixed, workers) {
+    knn <- fixed$cluster_knn
+    walk_knn <- fixed$walk_knn
+    graph_sec <- system.time({
+        graph <- fastEmbedR::knn_graph(
+            knn, k = min(30L, knn$n - 1L), backend = "cpu",
+            weight = "snn", n.cores = workers
+        )
+    })[["elapsed"]]
+    walk_sec <- if (fixed$same_input) graph_sec else system.time({
+        walk_graph <- fastEmbedR::knn_graph(
+            walk_knn, k = min(30L, walk_knn$n - 1L),
+            backend = "cpu", weight = "snn", n.cores = workers
+        )
+    })[["elapsed"]]
+    if (fixed$same_input) walk_graph <- graph
+    louvain <- run_fastembedr_cluster(graph, "louvain", "cpu", 4L)
+    leiden <- run_fastembedr_cluster(graph, "leiden", "cpu", 4L)
+    walktrap <- run_fastembedr_cluster(
+        walk_graph, "walktrap", "cpu", 4L
+    )
+    data.frame(
+        cluster_n = graph$n_vertices, cluster_edges = graph$n_edges,
+        walktrap_n = walk_graph$n_vertices,
+        graph_sec = graph_sec, walktrap_graph_sec = walk_sec,
+        louvain_fit_sec = louvain$elapsed,
+        leiden_fit_sec = leiden$elapsed,
+        walktrap_fit_sec = walktrap$elapsed,
+        louvain_graph_fit_sec = graph_sec + louvain$elapsed,
+        leiden_graph_fit_sec = graph_sec + leiden$elapsed,
+        walktrap_graph_fit_sec = walk_sec + walktrap$elapsed,
+        louvain_modularity = louvain$fit$modularity,
+        leiden_modularity = leiden$fit$modularity,
+        walktrap_modularity = walktrap$fit$modularity,
+        fit_threads = 1L
+    )
+}
+
+run_scaling_trial <- function(x, fixed, workers, replicate) {
+    knn_sec <- system.time({
+        knn <- fastEmbedR::precompute_knn(
+            x, k = 30L, backend = "cpu", n.cores = workers
+        )
+    })[["elapsed"]]
+    pca_sec <- system.time({
+        pca_fit <- fastEmbedR::pca(
+            x, ncomp = 2L, backend = "cpu", n.cores = workers,
+            seed = 4L, tsne_init = TRUE
+        )
+    })[["elapsed"]]
+    rank <- min(50L, nrow(fixed$cluster_x) - 1L, ncol(x) - 1L)
+    pca_rank50_sec <- system.time({
+        fastEmbedR::pca(
+            fixed$cluster_x, ncomp = rank,
+            backend = "cpu", n.cores = workers,
+            seed = 4L
+        )
+    })[["elapsed"]]
+    tsne_sec <- system.time({
+        fastEmbedR::tsne_knn(
+            knn, perplexity = 30, Y_init = pca_fit$tsne_init,
+            seed = 4L, backend = "cpu", n.cores = workers
+        )
+    })[["elapsed"]]
+    umap_sec <- system.time({
+        fastEmbedR::umap_knn(
+            knn, seed = 4L, backend = "cpu", n.cores = workers,
+            graph_mode = "fuzzy"
+        )
+    })[["elapsed"]]
+    clusters <- run_scaling_clusters(fixed, workers)
+    cbind(data.frame(
+        dataset = dataset, n = nrow(x), p = ncol(x),
+        threads = workers, replicate = replicate,
+        knn_engine = knn$engine, knn_method = knn$method,
+        knn_m = knn$M %||% NA_integer_,
+        knn_ef_construction = knn$efConstruction %||% NA_integer_,
+        knn_ef_search = knn$efSearch %||% NA_integer_,
+        knn_sec = knn_sec, pca_sec = pca_sec,
+        pca_rank50_rank = rank, pca_rank50_sec = pca_rank50_sec,
+        tsne_embedding_sec = tsne_sec, umap_embedding_sec = umap_sec,
+        total_tsne_sec = knn_sec + pca_sec + tsne_sec,
+        total_umap_sec = knn_sec + umap_sec
+    ), clusters)
+}
+
 run_scaling <- function() {
     if (backend != "cpu") stop("Scaling mode is CPU-only.")
     loaded <- load_dataset(data_root, dataset)
-    scaling_cap <- switch(dataset,
-        COIL20 = nrow(loaded$data),
-        MNIST = nrow(loaded$data),
-        flow18 = nrow(loaded$data),
-        imagenet = min(100000L, nrow(loaded$data)),
-        min(max_n, nrow(loaded$data))
-    )
-    selected_rows <- stratified_rows(
-        loaded$labels, nrow(loaded$data), scaling_cap, 1701L
-    )
-    x <- as_float_matrix(loaded$data[selected_rows, , drop = FALSE])
-    warm <- x[seq_len(min(2000L, nrow(x))), , drop = FALSE]
-    invisible(fastEmbedR::precompute_knn(
-        warm, k = min(30L, nrow(warm) - 1L), backend = "cpu",
-        n.cores = threads
-    ))
+    x <- as_float_matrix(loaded$data)
+    warm <- x[seq_len(min(6000L, nrow(x))), , drop = FALSE]
+    fixed <- prepare_scaling_graphs(x, loaded$labels, threads)
+    rows_dir <- dataset_output_dir("cpu_scaling", dataset, "inputs")
+    write_csv_atomic(data.frame(source_row = fixed$cluster_rows),
+        file.path(rows_dir, "cluster_rows.csv"))
+    write_csv_atomic(data.frame(source_row = fixed$walk_rows),
+        file.path(rows_dir, "walktrap_rows.csv"))
+    workers <- c(1L, 2L, 4L, 8L, 12L)
+    workers <- workers[workers <= threads]
     reps <- if (nrow(x) > 100000L) 3L else 5L
-    rows <- list()
+    rows <- vector("list", length(workers) * reps)
     for (replicate in seq_len(reps)) {
-        knn_sec <- system.time({
-            knn <- fastEmbedR::precompute_knn(
-                x, k = 30L, backend = "cpu", n.cores = threads
+        set.seed(20261006L + replicate)
+        for (n_threads in sample(workers)) {
+            invisible(fastEmbedR::precompute_knn(
+                warm, k = min(30L, nrow(warm) - 1L),
+                backend = "cpu", n.cores = n_threads
+            ))
+            index <- (replicate - 1L) * length(workers) +
+                match(n_threads, workers)
+            rows[[index]] <- run_scaling_trial(
+                x, fixed, n_threads, replicate
             )
-        })[["elapsed"]]
-        pca_sec <- system.time({
-            pca_fit <- fastEmbedR::pca(
-                x, ncomp = 2L, backend = "cpu", n.cores = threads,
-                seed = 4L, tsne_init = TRUE
+            partial <- Filter(Negate(is.null), rows)
+            progress_dir <- dataset_output_dir(
+                "cpu_scaling", dataset, paste0(n_threads, "t")
             )
-        })[["elapsed"]]
-        tsne_sec <- system.time({
-            fastEmbedR::tsne_knn(
-                knn, perplexity = 30, Y_init = pca_fit$tsne_init,
-                seed = 4L, backend = "cpu", n.cores = threads
-            )
-        })[["elapsed"]]
-        umap_sec <- system.time({
-            fastEmbedR::umap_knn(
-                knn, seed = 4L, backend = "cpu", n.cores = threads,
-                graph_mode = "fuzzy"
-            )
-        })[["elapsed"]]
-        rows[[replicate]] <- data.frame(
-            dataset = dataset, n = nrow(x), p = ncol(x),
-            threads = threads, replicate = replicate,
-            knn_sec = knn_sec, pca_sec = pca_sec,
-            tsne_embedding_sec = tsne_sec,
-            umap_embedding_sec = umap_sec,
-            total_tsne_sec = knn_sec + pca_sec + tsne_sec,
-            total_umap_sec = knn_sec + umap_sec,
-            stringsAsFactors = FALSE
-        )
+            selected <- do.call(rbind, partial)
+            selected <- selected[selected$threads == n_threads, ,
+                drop = FALSE]
+            write_csv_atomic(selected,
+                file.path(progress_dir, "scaling.partial.csv"))
+        }
     }
-    out <- dataset_output_dir("cpu_scaling", dataset, paste0(threads, "t"))
-    write_csv_atomic(do.call(rbind, rows), file.path(out, "scaling.csv"))
-    write_status("cpu_scaling", dataset, paste0(threads, "t"), "success")
+    results <- do.call(rbind, rows)
+    for (n_threads in workers) {
+        out <- dataset_output_dir(
+            "cpu_scaling", dataset, paste0(n_threads, "t")
+        )
+        selected <- results[results$threads == n_threads, , drop = FALSE]
+        write_csv_atomic(selected, file.path(out, "scaling.csv"))
+        write_status("cpu_scaling", dataset,
+            paste0(n_threads, "t"), "success")
+    }
+}
+
+scaling_stages <- function() c(
+    "knn_sec", "pca_sec", "pca_rank50_sec",
+    "graph_sec", "walktrap_graph_sec",
+    "louvain_fit_sec", "leiden_fit_sec", "walktrap_fit_sec",
+    "louvain_graph_fit_sec", "leiden_graph_fit_sec",
+    "walktrap_graph_fit_sec", "tsne_embedding_sec",
+    "umap_embedding_sec", "total_tsne_sec", "total_umap_sec"
+)
+
+scaling_stage_size <- function(current, stage) {
+    column <- if (startsWith(stage, "walktrap_")) {
+        "walktrap_n"
+    } else if (stage %in% c("pca_rank50_sec", "graph_sec",
+            "louvain_fit_sec",
+            "leiden_fit_sec", "louvain_graph_fit_sec",
+            "leiden_graph_fit_sec")) {
+        "cluster_n"
+    } else {
+        "n"
+    }
+    current[[column]][[1L]]
+}
+
+summarize_scaling <- function(scaling) {
+    expected <- c(1L, 2L, 4L, 8L, 12L)
+    stages <- scaling_stages()
+    if (!all(stages %in% names(scaling))) {
+        stop("CPU scaling results lack required stages.")
+    }
+    summaries <- list()
+    for (name in unique(scaling$dataset)) {
+        current <- scaling[scaling$dataset == name, , drop = FALSE]
+        if (!identical(sort(unique(current$threads)), expected)) {
+            stop("Incomplete CPU thread sweep: ", name)
+        }
+        count <- table(current$threads)
+        if (length(unique(as.integer(count))) != 1L) {
+            stop("Unequal CPU scaling repetitions: ", name)
+        }
+        for (stage in stages) {
+            medians <- tapply(current[[stage]], current$threads,
+                stats::median)
+            baseline <- medians[["1"]]
+            speedup <- baseline / as.numeric(medians)
+            workers <- as.integer(names(medians))
+            serial_fit <- stage %in% c(
+                "louvain_fit_sec", "leiden_fit_sec", "walktrap_fit_sec"
+            )
+            summaries[[length(summaries) + 1L]] <- data.frame(
+                dataset = name, stage = stage, threads = workers,
+                n_observations = scaling_stage_size(current, stage),
+                fit_threads = if (serial_fit) 1L else NA_integer_,
+                repetitions = as.integer(count),
+                median_sec = as.numeric(medians),
+                speedup = speedup,
+                parallel_efficiency = speedup / workers
+            )
+        }
+    }
+    do.call(rbind, summaries)
 }
 
 run_pca_validation <- function() {
     require_expected_version()
     assert_backend(backend)
     loaded <- load_dataset(data_root, dataset)
-    cap <- min(max_n, nrow(loaded$data))
-    rows <- stratified_rows(loaded$labels, nrow(loaded$data), cap, 1701L)
-    x <- as_float_matrix(loaded$data[rows, , drop = FALSE])
+    rows <- full_benchmark_rows(loaded)
+    x <- as_float_matrix(loaded$data)
     requested_rank <- as_int(arg_value("rank"), 2L)
     rank <- valid_randomized_pca_rank(x, requested_rank)
     warm <- x[seq_len(min(2000L, nrow(x))), , drop = FALSE]
@@ -1519,11 +1726,18 @@ dense_pca_reference <- function(x, rank) {
         scores <- sweep(left, 2L, singular, "*")
     }
     singular <- sqrt(values)
+    next_singular <- if (rank < length(eig$values)) {
+        sqrt(max(eig$values[[rank + 1L]], 0))
+    } else NA_real_
     total_ss <- sum(centered * centered)
     reconstruction <- scores %*% t(loadings)
     list(
         scores = scores, loadings = loadings,
         singular_values = singular, center = center,
+        rank_boundary_relative_gap = if (is.finite(next_singular) &&
+                singular[[rank]] > 0) {
+            (singular[[rank]] - next_singular) / singular[[rank]]
+        } else NA_real_,
         captured_variance = sum(singular * singular) / total_ss,
         reconstruction_relative_error = sqrt(
             sum((centered - reconstruction)^2) / total_ss
@@ -1648,6 +1862,9 @@ run_pca_accuracy <- function() {
         rank = rank, seed = 4L,
         reference = "dense_centered_svd",
         reference_elapsed_sec = reference_sec,
+        reference_captured_variance = reference$captured_variance,
+        reference_rank_boundary_relative_gap =
+            reference$rank_boundary_relative_gap,
         stringsAsFactors = FALSE
     ), accuracy)
     out <- dataset_output_dir(
@@ -1714,9 +1931,7 @@ run_observed_knn_accuracy <- function() {
     require_expected_version()
     assert_backend(backend)
     loaded <- load_dataset(data_root, dataset)
-    rows <- stratified_rows(
-        loaded$labels, nrow(loaded$data), min(max_n, nrow(loaded$data)), 1701L
-    )
+    rows <- full_benchmark_rows(loaded)
     selected <- subset_dataset(loaded, rows)
     x <- as_float_matrix(selected$data)
     k <- min(ceiling(perplexity), nrow(x) - 1L)
@@ -1978,6 +2193,7 @@ workflow_timing_eligibility <- function(x) {
 cuda_workflow_ratios <- function(x, family) {
     required <- c(
         "family", "backend", "method", "n", "p", "n_components",
+        "n_neighbors",
         "device_synchronized", "elapsed_median_sec",
         "initialization_requested", "affinity_support", "input_precision"
     )
@@ -1990,6 +2206,17 @@ cuda_workflow_ratios <- function(x, family) {
     eligible <- eligible & x$comparison_contract == contract
     if (family == "tsne") {
         eligible <- eligible & x$total_iterations == 1000L
+        eligible <- eligible & (x$method != "cuml_tsne" |
+            (x$n_neighbors == 90L &
+            x$affinity_support == "cuml_default_90"))
+        if ("cuml_tsne_min_observed_iterations" %in% names(x)) {
+            observed <- suppressWarnings(as.numeric(
+                x$cuml_tsne_min_observed_iterations))
+            eligible <- eligible & (x$method != "cuml_tsne" |
+                observed == 1000L)
+        } else {
+            eligible <- eligible & x$method != "cuml_tsne"
+        }
     } else {
         eligible <- eligible & x$n_neighbors == 30L
     }
@@ -2071,6 +2298,50 @@ cuda_umap_workflow_ratios <- function(x) {
     cuda_workflow_ratios(x, "umap")
 }
 
+umap_binary_vs_fuzzy <- function(x) {
+    required <- c("comparator_mode", "dataset", "method", "seed", "n",
+        "p", "n_components", "n_neighbors", "graph_mode",
+        "elapsed_median_sec", "trustworthiness", "preserve_at_30",
+        "neighborhood_quality_score", "quality_sample_n")
+    if (!all(required %in% names(x))) return(data.frame())
+    selected <- x[workflow_timing_eligibility(x) &
+        x$method %in% c("fastembedr_umap",
+            "fastembedr_umap_binary"), , drop = FALSE]
+    fuzzy <- selected[selected$method == "fastembedr_umap", , drop = FALSE]
+    binary <- selected[selected$method == "fastembedr_umap_binary",
+        , drop = FALSE]
+    keys <- c("comparator_mode", "dataset", "seed", "n", "p",
+        "n_components", "n_neighbors", "quality_sample_n")
+    paired <- merge(fuzzy, binary, by = keys,
+        suffixes = c("_fuzzy", "_binary"))
+    if (!nrow(paired)) return(data.frame())
+    if (any(paired$graph_mode_fuzzy != "fuzzy") ||
+            any(paired$graph_mode_binary != "binary")) {
+        stop("UMAP mode comparison contains an incorrect graph mode.")
+    }
+    result <- data.frame(paired[keys],
+        fuzzy_median_sec = paired$elapsed_median_sec_fuzzy,
+        binary_median_sec = paired$elapsed_median_sec_binary,
+        binary_over_fuzzy_time = paired$elapsed_median_sec_binary /
+            paired$elapsed_median_sec_fuzzy,
+        fuzzy_quality = paired$neighborhood_quality_score_fuzzy,
+        binary_quality = paired$neighborhood_quality_score_binary,
+        fuzzy_trustworthiness = paired$trustworthiness_fuzzy,
+        binary_trustworthiness = paired$trustworthiness_binary,
+        fuzzy_preserve_at_30 = paired$preserve_at_30_fuzzy,
+        binary_preserve_at_30 = paired$preserve_at_30_binary)
+    for (field in c("label_knn_accuracy", "max_rss_kb",
+            "peak_incremental_mib")) {
+        fuzzy_field <- paste0(field, "_fuzzy")
+        binary_field <- paste0(field, "_binary")
+        if (all(c(fuzzy_field, binary_field) %in% names(paired))) {
+            result[[fuzzy_field]] <- paired[[fuzzy_field]]
+            result[[binary_field]] <- paired[[binary_field]]
+        }
+    }
+    result
+}
+
 run_aggregate <- function() {
     csv_files <- list.files(
         output_root, pattern = "[.]csv$", recursive = TRUE,
@@ -2115,11 +2386,13 @@ run_aggregate <- function() {
     if (length(timing_files)) {
         raw <- do.call(rbind, lapply(timing_files, utils::read.csv))
         key <- interaction(
-            raw$dataset, raw$backend, raw$support_multiplier, drop = TRUE
+            raw$dataset, raw$backend, raw$perplexity,
+            raw$support_multiplier, drop = TRUE
         )
         summary <- do.call(rbind, lapply(split(raw, key), function(x) {
             data.frame(
                 dataset = x$dataset[[1L]], backend = x$backend[[1L]],
+                perplexity = x$perplexity[[1L]],
                 support_multiplier = x$support_multiplier[[1L]],
                 timing_n = nrow(x), median_sec = stats::median(x$elapsed_sec),
                 q1_sec = stats::quantile(x$elapsed_sec, 0.25),
@@ -2337,29 +2610,7 @@ run_aggregate <- function() {
     if (length(scaling_files)) {
         scaling <- do.call(rbind, lapply(scaling_files, utils::read.csv))
         write_csv_atomic(scaling, file.path(out, "scaling_raw.csv"))
-        stages <- c("knn_sec", "pca_sec", "tsne_embedding_sec",
-            "umap_embedding_sec", "total_tsne_sec", "total_umap_sec"
-        )
-        summaries <- list()
-        for (name in unique(scaling$dataset)) {
-            current <- scaling[scaling$dataset == name, , drop = FALSE]
-            for (stage in stages) {
-                medians <- tapply(current[[stage]], current$threads,
-                    stats::median
-                )
-                baseline <- medians[["1"]]
-                summaries[[length(summaries) + 1L]] <- data.frame(
-                    dataset = name, stage = stage,
-                    threads = as.integer(names(medians)),
-                    median_sec = as.numeric(medians),
-                    speedup = baseline / as.numeric(medians),
-                    parallel_efficiency = baseline /
-                        (as.numeric(medians) * as.integer(names(medians))),
-                    stringsAsFactors = FALSE
-                )
-            }
-        }
-        write_csv_atomic(do.call(rbind, summaries),
+        write_csv_atomic(summarize_scaling(scaling),
             file.path(out, "scaling_summary.csv")
         )
     }
@@ -2453,6 +2704,7 @@ run_aggregate <- function() {
             x <- utils::read.csv(path, stringsAsFactors = FALSE)
             cbind(data.frame(
                 path = path,
+                device_samples_n = nrow(x),
                 baseline_mib = if (nrow(x)) x$baseline_mib[[1L]] else NA,
                 peak_used_mib = if (nrow(x)) max(x$memory_used_mib) else NA,
                 peak_incremental_mib = if (nrow(x)) {
@@ -2464,6 +2716,70 @@ run_aggregate <- function() {
             ), comparator_path_info(path))
         }))
         write_csv_atomic(gpu, file.path(out, "task_gpu_memory.csv"))
+    }
+    landmark_files <- csv_files[
+        basename(csv_files) == "result.csv" &
+            grepl("/landmark_memory/", csv_files, fixed = TRUE)
+    ]
+    if (length(landmark_files)) {
+        landmark <- do.call(rbind, lapply(
+            landmark_files, utils::read.csv,
+            stringsAsFactors = FALSE
+        ))
+        landmark_measure <- memory[
+            grepl("/measurement/landmark_memory/", memory$path,
+                fixed = TRUE), , drop = FALSE
+        ]
+        if (nrow(landmark_measure)) {
+            task <- as.integer(sub(
+                "^.*_([0-9]+)[.]time[.]txt$", "\\1",
+                landmark_measure$path
+            ))
+            landmark_measure$dataset <- basename(dirname(
+                dirname(landmark_measure$path)
+            ))
+            landmark_measure$backend <- basename(dirname(
+                landmark_measure$path
+            ))
+            landmark_measure$method <- c("tsne", "umap")[
+                (task %% 4L) %/% 2L + 1L
+            ]
+            landmark_measure$variant <- c("full", "landmark")[
+                task %% 2L + 1L
+            ]
+            landmark <- merge(landmark, landmark_measure[c(
+                "dataset", "backend", "method", "variant",
+                "wall_clock_sec", "max_rss_kb", "measurement_source"
+            )], by = c("dataset", "backend", "method", "variant"),
+            all.x = TRUE)
+        }
+        landmark_gpu <- gpu[
+            grepl("/measurement/landmark_memory/", gpu$path,
+                fixed = TRUE), , drop = FALSE
+        ]
+        if (nrow(landmark_gpu)) {
+            task <- as.integer(sub(
+                "^.*_([0-9]+)[.]gpu_memory[.]csv$", "\\1",
+                landmark_gpu$path
+            ))
+            landmark_gpu$dataset <- basename(dirname(
+                dirname(landmark_gpu$path)
+            ))
+            landmark_gpu$backend <- "cuda"
+            landmark_gpu$method <- c("tsne", "umap")[
+                (task %% 4L) %/% 2L + 1L
+            ]
+            landmark_gpu$variant <- c("full", "landmark")[
+                task %% 2L + 1L
+            ]
+            landmark <- merge(landmark, landmark_gpu[c(
+                "dataset", "backend", "method", "variant",
+                "baseline_mib", "peak_used_mib", "peak_incremental_mib"
+            )], by = c("dataset", "backend", "method", "variant"),
+            all.x = TRUE)
+        }
+        write_csv_atomic(landmark,
+            file.path(out, "landmark_memory_comparison.csv"))
     }
     comparator_files <- csv_files[
         basename(csv_files) == "result.csv" &
@@ -2488,12 +2804,29 @@ run_aggregate <- function() {
         }
         if (nrow(gpu)) {
             device <- stats::aggregate(
-                gpu[c("baseline_mib", "peak_used_mib",
+                gpu[c("device_samples_n", "baseline_mib", "peak_used_mib",
                     "peak_incremental_mib")],
                 gpu[keys], safe_max
             )
             comparators <- merge(comparators, device, by = keys, all.x = TRUE)
         }
+        if (!"max_rss_kb" %in% names(comparators)) {
+            comparators$max_rss_kb <- NA_real_
+        }
+        if (!"peak_incremental_mib" %in% names(comparators)) {
+            comparators$peak_incremental_mib <- NA_real_
+        }
+        if (!"device_samples_n" %in% names(comparators)) {
+            comparators$device_samples_n <- NA_integer_
+        }
+        comparators$peak_host_gib <- comparators$max_rss_kb / 1024^2
+        comparators$peak_device_incremental_gib <-
+            comparators$peak_incremental_mib / 1024
+        comparators$host_memory_scope <- "whole_worker_process"
+        comparators$device_memory_scope <- ifelse(
+            grepl("cuda", comparators$comparator_mode),
+            "allocated_device_sampled_200ms", "not_applicable"
+        )
         write_csv_atomic(
             comparators, file.path(out, "workflow_comparators_all.csv")
         )
@@ -2502,12 +2835,16 @@ run_aggregate <- function() {
             "backend", "metric", "perplexity", "n_neighbors",
             "initialization_requested", "initialization_role",
             "initialization_match", "shared_initial_coordinates",
-            "initial_coordinates_sha256", "pca_preprocessing",
+            "initial_coordinates_sha256", "initialization_engine",
+            "initialization_engine_version", "initialization_max_sd",
+            "pca_preprocessing",
+            "input_normalization", "timing_scope", "timing_interface",
             "iterations_policy", "early_iterations", "normal_iterations",
             "total_iterations", "learning_rate_policy",
             "learning_rate_value", "early_exaggeration",
             "late_exaggeration", "initial_momentum", "final_momentum",
-            "affinity_support", "optimizer", "epochs_policy",
+            "affinity_support", "optimizer", "graph_mode",
+            "epochs_policy",
             "epochs_value", "min_dist_policy", "min_dist_value",
             "spread", "repulsion_strength", "negative_sample_rate",
             "knn_boundary", "input_precision", "thread_control", "threads"
@@ -2538,6 +2875,11 @@ run_aggregate <- function() {
                 cuda_umap,
                 file.path(out, "cuda_umap_workflow_speed_ratio.csv")
             )
+        }
+        umap_modes <- umap_binary_vs_fuzzy(comparators)
+        if (nrow(umap_modes)) {
+            write_csv_atomic(umap_modes,
+                file.path(out, "umap_binary_vs_fuzzy.csv"))
         }
     }
     agreement <- aggregate_support_agreement(output_root)
@@ -2629,6 +2971,29 @@ run_aggregate <- function() {
         write_csv_atomic(
             clustering, file.path(out, "clustering_validation_all.csv")
         )
+    }
+    scale_files <- csv_files[
+        basename(csv_files) == "clustering_scale.csv"
+    ]
+    if (length(scale_files)) {
+        scale <- bind_rows_union(lapply(
+            scale_files, utils::read.csv,
+            stringsAsFactors = FALSE
+        ))
+        write_csv_atomic(
+            scale, file.path(out, "clustering_scale_all.csv")
+        )
+    }
+    skipped_files <- csv_files[
+        basename(csv_files) == "clustering_skipped.csv"
+    ]
+    if (length(skipped_files)) {
+        skipped <- bind_rows_union(lapply(
+            skipped_files, utils::read.csv,
+            stringsAsFactors = FALSE
+        ))
+        write_csv_atomic(skipped,
+            file.path(out, "clustering_skipped_all.csv"))
     }
     clustering_input_files <- csv_files[
         basename(csv_files) == "clustering_precompute.csv"
@@ -2864,6 +3229,7 @@ dispatch <- list(
     backend_quality = run_backend_quality,
     transform = run_transform,
     landmark_reconstruction = run_landmark_reconstruction,
+    landmark_memory = run_landmark_memory,
     scaling = run_scaling,
     pca = run_pca_validation,
     pca_accuracy = run_pca_accuracy,

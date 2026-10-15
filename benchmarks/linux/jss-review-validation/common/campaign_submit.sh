@@ -2,6 +2,14 @@
 
 # Shared submission helpers for the staged JSS validation campaign.
 
+campaign_require_method_timeout() {
+  if [[ "${METHOD_TIMEOUT_SECONDS:-7200}" != 7200 ]]; then
+    echo "This campaign requires METHOD_TIMEOUT_SECONDS=7200 (2 hours)." >&2
+    return 2
+  fi
+  export METHOD_TIMEOUT_SECONDS=7200
+}
+
 campaign_require_environment() {
   : "${BASE_DIR:?BASE_DIR is required}"
   : "${SUITE:?SUITE is required}"
@@ -171,6 +179,9 @@ campaign_submit_job() {
   export_spec="ALL,BASE_DIR=$BASE_DIR,SUITE=$SUITE,IMAGE=$IMAGE"
   export_spec+=",INPUT_ROOT=$INPUT_ROOT,OUTPUT_ROOT=$OUTPUT_ROOT"
   export_spec+=",EXPECTED_VERSION=$EXPECTED_VERSION"
+  if [[ -n "${FASTEMBEDR_DLL_SHA256:-}" ]]; then
+    export_spec+=",FASTEMBEDR_DLL_SHA256=$FASTEMBEDR_DLL_SHA256"
+  fi
   export_spec+=",FASTEMBEDR_IMAGE_SHA256=$FASTEMBEDR_IMAGE_SHA256"
   export_spec+=",FASTEMBEDR_SUITE_MANIFEST_SHA256="
   export_spec+="$FASTEMBEDR_SUITE_MANIFEST_SHA256"

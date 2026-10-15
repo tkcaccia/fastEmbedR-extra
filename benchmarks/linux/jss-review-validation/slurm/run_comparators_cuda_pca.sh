@@ -13,9 +13,17 @@
 #SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_JSS_pca_g_%A_%a.out
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_JSS_pca_g_%A_%a.err
 set -euo pipefail
+SUITE="${SUITE:-benchmark_scripts/fastembedr_jss_review_validation}"
 export N_COMPONENTS=2
-export COMPARATOR_TASK_ID="$((SLURM_ARRAY_TASK_ID * 3))"
-bash benchmark_scripts/fastembedr_jss_review_validation/common/run_comparator_task.sh \
-  r_cuda
-bash benchmark_scripts/fastembedr_jss_review_validation/common/run_comparator_task.sh \
-  python_cuda
+worker="$SUITE/common/run_comparator_task.sh"
+failed=0
+for mode in r_cuda python_cuda; do
+  methods_per_dataset=4
+  [[ "$mode" == python_cuda ]] && methods_per_dataset=3
+  if ! COMPARATOR_TASK_ID="$((SLURM_ARRAY_TASK_ID * methods_per_dataset))" \
+      bash "$worker" "$mode"; then
+    echo "CUDA PCA comparator failed: $mode" >&2
+    failed=1
+  fi
+done
+exit "$failed"
