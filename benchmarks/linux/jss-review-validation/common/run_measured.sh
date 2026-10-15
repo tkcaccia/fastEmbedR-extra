@@ -16,6 +16,7 @@ shift
 mkdir -p "$(dirname "$PREFIX")"
 TIME_FILE="${PREFIX}.time.txt"
 GPU_FILE="${PREFIX}.gpu_memory.csv"
+GPU_IDENTITY_FILE="${PREFIX}.gpu_identity.csv"
 GPU_ERROR="${PREFIX}.gpu_monitor.err"
 GPU_READY="${PREFIX}.gpu_monitor.ready"
 EXIT_FILE="${PREFIX}.exit_status"
@@ -90,7 +91,8 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-GPU_IDS="${SLURM_JOB_GPUS:-${CUDA_VISIBLE_DEVICES:-}}"
+# Slurm physical IDs can be renumbered in the job's CUDA/NVML namespace.
+GPU_IDS="${CUDA_VISIBLE_DEVICES:-${SLURM_JOB_GPUS:-}}"
 if [[ "${FASTEMBEDR_MONITOR_ALL_GPUS:-FALSE}" != TRUE ]]; then
   GPU_IDS="${GPU_IDS%%,*}"
 fi
@@ -105,6 +107,10 @@ if [[ "$BACKEND" == "cuda" ]]; then
   }
   : > "$GPU_ERROR"
   rm -f "$GPU_READY"
+  printf 'gpu_id,slurm_physical_id,gpu_uuid\n' > "$GPU_IDENTITY_FILE"
+  PHYSICAL_TEXT=${SLURM_JOB_GPUS:-}
+  PHYSICAL_IDS=( ${PHYSICAL_TEXT//,/ } )
+  GPU_POSITION=0
   for GPU_ID in ${GPU_IDS//,/ }; do
     BASELINES["$GPU_ID"]="$(nvidia-smi -i "$GPU_ID" \
       --query-gpu=memory.used --format=csv,noheader,nounits \
@@ -115,6 +121,17 @@ if [[ "$BACKEND" == "cuda" ]]; then
       cat "$GPU_ERROR" >&2
       exit 1
     }
+    GPU_UUID="$(nvidia-smi -i "$GPU_ID" --query-gpu=uuid \
+      --format=csv,noheader 2>> "$GPU_ERROR" | tr -d '[:space:]')"
+    [[ "$GPU_UUID" == GPU-* || "$GPU_UUID" == MIG-* ]] || {
+      echo "Invalid UUID for visible GPU $GPU_ID" >> "$GPU_ERROR"
+      cat "$GPU_ERROR" >&2
+      exit 1
+    }
+    printf '%s,%s,%s\n' "$GPU_ID" \
+      "${PHYSICAL_IDS[$GPU_POSITION]:-NA}" "$GPU_UUID" \
+      >> "$GPU_IDENTITY_FILE"
+    GPU_POSITION=$((GPU_POSITION + 1))
   done
   if [[ -s "$GPU_ERROR" ]]; then
     cat "$GPU_ERROR" >&2

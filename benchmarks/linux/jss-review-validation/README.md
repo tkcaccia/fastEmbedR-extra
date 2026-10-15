@@ -466,6 +466,10 @@ input and benchmark waves are submitted.
 - CUDA jobs sample device memory every 0.05 seconds and retain both the raw
   GPU memory and the increment above the pre-run allocator baseline. Missing
   device IDs and failed samples fail the measurement with a diagnostic.
+  Sampling uses job-visible CUDA/NVML IDs; `*.gpu_identity.csv` maps each
+  such ID to the Slurm physical ID and GPU UUID. Physical Slurm IDs may be
+  renumbered inside the allocation and must not be passed directly to
+  `nvidia-smi -i` there.
 - The support experiment separates repeated timing at seed 4 from independent
   embedding seeds. The warm-up run is never included in timing summaries.
 - Timing summaries never use one run per seed as timing replicates. They report
