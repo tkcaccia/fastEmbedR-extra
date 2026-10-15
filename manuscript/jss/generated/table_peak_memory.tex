@@ -1,0 +1,49 @@
+\begin{table}[!htbp]
+\centering
+\scriptsize
+\caption{Observed peak memory in campaign 20260930T203319Z (diagnostic, failed audit). Host RSS covers the complete worker, including data loading and quality assessment; it is not fit-only memory. CUDA values are sampled device-memory increases above the pre-worker baseline (nominal 0.2-s polling plus query time), so short peaks may be underestimated. Values are GiB; -- indicates no valid measurement. Counts show valid data sets for each memory metric; missing measurements are archived separately.}
+\label{tab:peak-memory}
+\textbf{A. Host peak RSS}\par\smallskip
+\begin{tabular}{p{0.48\textwidth}rrrr}
+\toprule
+Method & Completed & Measured & Median & Maximum \\
+\midrule
+fastEmbedR PCA [CPU] & 11 & 11 & 1.66 & 36.90 \\
+irlba [CPU] & 11 & 11 & 1.80 & 33.98 \\
+fastEmbedR PCA [CUDA] & 11 & 11 & 1.85 & 37.08 \\
+scikit-learn PCA [Python] & 11 & 11 & 0.80 & 11.86 \\
+RAPIDS cuML PCA [CUDA] & 11 & 11 & 1.10 & 18.95 \\
+Rtsne [CPU] & 9 & 9 & 1.38 & 4.34 \\
+FIt-SNE [CPU] & 11 & 11 & 1.75 & 34.53 \\
+fastEmbedR t-SNE [CPU] & 11 & 11 & 1.53 & 22.47 \\
+fastEmbedR t-SNE [CUDA] & 10 & 10 & 1.51 & 21.20 \\
+scikit-learn t-SNE [Python] & 7 & 7 & 0.76 & 1.12 \\
+openTSNE [Python] & 10 & 10 & 1.49 & 21.46 \\
+RAPIDS cuML t-SNE [CUDA] & 10 & 10 & 1.17 & 18.78 \\
+umap [CPU] & 7 & 7 & 5.32 & 9.00 \\
+uwot [CPU] & 11 & 11 & 1.68 & 36.66 \\
+uwot fast SGD [CPU] & 11 & 11 & 1.70 & 36.66 \\
+fastEmbedR fuzzy UMAP [CPU] & 11 & 11 & 1.50 & 25.21 \\
+fastEmbedR binary UMAP [CPU] & 11 & 11 & 1.49 & 25.21 \\
+fastEmbedR fuzzy UMAP [CUDA] & 10 & 10 & 1.42 & 21.13 \\
+fastEmbedR binary UMAP [CUDA] & 10 & 10 & 1.42 & 21.13 \\
+umap-learn [Python] & 10 & 10 & 2.09 & 51.67 \\
+RAPIDS cuML UMAP [CUDA] & 10 & 10 & 1.47 & 16.00 \\
+\bottomrule
+\end{tabular}
+\par\medskip
+\textbf{B. CUDA device-memory increase}\par\smallskip
+\begin{tabular}{p{0.48\textwidth}rrrr}
+\toprule
+Method & Completed & Measured & Median & Maximum \\
+\midrule
+fastEmbedR PCA [CUDA] & 11 & 0 & -- & -- \\
+RAPIDS cuML PCA [CUDA] & 11 & 0 & -- & -- \\
+fastEmbedR t-SNE [CUDA] & 10 & 7 & 1.03 & 17.79 \\
+RAPIDS cuML t-SNE [CUDA] & 10 & 7 & 1.28 & 16.97 \\
+fastEmbedR fuzzy UMAP [CUDA] & 10 & 7 & 0.78 & 13.57 \\
+fastEmbedR binary UMAP [CUDA] & 10 & 7 & 0.76 & 13.57 \\
+RAPIDS cuML UMAP [CUDA] & 10 & 7 & 0.73 & 11.96 \\
+\bottomrule
+\end{tabular}
+\end{table}

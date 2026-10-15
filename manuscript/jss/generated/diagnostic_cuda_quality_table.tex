@@ -1,0 +1,47 @@
+\begin{table}[p]
+\centering
+\caption{CUDA embedding quality in diagnostic campaign 20260930T203319Z. Entries are fastEmbedR / cuML on fixed sampled rows; $n$ is the fitted matrix size. Status is fastEmbedR / cuML; -- marks unavailable metrics. Different affinity supports make sampled t-SNE KL descriptive, not a matched-objective test.}
+\label{tab:diagnostic-cuda-quality}
+\scriptsize
+\textbf{A. Compact-support t-SNE / cuML t-SNE}\par\smallskip
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrl}
+\toprule
+Data set & Fitted $n$ & Trustworthiness & Preserve@30 & Sampled KL & Status \\
+\midrule
+COIL-20 & 1,440 & 0.939 / 0.934 & 0.627 / 0.623 & 1.480 / 1.317 & success / success \\
+USPS & 11,000 & 0.952 / 0.940 & 0.468 / 0.462 & 2.024 / 2.006 & success / success \\
+Fashion & 70,000 & 0.973 / 0.966 & 0.485 / 0.491 & 1.877 / 1.744 & success / success \\
+FlowRepo. & 5,220,347 & -- / -- & -- / -- & -- / -- & failed / failed \\
+flow18 & 1,000,021 & 0.967 / 0.951 & 0.445 / 0.422 & 2.049 / 1.857 & success / success \\
+MNIST & 70,000 & 0.941 / 0.931 & 0.437 / 0.443 & 2.316 / 2.164 & success / success \\
+ImageNet & 1,281,167 & 0.667 / 0.635 & 0.167 / 0.124 & 3.510 / 3.310 & success / success \\
+MetRef & 873 & 0.848 / 0.797 & 0.442 / 0.358 & 1.846 / 2.153 & success / success \\
+mass41 & 965,282 & 0.968 / 0.949 & 0.407 / 0.396 & 2.128 / 1.960 & success / success \\
+Tabula & 100,102 & 0.962 / 0.940 & 0.632 / 0.592 & 1.736 / 1.596 & success / success \\
+Retina & 44,808 & 0.912 / 0.900 & 0.432 / 0.428 & 1.970 / 1.916 & success / success \\
+\bottomrule
+\end{tabular}%
+}
+\medskip
+\textbf{B. Fuzzy UMAP / cuML UMAP}\par\smallskip
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrl}
+\toprule
+Data set & Fitted $n$ & Trustworthiness & Preserve@30 & Status \\
+\midrule
+COIL-20 & 1,440 & 0.908 / 0.920 & 0.613 / 0.620 & success / success \\
+USPS & 11,000 & 0.885 / 0.883 & 0.358 / 0.363 & success / success \\
+Fashion & 70,000 & 0.962 / 0.967 & 0.463 / 0.463 & success / success \\
+FlowRepo. & 5,220,347 & 0.960 / 0.967 & 0.445 / 0.443 & success / success \\
+flow18 & 1,000,021 & 0.962 / 0.961 & 0.435 / 0.432 & success / success \\
+MNIST & 70,000 & 0.939 / 0.935 & 0.452 / 0.444 & success / success \\
+ImageNet & 1,281,167 & 0.585 / 0.647 & 0.104 / 0.161 & success / success \\
+MetRef & 873 & 0.836 / 0.821 & 0.428 / 0.411 & success / success \\
+mass41 & 965,282 & 0.968 / 0.967 & 0.404 / 0.407 & success / success \\
+Tabula & 100,102 & 0.923 / 0.970 & 0.607 / 0.643 & success / success \\
+Retina & 44,808 & 0.900 / 0.904 & 0.406 / 0.411 & success / success \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}

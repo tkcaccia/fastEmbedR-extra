@@ -112,6 +112,12 @@ Rscript analysis/build_secondary_comparisons.R \
   /absolute/path/to/3d-lane
 ```
 
+The archived September 30 campaign predates the expanded stage schema
+required by `build_secondary_comparisons.R`. Its published scaling, landmark,
+and clustering TeX tables are rendered from the compact CSVs bundled in
+`manuscript/jss/generated/secondary_20260930/` by
+`render_jss_secondary_20260930.R`, which the manuscript build invokes.
+
 The script writes dataset-level and summary CSVs for CPU thread scaling,
 20-percent landmarks, and clustering, along with a paired 2D/3D status and
 runtime-memory-quality table. Landmark RSS and incremental GPU-memory ratios

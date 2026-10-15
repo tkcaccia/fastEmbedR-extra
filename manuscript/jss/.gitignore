@@ -1,0 +1,8 @@
+outputs/*.aux
+outputs/*.bbl
+outputs/*.blg
+outputs/*.fdb_latexmk
+outputs/*.fls
+outputs/*.log
+outputs/*.out
+outputs/_build/

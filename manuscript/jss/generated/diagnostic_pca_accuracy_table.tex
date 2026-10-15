@@ -1,0 +1,16 @@
+\begin{table}[htbp]
+\centering
+\caption{PCA agreement with dense centered SVD on fixed subsets in campaign 20260930T203319Z. The effective rank may be below the requested rank.}
+\label{tab:diagnostic-pca-accuracy}
+\scriptsize
+\begin{tabular}{lrrrr}
+\toprule
+Backend & Requested rank & Data sets & Score correlation & Loading cosine \\
+\midrule
+CPU & 2 & 11 & 0.999972 & 0.999998 \\
+CPU & 50 & 11 & 0.999292 & 0.998447 \\
+CUDA & 2 & 11 & 1.000000 & 1.000000 \\
+CUDA & 50 & 11 & 1.000000 & 1.000000 \\
+\bottomrule
+\end{tabular}
+\end{table}

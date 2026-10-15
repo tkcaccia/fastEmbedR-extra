@@ -1,0 +1,282 @@
+\documentclass[article]{jss}
+
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{microtype}
+\usepackage{url}
+\usepackage{xspace}
+\usepackage{float}
+
+\newcommand{\fastEmbedR}{\pkg{fastEmbedR}\xspace}
+
+\author{Moussa Kassim Mohamed$^{1,2,*}$ \quad Martin Ocharo$^{1,2,*}$\\
+  Giulia Canarutto$^{3,4}$ \quad Dalia Ahmed$^1$ \quad Dupe Ojo$^1$\\
+  Alessia Vignoli$^{5,6}$ \quad Leonardo Tenori$^{5,6,\dagger}$\\
+  Dinesh Gupta$^{7}$ \quad Silvano Piazza$^{3,8}$\\
+  Stefano Cacciatore$^{1,2,\dagger}$}
+
+\title{Supplementary Benchmark Results for \fastEmbedR}
+\Plaintitle{Supplementary Benchmark Results for fastEmbedR}
+\Shorttitle{fastEmbedR Supplementary Results}
+\Plainauthor{Kassim, Ocharo, Canarutto, Ahmed, Ojo, Vignoli, Tenori, Gupta,
+  Piazza, Cacciatore}
+
+\Abstract{
+  This supplement records the completed observations and explicit failures
+  of diagnostic campaign 20260930T203319Z: workflow timing and memory,
+  embedding quality, neighbor recall, support width, CPU scaling, held-out
+  transformation, landmarking, PCA, and graph clustering. A separate
+  September 29 campaign supplies the illustrative embedding gallery.
+  Neither campaign passed its final audit; results are not release-level
+  speed claims.
+}
+
+\Keywords{dimensionality reduction, t-SNE, UMAP, reproducible benchmarks}
+\Plainkeywords{dimensionality reduction, t-SNE, UMAP, reproducible
+  benchmarks}
+
+\Address{
+  $^1$Bioinformatics Unit, International Centre for Genetic Engineering and
+  Biotechnology (ICGEB), Cape Town 7925, South Africa\\
+  $^2$Department of Integrative Biomedical Sciences, Institute of Infectious
+  Disease \& Molecular Medicine, University of Cape Town, Cape Town 7925,
+  South Africa\\
+  $^3$Computational Biology Group, International Centre for Genetic
+  Engineering and Biotechnology (ICGEB), Trieste, Italy\\
+  $^4$Life Science Department (DSV), University of Trieste, Trieste, Italy\\
+  $^5$Department of Chemistry ``Ugo Schiff'', University of Florence,
+  Sesto Fiorentino, Italy\\
+  $^6$Magnetic Resonance Center, University of Florence, Sesto Fiorentino,
+  Italy\\
+  $^7$Translational Bioinformatics Group, ICGEB, New Delhi, India\\
+  $^8$Bioinformatics Facility, Department of Cellular, Computational and
+  Integrative Biology - CIBIO, University of Trento, Trento, Italy\\
+  $^*$These authors contributed equally.\\
+  $^\dagger$Co-corresponding authors: tenori@cerm.unifi.it and
+  stefano.cacciatore@icgeb.org\\
+  URL: \url{https://github.com/tkcaccia/fastEmbedR-extra}
+}
+
+\begin{document}
+\renewcommand{\thetable}{S\arabic{table}}
+\renewcommand{\thefigure}{S\arabic{figure}}
+
+\section{Workflow elapsed times}
+
+Table~\ref{tab:all-method-performance} combines the R and direct-Python
+results for PCA, t-SNE, and UMAP without treating their timing boundaries
+as equivalent. It gives every observed completed time, marks single-fit
+measurements, and identifies failed or missing combinations. The source
+campaign used full data-set matrices and failed its final audit; the times
+are descriptive diagnostics, not publication-grade speed ratios.
+``R call'' is the complete public fit; ``Py fit'' is the direct Python
+estimator fit, excluding process startup. An asterisk marks a completed
+single fit without timing repetitions. T denotes a time limit, M a
+confirmed memory limit, F another failure, K an unclassified kill,
+U unsupported, C cancelled, I a completed fit without usable time,
+and -- not run or no status.
+
+\input{generated/table_all_methods_runtime_supp.tex}
+
+\section{Comparator grid and timing boundaries}
+
+In the revised two-dimensional t-SNE protocol, \pkg{fastEmbedR} reports its
+selected grid in each fit. The pinned FIt-SNE wrapper exposes interpolation
+points, minimum intervals, and intervals per coordinate unit. The benchmark
+requests three interpolation points and minimum interval counts of 43 below
+40,000 rows and 86 otherwise. FIt-SNE rounds these to supported box counts
+of at least 50 and 90, respectively, corresponding to at least 150 and 270
+interpolation nodes per axis. The realized grid can be larger if the current
+coordinate span requires it; the wrapper does not return that size. These
+settings approximate rather than exactly match the \pkg{fastEmbedR} CPU
+128- and 256-cell policies. FIt-SNE three-dimensional Barnes--Hut runs do
+not use the interpolation grid.
+
+The tested cuML 26.6.0 implementation fixes three interpolation points and
+50 intervals per axis in its two-dimensional FFT source, yielding a
+300-cell padded transform axis. Its public Python t-SNE constructor does not
+expose a grid-resolution parameter, so a matched-grid cuML comparison would
+require modifying and rebuilding cuML. The benchmark records this fixed
+source policy, but does not mislabel the runs as grid matched. UMAP methods
+do not use this t-SNE FFT grid.
+
+The September 30 workflow campaign has five same-seed timing repetitions
+after warm-up for timing-eligible methods; jobs reaching the long-run
+budget may have one completed fit. All input matrices were fitted in full.
+The 7,200-second per-method limit and failed campaign audit are reflected
+in Table~\ref{tab:all-method-performance}. The embedding gallery below
+comes from a separate, capped September 29 campaign and must not be
+read as visual evidence for the September 30 timings.
+
+\section{Data-set-level CUDA embedding quality}
+
+Table~\ref{tab:diagnostic-cuda-quality} reports trustworthiness,
+Preserve@30, and sampled t-SNE KL for every CUDA \fastEmbedR and cuML
+pair. The methods use the same fitted row count and evaluation sample
+within a data set, but differ in affinity support and timing boundary.
+KL values across those objectives are not directly comparable.
+
+\input{generated/diagnostic_cuda_quality_table.tex}
+
+\section{Backend quality and t-SNE support}
+
+Table~\ref{tab:native-quality} reports full-workflow quality for every
+completed CPU and CUDA data-set pair. The CPU FlowRepository full-workflow
+quality run was incomplete; matched-neighbor quality from a different
+boundary is not substituted. Trustworthiness and Preserve@30 use fixed
+quality-sample rows. The low ImageNet values reflect this feature matrix's
+limited two-dimensional neighborhood preservation; ImageNet is used
+primarily as a scalability stress test. Final KL was not retained for the
+CUDA full-workflow diagnostic and is shown as missing, not zero.
+
+\input{generated/diagnostic_native_quality_table.tex}
+
+The $k=P$ affinity support makes the target perplexity the maximum possible
+entropy of each conditional distribution. At $P=30$, normalized conditional
+entropy was approximately 1.000 for $k=P$ and 0.761 for $k=3P$ in an
+exact-neighbor affinity diagnostic. Table~\ref{tab:support-width} gives
+paired time and quality summaries for $P=10$, 20, and 30. KL values across
+support widths are objectives with different affinities, not comparable
+optimization losses for one common objective.
+
+\input{generated/diagnostic_support_width_table.tex}
+
+\section{Scaling, transformation, and landmarks}
+
+The strong-scaling experiment used identical inputs at 1, 2, 4, 8, and
+12 CPU threads on COIL20, MNIST, flow18, and ImageNet. Times are complete
+workflows; stage-level values, including search, initialization, graph or
+affinity construction, and optimization, remain in the machine-readable
+campaign. The ratios in Table~\ref{tab:cpu-scaling} are relative to each
+data set's one-thread result.
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{CPU full-workflow strong scaling in campaign
+  20260930T203319Z. Speedups at 2--12 threads are relative to the
+  one-thread elapsed time in the same row.}
+\label{tab:cpu-scaling}
+\input{generated/secondary_20260930/cpu_scaling_table.tex}
+\end{table}
+
+Held-out transformation fits a reference on training rows and projects
+genuinely unseen queries without moving the reference. Table
+\ref{tab:transform-results} contrasts query-to-reference Preserve@30 with
+joint embedding of those queries. Times are transform calls, not complete
+fit-plus-transform workflows.
+
+\input{generated/diagnostic_transform_table.tex}
+
+The 20-percent landmark experiment instead reconstructs rows omitted from
+the fitted subset. It is a different statistical task from held-out
+prediction. In Table~\ref{tab:landmark-results}, elapsed and host-RSS ratios
+are landmark/full; ratios below one favor landmarking. The GPU peak ratio
+is unavailable where device sampling was inadequate. In particular, the
+CUDA UMAP median runtime and host-RSS ratios exceed one. Procrustes
+agreement is especially modest for fuzzy UMAP.
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Landmark reconstruction over 11 data sets in campaign
+  20260930T203319Z. Each row is the median of data-set medians for a
+  20-percent landmark fraction. RSS covers isolated fit workers; -- means
+  insufficient device-memory evidence.}
+\label{tab:landmark-results}
+\input{generated/secondary_20260930/landmark_table.tex}
+\end{table}
+
+\section{Secondary analyses and memory}
+
+Binary UMAP discards fuzzy edge weights and therefore changes the
+embedding objective. It is retained as an adjacency sensitivity analysis.
+Table~\ref{tab:binary-umap} reports its observed time and Preserve@30
+change, without treating it as a faster fuzzy-UMAP setting.
+
+\input{generated/diagnostic_binary_umap_table.tex}
+
+Table~\ref{tab:peak-memory} separates complete-worker host RSS from sampled
+device-wide CUDA memory above the pre-worker allocator baseline. Device
+sampling may miss short peaks; missing samples remain missing. These
+memory boundaries are not the direct-Python fit-only timing boundary.
+
+\input{generated/table_peak_memory.tex}
+
+CPU and CUDA PCA were compared with dense centered singular value
+decomposition on 11 fixed subsets. Signs and equivalent subspace
+rotations were aligned before score and loading comparisons.
+\pkg{irlba} is an approximate performance comparator, not the numerical
+reference. ImageNet CPU rank-2 score agreement was 0.783, an unresolved
+outlier for that configuration.
+
+\input{generated/diagnostic_pca_accuracy_table.tex}
+
+Graph construction was saved separately from clustering. Only COIL20
+and MetRef completed the latest same-graph clustering validation; the
+other nine data-set jobs failed, so Table~\ref{tab:diagnostic-clustering}
+is restricted to six seed runs per implementation. Native CPU Louvain,
+Leiden, and Walktrap were compared with \pkg{igraph}; CUDA Louvain and
+Leiden used the corresponding native CPU memberships as a reference.
+Label adjusted Rand index compares the recovered communities with the
+data-set labels; paired adjusted Rand index compares two partitions.
+These are not end-to-end embedding speedups, and Metal clustering is
+not represented.
+
+\input{generated/diagnostic_clustering_table.tex}
+
+\section{Campaign identity and unresolved gates}
+
+The source archive and the installed native library are recorded
+separately because this image included a container-build patch.
+Table~\ref{tab:release-identity} fixes the exact diagnostic source and
+benchmark identities. The campaign's final audit reported 34 failed
+or timed-out tasks and four output-audit failures. The replication
+directory retains every unsuccessful method--data-set status.
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Immutable identity of diagnostic campaign 20260930T203319Z.
+  The campaign failed its final audit.}
+\label{tab:release-identity}
+\begin{tabular}{ll}
+\toprule
+Item & Identifier \\
+\midrule
+Package & fastEmbedR 0.1 \\
+Source commit & \texttt{7f22c52b28400535c2a246de68e7189cd9880ea1} \\
+Source archive SHA-256 &
+  \texttt{a3bc4a09e6f60bb719cf49b5d91af876c084666ff1b390d06ea9c155d2e991b9} \\
+Build patch SHA-256 &
+  \texttt{8a725d2d2579425ff8d7edd3684f74c3fbb9ec1e5e3624c53e3eb3280b1188c7} \\
+Container SHA-256 &
+  \texttt{54e9604d951ecb3d80f49671d9db7a35cf19f1342eb3ee7c708cbc0c3a7f0aa8} \\
+Installed library SHA-256 &
+  \texttt{d44f08b574a4932bd36f7afb1d0da0895ccaaa9e1e5ca3f4c040ef2357d649fc} \\
+Benchmark manifest SHA-256 &
+  \texttt{d0dddde1d82fa3faa01a9617db55b4128f8a04de61b8fd4dfb6f117d99e6f44c} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The experimental file-backed phase was added after this image and campaign
+were created. No BigANN 1-billion-row or two-GPU result from that phase
+appears in these tables. Its six planned analyses are matched correctness,
+real-data scaling, memory boundary, full versus landmark, multi-GPU, and
+checkpoint recovery. The phase must be rerun with source and output
+checksums before any result is included in a release-level comparison.
+
+\section{Embedding gallery}
+
+The gallery uses coordinates from campaign 20260929T210526Z, separate
+from the full-data timing campaign in Table~S1. Only seed-4 layouts are
+shown. Other seeds contribute to numerical summaries but are not
+illustrated. That campaign also failed its audit; these plots are
+visual diagnostics, not release-level validation. Missing panels are
+labelled and are never filled from another campaign.
+
+\input{generated/all_methods_embedding_gallery.tex}
+
+\end{document}

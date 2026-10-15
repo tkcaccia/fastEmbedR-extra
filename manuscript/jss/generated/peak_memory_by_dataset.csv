@@ -1,0 +1,232 @@
+"dataset","family","method","route","title","status","fit_n","peak_host_gib","peak_device_incremental_gib","device_baseline_gib","device_samples_n"
+"COIL20","pca","fastembedr_pca","r_cpu","fastEmbedR PCA [CPU]","success",1440,1.33868026733398,,,
+"USPS","pca","fastembedr_pca","r_cpu","fastEmbedR PCA [CPU]","success",11000,0.555606842041016,,,
+"FashionMNIST","pca","fastembedr_pca","r_cpu","fastEmbedR PCA [CPU]","success",70000,2.07840347290039,,,
+"FlowRepository_FR-FCM-ZYRM_files","pca","fastembedr_pca","r_cpu","fastEmbedR PCA [CPU]","success",5220347,13.8483085632324,,,
+"flow18","pca","fastembedr_pca","r_cpu","fastEmbedR PCA [CPU]","success",1000021,1.65621948242188,,,
+"MNIST","pca","fastembedr_pca","r_cpu","fastEmbedR PCA [CPU]","success",70000,2.07913970947266,,,
+"imagenet","pca","fastembedr_pca","r_cpu","fastEmbedR PCA [CPU]","success",1281167,36.9011383056641,,,
+"MetRef","pca","fastembedr_pca","r_cpu","fastEmbedR PCA [CPU]","success",873,0.445198059082031,,,
+"mass41","pca","fastembedr_pca","r_cpu","fastEmbedR PCA [CPU]","success",965282,1.80110168457031,,,
+"TabulaMuris","pca","fastembedr_pca","r_cpu","fastEmbedR PCA [CPU]","success",100102,0.753166198730469,,,
+"Macosko2015_retina","pca","fastembedr_pca","r_cpu","fastEmbedR PCA [CPU]","success",44808,0.583667755126953,,,
+"COIL20","pca","irlba_pca","r_cpu","irlba [CPU]","success",1440,1.32429504394531,,,
+"USPS","pca","irlba_pca","r_cpu","irlba [CPU]","success",11000,0.645946502685547,,,
+"FashionMNIST","pca","irlba_pca","r_cpu","irlba [CPU]","success",70000,2.02949142456055,,,
+"FlowRepository_FR-FCM-ZYRM_files","pca","irlba_pca","r_cpu","irlba [CPU]","success",5220347,12.582706451416,,,
+"flow18","pca","irlba_pca","r_cpu","irlba [CPU]","success",1000021,1.83478927612305,,,
+"MNIST","pca","irlba_pca","r_cpu","irlba [CPU]","success",70000,2.03114318847656,,,
+"imagenet","pca","irlba_pca","r_cpu","irlba [CPU]","success",1281167,33.9827919006348,,,
+"MetRef","pca","irlba_pca","r_cpu","irlba [CPU]","success",873,0.543498992919922,,,
+"mass41","pca","irlba_pca","r_cpu","irlba [CPU]","success",965282,1.79656982421875,,,
+"TabulaMuris","pca","irlba_pca","r_cpu","irlba [CPU]","success",100102,0.904945373535156,,,
+"Macosko2015_retina","pca","irlba_pca","r_cpu","irlba [CPU]","success",44808,0.69342041015625,,,
+"COIL20","pca","fastembedr_pca","r_cuda","fastEmbedR PCA [CUDA]","success",1440,1.42841339111328,,,0
+"USPS","pca","fastembedr_pca","r_cuda","fastEmbedR PCA [CUDA]","success",11000,0.804241180419922,,,0
+"FashionMNIST","pca","fastembedr_pca","r_cuda","fastEmbedR PCA [CUDA]","success",70000,2.29652786254883,,,0
+"FlowRepository_FR-FCM-ZYRM_files","pca","fastembedr_pca","r_cuda","fastEmbedR PCA [CUDA]","success",5220347,11.8258399963379,,,0
+"flow18","pca","fastembedr_pca","r_cuda","fastEmbedR PCA [CUDA]","success",1000021,1.84502410888672,,,0
+"MNIST","pca","fastembedr_pca","r_cuda","fastEmbedR PCA [CUDA]","success",70000,2.29654693603516,,,0
+"imagenet","pca","fastembedr_pca","r_cuda","fastEmbedR PCA [CUDA]","success",1281167,37.0791625976562,,,0
+"MetRef","pca","fastembedr_pca","r_cuda","fastEmbedR PCA [CUDA]","success",873,0.677574157714844,,,0
+"mass41","pca","fastembedr_pca","r_cuda","fastEmbedR PCA [CUDA]","success",965282,1.93194961547852,,,0
+"TabulaMuris","pca","fastembedr_pca","r_cuda","fastEmbedR PCA [CUDA]","success",100102,0.999530792236328,,,0
+"Macosko2015_retina","pca","fastembedr_pca","r_cuda","fastEmbedR PCA [CUDA]","success",44808,0.821849822998047,,,0
+"COIL20","pca","sklearn_pca","python_cpu","scikit-learn PCA [Python]","success",1440,0.657936096191406,,,
+"USPS","pca","sklearn_pca","python_cpu","scikit-learn PCA [Python]","success",11000,0.427898406982422,,,
+"FashionMNIST","pca","sklearn_pca","python_cpu","scikit-learn PCA [Python]","success",70000,0.969448089599609,,,
+"FlowRepository_FR-FCM-ZYRM_files","pca","sklearn_pca","python_cpu","scikit-learn PCA [Python]","success",5220347,5.6210823059082,,,
+"flow18","pca","sklearn_pca","python_cpu","scikit-learn PCA [Python]","success",1000021,0.795627593994141,,,
+"MNIST","pca","sklearn_pca","python_cpu","scikit-learn PCA [Python]","success",70000,0.961971282958984,,,
+"imagenet","pca","sklearn_pca","python_cpu","scikit-learn PCA [Python]","success",1281167,11.8556442260742,,,
+"MetRef","pca","sklearn_pca","python_cpu","scikit-learn PCA [Python]","success",873,0.406898498535156,,,
+"mass41","pca","sklearn_pca","python_cpu","scikit-learn PCA [Python]","success",965282,0.849826812744141,,,
+"TabulaMuris","pca","sklearn_pca","python_cpu","scikit-learn PCA [Python]","success",100102,0.548080444335938,,,
+"Macosko2015_retina","pca","sklearn_pca","python_cpu","scikit-learn PCA [Python]","success",44808,0.451343536376953,,,
+"COIL20","pca","cuml_pca","python_cuda","RAPIDS cuML PCA [CUDA]","success",1440,1.26338958740234,,,0
+"USPS","pca","cuml_pca","python_cuda","RAPIDS cuML PCA [CUDA]","success",11000,0.97503662109375,,,0
+"FashionMNIST","pca","cuml_pca","python_cuda","RAPIDS cuML PCA [CUDA]","success",70000,1.5629997253418,,,0
+"FlowRepository_FR-FCM-ZYRM_files","pca","cuml_pca","python_cuda","RAPIDS cuML PCA [CUDA]","success",5220347,4.71852874755859,,,0
+"flow18","pca","cuml_pca","python_cuda","RAPIDS cuML PCA [CUDA]","success",1000021,1.07535171508789,,,0
+"MNIST","pca","cuml_pca","python_cuda","RAPIDS cuML PCA [CUDA]","success",70000,1.55348205566406,,,0
+"imagenet","pca","cuml_pca","python_cuda","RAPIDS cuML PCA [CUDA]","success",1281167,18.9454765319824,,,0
+"MetRef","pca","cuml_pca","python_cuda","RAPIDS cuML PCA [CUDA]","success",873,0.937038421630859,,,0
+"mass41","pca","cuml_pca","python_cuda","RAPIDS cuML PCA [CUDA]","success",965282,1.10354232788086,,,0
+"TabulaMuris","pca","cuml_pca","python_cuda","RAPIDS cuML PCA [CUDA]","success",100102,0.963142395019531,,,0
+"Macosko2015_retina","pca","cuml_pca","python_cuda","RAPIDS cuML PCA [CUDA]","success",44808,0.948829650878906,,,0
+"COIL20","tsne","rtsne","r_cpu","Rtsne [CPU]","success",1440,1.38287734985352,,,
+"USPS","tsne","rtsne","r_cpu","Rtsne [CPU]","success",11000,0.868194580078125,,,
+"FashionMNIST","tsne","rtsne","r_cpu","Rtsne [CPU]","success",70000,2.67918014526367,,,
+"FlowRepository_FR-FCM-ZYRM_files","tsne","rtsne","r_cpu","Rtsne [CPU]","timeout",,,,,
+"flow18","tsne","rtsne","r_cpu","Rtsne [CPU]","success",1000021,4.1824951171875,,,
+"MNIST","tsne","rtsne","r_cpu","Rtsne [CPU]","success",70000,2.67938613891602,,,
+"imagenet","tsne","rtsne","r_cpu","Rtsne [CPU]","timeout",,,,,
+"MetRef","tsne","rtsne","r_cpu","Rtsne [CPU]","success",873,0.603496551513672,,,
+"mass41","tsne","rtsne","r_cpu","Rtsne [CPU]","success",965282,4.3422966003418,,,
+"TabulaMuris","tsne","rtsne","r_cpu","Rtsne [CPU]","success",100102,0.992504119873047,,,
+"Macosko2015_retina","tsne","rtsne","r_cpu","Rtsne [CPU]","success",44808,0.888084411621094,,,
+"COIL20","tsne","fitsne","r_cpu","FIt-SNE [CPU]","success",1440,0.988960266113281,,,
+"USPS","tsne","fitsne","r_cpu","FIt-SNE [CPU]","success",11000,0.886955261230469,,,
+"FashionMNIST","tsne","fitsne","r_cpu","FIt-SNE [CPU]","success",70000,1.75036239624023,,,
+"FlowRepository_FR-FCM-ZYRM_files","tsne","fitsne","r_cpu","FIt-SNE [CPU]","success",5220347,16.6901016235352,,,
+"flow18","tsne","fitsne","r_cpu","FIt-SNE [CPU]","success",1000021,2.68400192260742,,,
+"MNIST","tsne","fitsne","r_cpu","FIt-SNE [CPU]","success",70000,1.74922180175781,,,
+"imagenet","tsne","fitsne","r_cpu","FIt-SNE [CPU]","success",1281167,34.5301818847656,,,
+"MetRef","tsne","fitsne","r_cpu","FIt-SNE [CPU]","success",873,0.590034484863281,,,
+"mass41","tsne","fitsne","r_cpu","FIt-SNE [CPU]","success",965282,2.74094772338867,,,
+"TabulaMuris","tsne","fitsne","r_cpu","FIt-SNE [CPU]","success",100102,0.954673767089844,,,
+"Macosko2015_retina","tsne","fitsne","r_cpu","FIt-SNE [CPU]","success",44808,0.88421630859375,,,
+"COIL20","tsne","fastembedr_tsne","r_cpu","fastEmbedR t-SNE [CPU]","success",1440,0.868873596191406,,,
+"USPS","tsne","fastembedr_tsne","r_cpu","fastEmbedR t-SNE [CPU]","success",11000,0.810829162597656,,,
+"FashionMNIST","tsne","fastembedr_tsne","r_cpu","fastEmbedR t-SNE [CPU]","success",70000,1.52644729614258,,,
+"FlowRepository_FR-FCM-ZYRM_files","tsne","fastembedr_tsne","r_cpu","fastEmbedR t-SNE [CPU]","success",5220347,13.204891204834,,,
+"flow18","tsne","fastembedr_tsne","r_cpu","fastEmbedR t-SNE [CPU]","success",1000021,2.5322380065918,,,
+"MNIST","tsne","fastembedr_tsne","r_cpu","fastEmbedR t-SNE [CPU]","success",70000,1.52666091918945,,,
+"imagenet","tsne","fastembedr_tsne","r_cpu","fastEmbedR t-SNE [CPU]","success",1281167,22.4670639038086,,,
+"MetRef","tsne","fastembedr_tsne","r_cpu","fastEmbedR t-SNE [CPU]","success",873,0.51409912109375,,,
+"mass41","tsne","fastembedr_tsne","r_cpu","fastEmbedR t-SNE [CPU]","success",965282,2.51234436035156,,,
+"TabulaMuris","tsne","fastembedr_tsne","r_cpu","fastEmbedR t-SNE [CPU]","success",100102,0.981536865234375,,,
+"Macosko2015_retina","tsne","fastembedr_tsne","r_cpu","fastEmbedR t-SNE [CPU]","success",44808,0.77313232421875,,,
+"COIL20","tsne","fastembedr_tsne","r_cuda","fastEmbedR t-SNE [CUDA]","success",1440,1.15760803222656,0.8642578125,0,44
+"USPS","tsne","fastembedr_tsne","r_cuda","fastEmbedR t-SNE [CUDA]","success",11000,1.12940216064453,,,0
+"FashionMNIST","tsne","fastembedr_tsne","r_cuda","fastEmbedR t-SNE [CUDA]","success",70000,1.79605102539062,1.0302734375,0,70
+"FlowRepository_FR-FCM-ZYRM_files","tsne","fastembedr_tsne","r_cuda","fastEmbedR t-SNE [CUDA]","failed",5220347,,,,0
+"flow18","tsne","fastembedr_tsne","r_cuda","fastEmbedR t-SNE [CUDA]","success",1000021,1.96210861206055,1.5478515625,0,221
+"MNIST","tsne","fastembedr_tsne","r_cuda","fastEmbedR t-SNE [CUDA]","success",70000,1.79246520996094,,,0
+"imagenet","tsne","fastembedr_tsne","r_cuda","fastEmbedR t-SNE [CUDA]","success",1281167,21.2038078308105,17.7900390625,0,13958
+"MetRef","tsne","fastembedr_tsne","r_cuda","fastEmbedR t-SNE [CUDA]","success",873,0.817222595214844,0.4970703125,0,22
+"mass41","tsne","fastembedr_tsne","r_cuda","fastEmbedR t-SNE [CUDA]","success",965282,1.9651985168457,,,0
+"TabulaMuris","tsne","fastembedr_tsne","r_cuda","fastEmbedR t-SNE [CUDA]","success",100102,1.22061538696289,1.1552734375,0,117
+"Macosko2015_retina","tsne","fastembedr_tsne","r_cuda","fastEmbedR t-SNE [CUDA]","success",44808,1.10644149780273,0.5791015625,0,38
+"COIL20","tsne","sklearn_tsne","python_cpu","scikit-learn t-SNE [Python]","success",1440,0.764087677001953,,,
+"USPS","tsne","sklearn_tsne","python_cpu","scikit-learn t-SNE [Python]","success",11000,0.498435974121094,,,
+"FashionMNIST","tsne","sklearn_tsne","python_cpu","scikit-learn t-SNE [Python]","success",70000,1.12045288085938,,,
+"FlowRepository_FR-FCM-ZYRM_files","tsne","sklearn_tsne","python_cpu","scikit-learn t-SNE [Python]","timeout",,,,,
+"flow18","tsne","sklearn_tsne","python_cpu","scikit-learn t-SNE [Python]","timeout",,,,,
+"MNIST","tsne","sklearn_tsne","python_cpu","scikit-learn t-SNE [Python]","success",70000,1.10087585449219,,,
+"imagenet","tsne","sklearn_tsne","python_cpu","scikit-learn t-SNE [Python]","timeout",,,,,
+"MetRef","tsne","sklearn_tsne","python_cpu","scikit-learn t-SNE [Python]","success",873,0.430465698242188,,,
+"mass41","tsne","sklearn_tsne","python_cpu","scikit-learn t-SNE [Python]","timeout",,,,,
+"TabulaMuris","tsne","sklearn_tsne","python_cpu","scikit-learn t-SNE [Python]","success",100102,1.03234100341797,,,
+"Macosko2015_retina","tsne","sklearn_tsne","python_cpu","scikit-learn t-SNE [Python]","success",44808,0.739273071289062,,,
+"COIL20","tsne","python_opentsne","python_cpu","openTSNE [Python]","success",1440,0.934951782226562,,,
+"USPS","tsne","python_opentsne","python_cpu","openTSNE [Python]","success",11000,0.747028350830078,,,
+"FashionMNIST","tsne","python_opentsne","python_cpu","openTSNE [Python]","success",70000,1.65869903564453,,,
+"FlowRepository_FR-FCM-ZYRM_files","tsne","python_opentsne","python_cpu","openTSNE [Python]","timeout",,,,,
+"flow18","tsne","python_opentsne","python_cpu","openTSNE [Python]","success",1000021,7.88950347900391,,,
+"MNIST","tsne","python_opentsne","python_cpu","openTSNE [Python]","success",70000,1.59866714477539,,,
+"imagenet","tsne","python_opentsne","python_cpu","openTSNE [Python]","success",1281167,21.459156036377,,,
+"MetRef","tsne","python_opentsne","python_cpu","openTSNE [Python]","success",873,0.552116394042969,,,
+"mass41","tsne","python_opentsne","python_cpu","openTSNE [Python]","success",965282,8.49415588378906,,,
+"TabulaMuris","tsne","python_opentsne","python_cpu","openTSNE [Python]","success",100102,1.37866592407227,,,
+"Macosko2015_retina","tsne","python_opentsne","python_cpu","openTSNE [Python]","success",44808,0.958522796630859,,,
+"COIL20","tsne","cuml_tsne","python_cuda","RAPIDS cuML t-SNE [CUDA]","success",1440,1.37078475952148,6.5556640625,0,196
+"USPS","tsne","cuml_tsne","python_cuda","RAPIDS cuML t-SNE [CUDA]","success",11000,1.06799697875977,,,0
+"FashionMNIST","tsne","cuml_tsne","python_cuda","RAPIDS cuML t-SNE [CUDA]","success",70000,1.58584594726562,1.2841796875,0,103
+"FlowRepository_FR-FCM-ZYRM_files","tsne","cuml_tsne","python_cuda","RAPIDS cuML t-SNE [CUDA]","failed",,,,,
+"flow18","tsne","cuml_tsne","python_cuda","RAPIDS cuML t-SNE [CUDA]","success",1000021,1.16265487670898,5.2275390625,0,1484
+"MNIST","tsne","cuml_tsne","python_cuda","RAPIDS cuML t-SNE [CUDA]","success",70000,1.57652282714844,,,0
+"imagenet","tsne","cuml_tsne","python_cuda","RAPIDS cuML t-SNE [CUDA]","success",1281167,18.7824020385742,16.9677734375,0,5138
+"MetRef","tsne","cuml_tsne","python_cuda","RAPIDS cuML t-SNE [CUDA]","success",873,1.01651382446289,0.4697265625,0,37
+"mass41","tsne","cuml_tsne","python_cuda","RAPIDS cuML t-SNE [CUDA]","success",965282,1.16755676269531,,,0
+"TabulaMuris","tsne","cuml_tsne","python_cuda","RAPIDS cuML t-SNE [CUDA]","success",100102,1.07425689697266,0.8876953125,0,108
+"Macosko2015_retina","tsne","cuml_tsne","python_cuda","RAPIDS cuML t-SNE [CUDA]","success",44808,1.05104446411133,0.6728515625,0,69
+"COIL20","umap","r_umap","r_cpu","umap [CPU]","success",1440,1.45190048217773,,,
+"USPS","umap","r_umap","r_cpu","umap [CPU]","success",11000,1.88681793212891,,,
+"FashionMNIST","umap","r_umap","r_cpu","umap [CPU]","success",70000,7.96426773071289,,,
+"FlowRepository_FR-FCM-ZYRM_files","umap","r_umap","r_cpu","umap [CPU]","timeout",,,,,
+"flow18","umap","r_umap","r_cpu","umap [CPU]","timeout",,,,,
+"MNIST","umap","r_umap","r_cpu","umap [CPU]","success",70000,8.99716567993164,,,
+"imagenet","umap","r_umap","r_cpu","umap [CPU]","timeout",,,,,
+"MetRef","umap","r_umap","r_cpu","umap [CPU]","success",873,0.62841796875,,,
+"mass41","umap","r_umap","r_cpu","umap [CPU]","timeout",,,,,
+"TabulaMuris","umap","r_umap","r_cpu","umap [CPU]","success",100102,7.2028923034668,,,
+"Macosko2015_retina","umap","r_umap","r_cpu","umap [CPU]","success",44808,5.31914901733398,,,
+"COIL20","umap","uwot","r_cpu","uwot [CPU]","success",1440,1.05602264404297,,,
+"USPS","umap","uwot","r_cpu","uwot [CPU]","success",11000,0.847862243652344,,,
+"FashionMNIST","umap","uwot","r_cpu","uwot [CPU]","success",70000,1.67918014526367,,,
+"FlowRepository_FR-FCM-ZYRM_files","umap","uwot","r_cpu","uwot [CPU]","success",5220347,36.6609115600586,,,
+"flow18","umap","uwot","r_cpu","uwot [CPU]","success",1000021,6.77595901489258,,,
+"MNIST","umap","uwot","r_cpu","uwot [CPU]","success",70000,1.67891693115234,,,
+"imagenet","umap","uwot","r_cpu","uwot [CPU]","success",1281167,27.4765968322754,,,
+"MetRef","umap","uwot","r_cpu","uwot [CPU]","success",873,0.600841522216797,,,
+"mass41","umap","uwot","r_cpu","uwot [CPU]","success",965282,6.94692230224609,,,
+"TabulaMuris","umap","uwot","r_cpu","uwot [CPU]","success",100102,1.26980972290039,,,
+"Macosko2015_retina","umap","uwot","r_cpu","uwot [CPU]","success",44808,0.914924621582031,,,
+"COIL20","umap","uwot_fast_sgd","r_cpu","uwot fast SGD [CPU]","success",1440,1.05639266967773,,,
+"USPS","umap","uwot_fast_sgd","r_cpu","uwot fast SGD [CPU]","success",11000,0.862899780273438,,,
+"FashionMNIST","umap","uwot_fast_sgd","r_cpu","uwot fast SGD [CPU]","success",70000,1.69594192504883,,,
+"FlowRepository_FR-FCM-ZYRM_files","umap","uwot_fast_sgd","r_cpu","uwot fast SGD [CPU]","success",5220347,36.661491394043,,,
+"flow18","umap","uwot_fast_sgd","r_cpu","uwot fast SGD [CPU]","success",1000021,6.77602386474609,,,
+"MNIST","umap","uwot_fast_sgd","r_cpu","uwot fast SGD [CPU]","success",70000,1.70899963378906,,,
+"imagenet","umap","uwot_fast_sgd","r_cpu","uwot fast SGD [CPU]","success",1281167,27.4787063598633,,,
+"MetRef","umap","uwot_fast_sgd","r_cpu","uwot fast SGD [CPU]","success",873,0.601417541503906,,,
+"mass41","umap","uwot_fast_sgd","r_cpu","uwot fast SGD [CPU]","success",965282,6.94685745239258,,,
+"TabulaMuris","umap","uwot_fast_sgd","r_cpu","uwot fast SGD [CPU]","success",100102,1.26993560791016,,,
+"Macosko2015_retina","umap","uwot_fast_sgd","r_cpu","uwot fast SGD [CPU]","success",44808,0.916419982910156,,,
+"COIL20","umap","fastembedr_umap","r_cpu","fastEmbedR fuzzy UMAP [CPU]","success",1440,0.867881774902344,,,
+"USPS","umap","fastembedr_umap","r_cpu","fastEmbedR fuzzy UMAP [CPU]","success",11000,0.735160827636719,,,
+"FashionMNIST","umap","fastembedr_umap","r_cpu","fastEmbedR fuzzy UMAP [CPU]","success",70000,1.49580764770508,,,
+"FlowRepository_FR-FCM-ZYRM_files","umap","fastembedr_umap","r_cpu","fastEmbedR fuzzy UMAP [CPU]","success",5220347,25.2132835388184,,,
+"flow18","umap","fastembedr_umap","r_cpu","fastEmbedR fuzzy UMAP [CPU]","success",1000021,4.40836715698242,,,
+"MNIST","umap","fastembedr_umap","r_cpu","fastEmbedR fuzzy UMAP [CPU]","success",70000,1.49611282348633,,,
+"imagenet","umap","fastembedr_umap","r_cpu","fastEmbedR fuzzy UMAP [CPU]","success",1281167,21.7929153442383,,,
+"MetRef","umap","fastembedr_umap","r_cpu","fastEmbedR fuzzy UMAP [CPU]","success",873,0.512241363525391,,,
+"mass41","umap","fastembedr_umap","r_cpu","fastEmbedR fuzzy UMAP [CPU]","success",965282,4.51613616943359,,,
+"TabulaMuris","umap","fastembedr_umap","r_cpu","fastEmbedR fuzzy UMAP [CPU]","success",100102,0.889434814453125,,,
+"Macosko2015_retina","umap","fastembedr_umap","r_cpu","fastEmbedR fuzzy UMAP [CPU]","success",44808,0.812732696533203,,,
+"COIL20","umap","fastembedr_umap_binary","r_cpu","fastEmbedR binary UMAP [CPU]","success",1440,0.867851257324219,,,
+"USPS","umap","fastembedr_umap_binary","r_cpu","fastEmbedR binary UMAP [CPU]","success",11000,0.750869750976562,,,
+"FashionMNIST","umap","fastembedr_umap_binary","r_cpu","fastEmbedR binary UMAP [CPU]","success",70000,1.49587249755859,,,
+"FlowRepository_FR-FCM-ZYRM_files","umap","fastembedr_umap_binary","r_cpu","fastEmbedR binary UMAP [CPU]","success",5220347,25.2135772705078,,,
+"flow18","umap","fastembedr_umap_binary","r_cpu","fastEmbedR binary UMAP [CPU]","success",1000021,4.40812301635742,,,
+"MNIST","umap","fastembedr_umap_binary","r_cpu","fastEmbedR binary UMAP [CPU]","success",70000,1.49355316162109,,,
+"imagenet","umap","fastembedr_umap_binary","r_cpu","fastEmbedR binary UMAP [CPU]","success",1281167,21.7926292419434,,,
+"MetRef","umap","fastembedr_umap_binary","r_cpu","fastEmbedR binary UMAP [CPU]","success",873,0.512413024902344,,,
+"mass41","umap","fastembedr_umap_binary","r_cpu","fastEmbedR binary UMAP [CPU]","success",965282,4.51613616943359,,,
+"TabulaMuris","umap","fastembedr_umap_binary","r_cpu","fastEmbedR binary UMAP [CPU]","success",100102,0.887657165527344,,,
+"Macosko2015_retina","umap","fastembedr_umap_binary","r_cpu","fastEmbedR binary UMAP [CPU]","success",44808,0.813045501708984,,,
+"COIL20","umap","fastembedr_umap","r_cuda","fastEmbedR fuzzy UMAP [CUDA]","success",1440,1.05568313598633,0.5556640625,0,41
+"USPS","umap","fastembedr_umap","r_cuda","fastEmbedR fuzzy UMAP [CUDA]","success",11000,0.999011993408203,,,0
+"FashionMNIST","umap","fastembedr_umap","r_cuda","fastEmbedR fuzzy UMAP [CUDA]","success",70000,1.65206909179688,0.7783203125,0,58
+"FlowRepository_FR-FCM-ZYRM_files","umap","fastembedr_umap","r_cuda","fastEmbedR fuzzy UMAP [CUDA]","failed",5220347,,,,0
+"flow18","umap","fastembedr_umap","r_cuda","fastEmbedR fuzzy UMAP [CUDA]","success",1000021,1.9128303527832,1.9521484375,0,71
+"MNIST","umap","fastembedr_umap","r_cuda","fastEmbedR fuzzy UMAP [CUDA]","success",70000,1.65449523925781,,,0
+"imagenet","umap","fastembedr_umap","r_cuda","fastEmbedR fuzzy UMAP [CUDA]","success",1281167,21.1334075927734,13.5673828125,0,14194
+"MetRef","umap","fastembedr_umap","r_cuda","fastEmbedR fuzzy UMAP [CUDA]","success",873,0.709865570068359,0.4677734375,0,19
+"mass41","umap","fastembedr_umap","r_cuda","fastEmbedR fuzzy UMAP [CUDA]","success",965282,1.9072380065918,,,0
+"TabulaMuris","umap","fastembedr_umap","r_cuda","fastEmbedR fuzzy UMAP [CUDA]","success",100102,1.1802978515625,0.8759765625,0,36
+"Macosko2015_retina","umap","fastembedr_umap","r_cuda","fastEmbedR fuzzy UMAP [CUDA]","success",44808,0.994396209716797,0.5341796875,0,30
+"COIL20","umap","fastembedr_umap_binary","r_cuda","fastEmbedR binary UMAP [CUDA]","success",1440,1.055908203125,0.4677734375,0,42
+"USPS","umap","fastembedr_umap_binary","r_cuda","fastEmbedR binary UMAP [CUDA]","success",11000,0.998443603515625,,,0
+"FashionMNIST","umap","fastembedr_umap_binary","r_cuda","fastEmbedR binary UMAP [CUDA]","success",70000,1.65216064453125,0.7783203125,0,60
+"FlowRepository_FR-FCM-ZYRM_files","umap","fastembedr_umap_binary","r_cuda","fastEmbedR binary UMAP [CUDA]","failed",5220347,,,,0
+"flow18","umap","fastembedr_umap_binary","r_cuda","fastEmbedR binary UMAP [CUDA]","success",1000021,1.91414260864258,1.9482421875,0,87
+"MNIST","umap","fastembedr_umap_binary","r_cuda","fastEmbedR binary UMAP [CUDA]","success",70000,1.65243148803711,,,0
+"imagenet","umap","fastembedr_umap_binary","r_cuda","fastEmbedR binary UMAP [CUDA]","success",1281167,21.1338310241699,13.5732421875,0,13686
+"MetRef","umap","fastembedr_umap_binary","r_cuda","fastEmbedR binary UMAP [CUDA]","success",873,0.710491180419922,0.4677734375,0,20
+"mass41","umap","fastembedr_umap_binary","r_cuda","fastEmbedR binary UMAP [CUDA]","success",965282,1.90597915649414,,,0
+"TabulaMuris","umap","fastembedr_umap_binary","r_cuda","fastEmbedR binary UMAP [CUDA]","success",100102,1.17965698242188,0.7587890625,0,39
+"Macosko2015_retina","umap","fastembedr_umap_binary","r_cuda","fastEmbedR binary UMAP [CUDA]","success",44808,0.993766784667969,0.5048828125,0,31
+"COIL20","umap","python_umap","python_cpu","umap-learn [Python]","success",1440,0.996395111083984,,,
+"USPS","umap","python_umap","python_cpu","umap-learn [Python]","success",11000,0.885932922363281,,,
+"FashionMNIST","umap","python_umap","python_cpu","umap-learn [Python]","success",70000,2.61531829833984,,,
+"FlowRepository_FR-FCM-ZYRM_files","umap","python_umap","python_cpu","umap-learn [Python]","timeout",,,,,
+"flow18","umap","python_umap","python_cpu","umap-learn [Python]","success",1000021,12.9569854736328,,,
+"MNIST","umap","python_umap","python_cpu","umap-learn [Python]","success",70000,2.50024795532227,,,
+"imagenet","umap","python_umap","python_cpu","umap-learn [Python]","success",1281167,51.6742935180664,,,
+"MetRef","umap","python_umap","python_cpu","umap-learn [Python]","success",873,0.628475189208984,,,
+"mass41","umap","python_umap","python_cpu","umap-learn [Python]","success",965282,16.3826065063477,,,
+"TabulaMuris","umap","python_umap","python_cpu","umap-learn [Python]","success",100102,1.67765808105469,,,
+"Macosko2015_retina","umap","python_umap","python_cpu","umap-learn [Python]","success",44808,1.09508895874023,,,
+"COIL20","umap","cuml_umap","python_cuda","RAPIDS cuML UMAP [CUDA]","success",1440,1.38739776611328,0.7314453125,0,37
+"USPS","umap","cuml_umap","python_cuda","RAPIDS cuML UMAP [CUDA]","success",11000,1.07540893554688,,,0
+"FashionMNIST","umap","cuml_umap","python_cuda","RAPIDS cuML UMAP [CUDA]","success",70000,1.57903671264648,1.0595703125,0,58
+"FlowRepository_FR-FCM-ZYRM_files","umap","cuml_umap","python_cuda","RAPIDS cuML UMAP [CUDA]","failed",5220347,,,,0
+"flow18","umap","cuml_umap","python_cuda","RAPIDS cuML UMAP [CUDA]","success",1000021,2.53202056884766,1.8291015625,0,311
+"MNIST","umap","cuml_umap","python_cuda","RAPIDS cuML UMAP [CUDA]","success",70000,1.55695343017578,,,0
+"imagenet","umap","cuml_umap","python_cuda","RAPIDS cuML UMAP [CUDA]","success",1281167,15.999340057373,11.9619140625,0,8601
+"MetRef","umap","cuml_umap","python_cuda","RAPIDS cuML UMAP [CUDA]","success",873,1.034423828125,0.5595703125,0,35
+"mass41","umap","cuml_umap","python_cuda","RAPIDS cuML UMAP [CUDA]","success",965282,2.59269714355469,,,0
+"TabulaMuris","umap","cuml_umap","python_cuda","RAPIDS cuML UMAP [CUDA]","success",100102,1.21426391601562,0.7236328125,0,55
+"Macosko2015_retina","umap","cuml_umap","python_cuda","RAPIDS cuML UMAP [CUDA]","success",44808,1.13682556152344,0.6416015625,0,42

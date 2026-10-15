@@ -1,0 +1,22 @@
+"family","method","route","title","completed_datasets","host_measured","peak_host_median_gib","peak_host_max_gib","device_measured","peak_device_median_gib","peak_device_max_gib"
+"pca","fastembedr_pca","r_cpu","fastEmbedR PCA [CPU]",11,11,1.65621948242188,36.9011383056641,0,,
+"pca","irlba_pca","r_cpu","irlba [CPU]",11,11,1.79656982421875,33.9827919006348,0,,
+"pca","fastembedr_pca","r_cuda","fastEmbedR PCA [CUDA]",11,11,1.84502410888672,37.0791625976562,0,,
+"pca","sklearn_pca","python_cpu","scikit-learn PCA [Python]",11,11,0.795627593994141,11.8556442260742,0,,
+"pca","cuml_pca","python_cuda","RAPIDS cuML PCA [CUDA]",11,11,1.10354232788086,18.9454765319824,0,,
+"tsne","rtsne","r_cpu","Rtsne [CPU]",9,9,1.38287734985352,4.3422966003418,0,,
+"tsne","fitsne","r_cpu","FIt-SNE [CPU]",11,11,1.74922180175781,34.5301818847656,0,,
+"tsne","fastembedr_tsne","r_cpu","fastEmbedR t-SNE [CPU]",11,11,1.52644729614258,22.4670639038086,0,,
+"tsne","fastembedr_tsne","r_cuda","fastEmbedR t-SNE [CUDA]",10,10,1.50654029846191,21.2038078308105,7,1.0302734375,17.7900390625
+"tsne","sklearn_tsne","python_cpu","scikit-learn t-SNE [Python]",7,7,0.764087677001953,1.12045288085938,0,,
+"tsne","python_opentsne","python_cpu","openTSNE [Python]",10,10,1.48866653442383,21.459156036377,0,,
+"tsne","cuml_tsne","python_cuda","RAPIDS cuML t-SNE [CUDA]",10,10,1.16510581970214,18.7824020385742,7,1.2841796875,16.9677734375
+"umap","r_umap","r_cpu","umap [CPU]",7,7,5.31914901733398,8.99716567993164,0,,
+"umap","uwot","r_cpu","uwot [CPU]",11,11,1.67891693115234,36.6609115600586,0,,
+"umap","uwot_fast_sgd","r_cpu","uwot fast SGD [CPU]",11,11,1.69594192504883,36.661491394043,0,,
+"umap","fastembedr_umap","r_cpu","fastEmbedR fuzzy UMAP [CPU]",11,11,1.49580764770508,25.2132835388184,0,,
+"umap","fastembedr_umap_binary","r_cpu","fastEmbedR binary UMAP [CPU]",11,11,1.49355316162109,25.2135772705078,0,,
+"umap","fastembedr_umap","r_cuda","fastEmbedR fuzzy UMAP [CUDA]",10,10,1.41618347167969,21.1334075927734,7,0.7783203125,13.5673828125
+"umap","fastembedr_umap_binary","r_cuda","fastEmbedR binary UMAP [CUDA]",10,10,1.41590881347657,21.1338310241699,7,0.7587890625,13.5732421875
+"umap","python_umap","python_cpu","umap-learn [Python]",10,10,2.08895301818848,51.6742935180664,0,,
+"umap","cuml_umap","python_cuda","RAPIDS cuML UMAP [CUDA]",10,10,1.47217559814453,15.999340057373,7,0.7314453125,11.9619140625
