@@ -28,7 +28,8 @@ singularity build --fakeroot \
 The definition checks archive hashes before installation, installs all
 three packages in order, refreshes embedded labels and the shared-library
 checksum, and verifies R and Python imports. Also run focused CPU/CUDA
-package tests and a real one-GPU file-backed fit on Chiamaka, then record
+package tests and `test_candidate_gpu.R` against the candidate with a
+physical CUDA device on Chiamaka, then record
 the candidate SHA-256. Use the same candidate bytes for the HPC after
 validation. Replace the stable `fastembedr_cuda.sif` only after those
 checks pass; never benchmark an image whose `source-identity.txt`, R
