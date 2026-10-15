@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 METHODS = ("pca", "knn", "tsne", "umap", "leiden", "louvain")
-FIELDS = ("mode", "rows", "lane", "job", "method", "status",
+FIELDS = ("mode", "rows", "lane", "job", "job_memory", "method", "status",
           "audit_status", "seconds", "stage_rss_bytes",
           "job_rss_peak_bytes", "gpu_peak_per_device_json",
           "ssd_peak_allocated_bytes", "output_bytes", "plot",
@@ -86,6 +86,7 @@ def summarize_case(job, root):
         stage = stages.get(method, {})
         records.append(dict(mode=mode, rows=job["rows"],
                             lane=job["lane"], job=job["job"],
+                            job_memory=job.get("job_memory", ""),
                             method=method, status=status,
                             audit_status=audit.get("status", "missing"),
                             seconds=stage.get("seconds", ""),

@@ -22,11 +22,20 @@ case_details() {
     esac
 }
 
+case_memory() {
+    if [[ "$1" == full && "$2" == 100000000 &&
+          "$3" == cpu4 ]]; then
+        echo 32G
+    else
+        echo 64G
+    fi
+}
+
 print_plan() {
-    printf 'mode\trows\tlane\tbackend\tcores\tdevices\tdepends_on\n'
-    printf 'classic\t1000000\tcpu4\tcpu\t4\t-\t-\n'
-    printf 'classic\t1000000\tcuda1\tcuda\t1\t0\t-\n'
-    local lane rows prior depends
+    printf 'mode\trows\tlane\tbackend\tcores\tdevices\tjob_memory\tdepends_on\n'
+    printf 'classic\t1000000\tcpu4\tcpu\t4\t-\t64G\t-\n'
+    printf 'classic\t1000000\tcuda1\tcuda\t1\t0\t64G\t-\n'
+    local lane rows prior depends memory
     for lane in "${lanes[@]}"; do
         case_details "$lane"
         prior=-
@@ -39,9 +48,10 @@ print_plan() {
             if [[ "$lane" == cuda4 && "$rows" == 100000000 ]]; then
                 depends+=,cuda2_100000000
             fi
-            printf 'full\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+            memory=$(case_memory full "$rows" "$lane")
+            printf 'full\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
                 "$rows" "$lane" "$backend" "$cores" \
-                "${devices:--}" "$depends"
+                "${devices:--}" "$memory" "$depends"
             prior="${lane}_${rows}"
         done
     done
@@ -62,14 +72,18 @@ if squeue -h -u "$USER" -o '%j' | grep '^feR_fg_' >/dev/null; then
     exit 2
 fi
 quota_free=${DEEP1B_QUOTA_FREE_BYTES:-}
-if [[ -z "$quota_free" ]] && command -v myquota >/dev/null; then
-    quota_free=$(myquota | awk '$1 == "/scratch" {
+quota_command=purequota
+if ! command -v "$quota_command" >/dev/null; then
+    quota_command=myquota
+fi
+if [[ -z "$quota_free" ]] && command -v "$quota_command" >/dev/null; then
+    quota_free=$("$quota_command" | awk '$1 == "/scratch" {
         gsub(/GB/, "", $2); gsub(/GB/, "", $3)
         printf "%.0f", ($2 - $3) * 1000000000
     }')
 fi
 [[ "$quota_free" =~ ^[0-9]+$ ]] || {
-    echo 'Set DEEP1B_QUOTA_FREE_BYTES from myquota.' >&2
+    echo 'Set DEEP1B_QUOTA_FREE_BYTES from purequota.' >&2
     exit 2
 }
 physical_free=$(df -B1 --output=avail "$base" | tail -n 1)
@@ -109,7 +123,7 @@ export DEEP1B_BASE="$base" DEEP1B_IMAGE="$image"
 export DEEP1B_IMAGE_SHA256="$digest"
 export DEEP1B_QUOTA_FREE_BYTES="$quota_free"
 export DEEP1B_FIRST_ROW=1000001 DEEP1B_SMOKE=0
-export DEEP1B_DEPENDENCY_TYPE=afterok
+export DEEP1B_DEPENDENCY_TYPE=afterany
 ledger=$base/fastEmbedR-results/massive-data/deep1b_matrix/
 ledger+=$(date -u +%Y%m%dT%H%M%SZ)
 mkdir -p "$ledger"
@@ -120,19 +134,21 @@ sha256sum "$suite/submit_matrix.sh" \
     "$suite/submit_fullgraph5m.sh" \
     "$suite/run_fullgraph_job.sh" \
     "$suite/run_full_graph.R" > "$ledger/source.sha256"
-printf 'mode\trows\tlane\tjob\tcampaign\tdependency\n' \
+printf 'mode\trows\tlane\tjob\tcampaign\tjob_memory\tdependency\n' \
     > "$ledger/jobs.tsv"
 
 declare -A last_job job_for_case
 submit_case() {
     local mode=$1 rows=$2 lane=$3 dependency=$4
     case_details "$lane"
-    local output record job campaign
+    local output record job campaign memory
+    memory=$(case_memory "$mode" "$rows" "$lane")
     output=$(DEEP1B_FIT_MODE="$mode" \
         DEEP1B_FULLGRAPH_ROWS="$rows" \
         DEEP1B_BACKEND_FILTER="$backend" \
         DEEP1B_CPU_CORES="$cores" \
         DEEP1B_GPU_DEVICES="$devices" \
+        DEEP1B_JOB_MEMORY="$memory" \
         DEEP1B_AFTER_JOB="$dependency" \
         bash "$suite/submit_fullgraph5m.sh" deep)
     record=$(printf '%s\n' "$output" | awk -F '\t' \
@@ -144,9 +160,9 @@ submit_case() {
         echo "Submission blocked: $mode $rows $lane" >&2
         exit 3
     }
-    printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
         "$mode" "$rows" "$lane" "$job" "$campaign" \
-        "${dependency:--}" >> "$ledger/jobs.tsv"
+        "$memory" "${dependency:--}" >> "$ledger/jobs.tsv"
     if [[ "$mode" == full ]]; then
         last_job[$lane]=$job
         job_for_case["${lane}_${rows}"]=$job

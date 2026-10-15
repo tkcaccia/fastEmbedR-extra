@@ -64,6 +64,13 @@ class MatrixPlanTest(unittest.TestCase):
         self.assertEqual(len(classic), 2)
         self.assertTrue(all(row["depends_on"] == "-"
                             for row in classic))
+        boundary = [row for row in rows if row["mode"] == "full"
+                    and row["rows"] == "100000000"
+                    and row["lane"] == "cpu4"]
+        self.assertEqual(len(boundary), 1)
+        self.assertEqual(boundary[0]["job_memory"], "32G")
+        self.assertTrue(all(row["job_memory"] == "64G"
+                            for row in rows if row not in boundary))
 
     def test_submitted_dependencies_match_plan(self):
         supported = subprocess.run(
@@ -93,9 +100,10 @@ class MatrixPlanTest(unittest.TestCase):
                 "deep \"$DEEP1B_BACKEND_FILTER\" "
                 "\"$DEEP1B_FIT_MODE\" \"$DEEP1B_FULLGRAPH_ROWS\" "
                 "\"$next\" \"$base/campaign-$next\"\n"
-                "printf '%s\\t%s\\t%s\\t%s\\n' "
+                "printf '%s\\t%s\\t%s\\t%s\\t%s\\t%s\\n' "
                 "\"$DEEP1B_FIT_MODE\" \"$DEEP1B_FULLGRAPH_ROWS\" "
                 "\"$DEEP1B_CPU_CORES\" \"$DEEP1B_AFTER_JOB\" "
+                "\"$DEEP1B_JOB_MEMORY\" \"$DEEP1B_DEPENDENCY_TYPE\" "
                 ">> \"$base/dependencies\"\n")
             (base / "counter").write_text("1000")
             image = base / "image.sif"
@@ -128,6 +136,18 @@ class MatrixPlanTest(unittest.TestCase):
             self.assertEqual(lookup[("full", "50000000", "cpu4")]
                              ["dependency"],
                              lookup[("full", "10000000", "cpu4")]["job"])
+            self.assertEqual(lookup[("full", "100000000", "cpu4")]
+                             ["job_memory"], "32G")
+            self.assertTrue(all(row["job_memory"] == "64G" for row in jobs
+                                if row is not lookup[("full", "100000000",
+                                                  "cpu4")]))
+            with (base / "dependencies").open(newline="") as stream:
+                dependencies = list(csv.reader(stream, delimiter="\t"))
+            self.assertTrue(all(row[5] == "afterany"
+                                for row in dependencies))
+            self.assertIn(["full", "100000000", "4",
+                           lookup[("full", "50000000", "cpu4")]["job"],
+                           "32G", "afterany"], dependencies)
             for row in jobs:
                 if row["lane"].startswith("cpu"):
                     self.assertNotIn(

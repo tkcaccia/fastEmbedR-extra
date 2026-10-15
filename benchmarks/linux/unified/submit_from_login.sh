@@ -4,11 +4,15 @@ set -euo pipefail
 
 base=${FASTEMBEDR_BASE:-/scratch/firenze/NN}
 suite=$base/benchmark_scripts/unified
-command -v myquota >/dev/null || {
-    echo 'Run this helper where myquota is available.' >&2
+quota_command=purequota
+if ! command -v "$quota_command" >/dev/null; then
+    quota_command=myquota
+fi
+command -v "$quota_command" >/dev/null || {
+    echo 'Run this helper where purequota is available.' >&2
     exit 2
 }
-free=$(myquota | awk '$1 == "/scratch" {
+free=$("$quota_command" | awk '$1 == "/scratch" {
     gsub(/GB/, "", $2); gsub(/GB/, "", $3)
     printf "%.0f", ($2 - $3) * 1000000000
 }')

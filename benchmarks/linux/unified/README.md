@@ -47,12 +47,16 @@ bash benchmark_scripts/massive-data/deep1b/submit_matrix.sh --plan
 bash benchmark_scripts/unified/submit_from_login.sh
 ```
 
-The login helper only reads the quota and submits a short CPU launcher.
+The login helper reads `purequota` (or `myquota` where it is an executable)
+and submits a short CPU launcher. On UCT, `myquota` is only an interactive
+alias, so noninteractive submissions use `purequota`.
 Container checks and both campaign submissions run on a compute node.
 The two JSS launches and Deep1B launch start independently, so an L40S
 queue does not block CPU cases. Within a Deep1B hardware lane, 1M and 10M
-are independent; 50M/100M cases wait for successful earlier same-lane
-cases to release scratch. The 16-CPU 100M case also waits for the 4-CPU
+are independent; 50M/100M cases wait for earlier same-lane jobs to finish
+and release scratch. These storage-only dependencies use `afterany`, so a
+failed smaller case does not suppress larger independent evidence. The
+16-CPU 100M case also waits for the 4-CPU
 100M case, and the 4-GPU 100M case waits for the 2-GPU 100M case. These
 two cross-lane dependencies cap concurrent large payloads under the
 explicit quota reserve. Jobs, identities, dependencies, and launch failures
@@ -69,7 +73,10 @@ successful methods from partial jobs and names unsupported clustering
 routes explicitly; it does not read the full embeddings into RAM.
 The kNN row includes the observed recall, the explicit 0.99 gate result,
 the count of sampled rows below target, and the per-shard HNSW settings
-file when that CPU route was used.
+file when that CPU route was used. The full 100M CPU4 case has a 32 GB
+Slurm RAM cap, below its 38.4 GB input matrix. It supports a beyond-RAM
+claim only if that fit passes with every output row present; the other
+cases use a 64 GB cap. The per-case limit appears in both ledgers.
 
 ## Publication gates
 

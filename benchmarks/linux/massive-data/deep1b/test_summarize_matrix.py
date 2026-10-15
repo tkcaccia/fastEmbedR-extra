@@ -21,7 +21,8 @@ class SummaryTest(unittest.TestCase):
     def test_single_gpu_clustering_is_explicitly_unsupported(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            job = dict(mode="full", rows="3", lane="cuda1", job="12")
+            job = dict(mode="full", rows="3", lane="cuda1", job="12",
+                       job_memory="64G")
             (root / "audit.json").write_text(
                 json.dumps({"status": "PASS"}))
             write_csv(root / "knn.csv", dict(observed_recall="0.99",
@@ -43,6 +44,7 @@ class SummaryTest(unittest.TestCase):
             by_method = {row["method"]: row for row in rows}
             self.assertEqual(by_method["knn"]["knn_recall_mean"],
                              "0.99")
+            self.assertEqual(by_method["knn"]["job_memory"], "64G")
             self.assertEqual(by_method["knn"]["knn_recall_target_met"],
                              "FALSE")
             self.assertEqual(by_method["knn"]["knn_rows_below_target"],

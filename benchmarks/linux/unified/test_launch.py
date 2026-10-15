@@ -27,20 +27,27 @@ class UnifiedLaunchTest(unittest.TestCase):
             (suite / "submit.sbatch").write_text("#!/bin/bash\n")
             bin_dir = root / "bin"
             bin_dir.mkdir()
-            quota = bin_dir / "myquota"
-            quota.write_text("#!/bin/sh\necho '/scratch 2048GB 975GB 47%'\n")
-            quota.chmod(0o755)
             submit = bin_dir / "sbatch"
             submit.write_text("#!/bin/sh\nprintf '%s\\n' \"$@\"\n")
             submit.chmod(0o755)
             env = dict(os.environ, FASTEMBEDR_BASE=str(root),
                        PATH=str(bin_dir) + os.pathsep + os.environ["PATH"])
-            run = subprocess.run(
-                ["bash", str(SUITE / "submit_from_login.sh")],
-                env=env, check=True, capture_output=True, text=True)
-            self.assertIn("DEEP1B_QUOTA_FREE_BYTES=1073000000000",
-                          run.stdout)
-            self.assertIn(str(suite / "submit.sbatch"), run.stdout)
+            for command in ("purequota", "myquota"):
+                with self.subTest(command=command):
+                    quota = bin_dir / command
+                    quota.write_text(
+                        "#!/bin/sh\necho '/scratch 2048GB 975GB 47%'\n")
+                    quota.chmod(0o755)
+                    run = subprocess.run(
+                        ["bash", str(SUITE / "submit_from_login.sh")],
+                        env=env, check=True, capture_output=True,
+                        text=True)
+                    self.assertIn(
+                        "DEEP1B_QUOTA_FREE_BYTES=1073000000000",
+                        run.stdout)
+                    self.assertIn(str(suite / "submit.sbatch"),
+                                  run.stdout)
+                    quota.unlink()
 
 
 if __name__ == "__main__":
