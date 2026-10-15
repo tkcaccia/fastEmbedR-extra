@@ -12,7 +12,9 @@ FIELDS = ("mode", "rows", "lane", "job", "method", "status",
           "audit_status", "seconds", "stage_rss_bytes",
           "job_rss_peak_bytes", "gpu_peak_per_device_json",
           "ssd_peak_allocated_bytes", "output_bytes", "plot",
-          "knn_recall_mean", "knn_recall_min", "error", "campaign")
+          "knn_recall_mean", "knn_recall_min",
+          "knn_recall_target_met", "knn_rows_below_target",
+          "hnsw_settings_csv", "error", "campaign")
 
 
 def csv_rows(path, delimiter=","):
@@ -100,6 +102,16 @@ def summarize_case(job, root):
                             if method == "knn" else "",
                             knn_recall_min=knn.get("minimum_row_recall", "")
                             if method == "knn" else "",
+                            knn_recall_target_met=knn.get(
+                                "sample_target_met", "")
+                            if method == "knn" else "",
+                            knn_rows_below_target=knn.get(
+                                "sampled_rows_below_target", "")
+                            if method == "knn" else "",
+                            hnsw_settings_csv=str(root / "hnsw_settings.csv")
+                            if method == "knn" and
+                            (root / "hnsw_settings.csv").is_file()
+                            else "",
                             error=reason, campaign=str(root)))
     return records
 

@@ -25,7 +25,10 @@ class SummaryTest(unittest.TestCase):
             (root / "audit.json").write_text(
                 json.dumps({"status": "PASS"}))
             write_csv(root / "knn.csv", dict(observed_recall="0.99",
-                      minimum_row_recall="0.9"))
+                      minimum_row_recall="0.9",
+                      sample_target_met="FALSE",
+                      sampled_rows_below_target="1"))
+            (root / "hnsw_settings.csv").write_text("shard,m\n1,32\n")
             write_csv(root / "unsupported_methods.tsv", dict(
                 method="leiden", reason="needs 2-4 GPUs"), "\t")
             for method in ("pca", "tsne", "umap"):
@@ -40,6 +43,12 @@ class SummaryTest(unittest.TestCase):
             by_method = {row["method"]: row for row in rows}
             self.assertEqual(by_method["knn"]["knn_recall_mean"],
                              "0.99")
+            self.assertEqual(by_method["knn"]["knn_recall_target_met"],
+                             "FALSE")
+            self.assertEqual(by_method["knn"]["knn_rows_below_target"],
+                             "1")
+            self.assertEqual(by_method["knn"]["hnsw_settings_csv"],
+                             str(root / "hnsw_settings.csv"))
             self.assertEqual(by_method["umap"]["status"], "ok")
             self.assertEqual(by_method["leiden"]["status"],
                              "unsupported")

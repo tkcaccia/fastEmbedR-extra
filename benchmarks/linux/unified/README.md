@@ -67,6 +67,9 @@ python3 benchmark_scripts/massive-data/deep1b/summarize_matrix.py \
 It preserves
 successful methods from partial jobs and names unsupported clustering
 routes explicitly; it does not read the full embeddings into RAM.
+The kNN row includes the observed recall, the explicit 0.99 gate result,
+the count of sampled rows below target, and the per-shard HNSW settings
+file when that CPU route was used.
 
 ## Publication gates
 
