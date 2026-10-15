@@ -65,16 +65,24 @@ if [[ "${1:-}" == --plan ]]; then
     print_plan
     exit 0
 fi
-[[ $# == 0 ]] || { echo 'Usage: submit_matrix.sh [--plan]' >&2; exit 2; }
+resume_ledger=
+if [[ "${1:-}" == --resume && $# == 2 ]]; then
+    resume_ledger=$2
+elif [[ $# != 0 ]]; then
+    echo 'Usage: submit_matrix.sh [--plan|--resume JOBS.tsv]' >&2
+    exit 2
+fi
 [[ -s "$image" && -s "$suite/submit_fullgraph5m.sh" ]] || {
     echo 'Image or Deep1B suite is missing.' >&2
     exit 2
 }
-if squeue -h -u "$USER" -o '%j' | grep '^feR_fg_' >/dev/null; then
+if [[ -z "$resume_ledger" ]] &&
+   squeue -h -u "$USER" -o '%j' | grep '^feR_fg_' >/dev/null; then
     echo 'An earlier full-graph job is still active.' >&2
     exit 2
 fi
 quota_free=${DEEP1B_QUOTA_FREE_BYTES:-}
+if [[ -n "$resume_ledger" ]]; then quota_free=; fi
 quota_command=purequota
 if ! command -v "$quota_command" >/dev/null; then
     quota_command=myquota
@@ -108,7 +116,7 @@ peak += 200_000_000_000  # Two independent JSS campaign reserves.
 print(peak, (peak * 20 + 16) // 17)
 PY
 )
-if ((available < required)); then
+if [[ -z "$resume_ledger" ]] && ((available < required)); then
     printf 'Need %s free bytes for independent lanes; have %s.\n' \
         "$required" "$available" >&2
     exit 3
@@ -127,33 +135,97 @@ export DEEP1B_IMAGE_SHA256="$digest"
 export DEEP1B_QUOTA_FREE_BYTES="$quota_free"
 export DEEP1B_FIRST_ROW=1000001 DEEP1B_SMOKE=0
 export DEEP1B_DEPENDENCY_TYPE=afterany
-ledger=$base/fastEmbedR-results/massive-data/deep1b_matrix/
-ledger+=$(date -u +%Y%m%dT%H%M%SZ)
-mkdir -p "$ledger"
-print_plan > "$ledger/plan.tsv"
-printf 'image_sha256=%s\nreserved_peak_bytes=%s\n' \
-    "$digest" "$reserved" > "$ledger/identity.txt"
-sha256sum "$suite/submit_matrix.sh" \
-    "$suite/submit_fullgraph5m.sh" \
-    "$suite/run_fullgraph_job.sh" \
-    "$suite/run_full_graph.R" > "$ledger/source.sha256"
-printf 'mode\trows\tlane\tjob\tcampaign\tjob_memory\tdependency\n' \
-    > "$ledger/jobs.tsv"
+if [[ -n "$resume_ledger" ]]; then
+    ledger=$(dirname "$(realpath "$resume_ledger")")
+    matrix_root=$base/fastEmbedR-results/massive-data/deep1b_matrix
+    [[ "$ledger" == "$matrix_root/"* ]] || {
+        echo 'Resume ledger is outside the Deep1B matrix root.' >&2
+        exit 2
+    }
+    expected=$(sed -n 's/^image_sha256=//p' "$ledger/identity.txt")
+    [[ "$expected" == "$digest" ]] || {
+        echo 'Resume image differs from the source-locked matrix.' >&2
+        exit 3
+    }
+    awk -v scheduler="$suite/submit_matrix.sh" \
+        '$2 != scheduler' "$ledger/source.sha256" | \
+        sha256sum -c - >/dev/null || {
+        echo 'Deep1B runner changed after matrix submission.' >&2
+        exit 3
+    }
+    sha256sum "$suite/submit_matrix.sh" \
+        >> "$ledger/resume_source.sha256"
+else
+    ledger=$base/fastEmbedR-results/massive-data/deep1b_matrix/
+    ledger+=$(date -u +%Y%m%dT%H%M%SZ)
+    mkdir -p "$ledger"
+    print_plan > "$ledger/plan.tsv"
+    printf 'image_sha256=%s\nreserved_peak_bytes=%s\n' \
+        "$digest" "$reserved" > "$ledger/identity.txt"
+    sha256sum "$suite/submit_matrix.sh" \
+        "$suite/submit_fullgraph5m.sh" \
+        "$suite/run_fullgraph_job.sh" \
+        "$suite/run_full_graph.R" > "$ledger/source.sha256"
+    printf 'mode\trows\tlane\tjob\tcampaign\tjob_memory\tdependency\n' \
+        > "$ledger/jobs.tsv"
+fi
 
-declare -A last_job job_for_case
+declare -A last_job job_for_case submitted
+if [[ -n "$resume_ledger" ]]; then
+    while IFS=$'\t' read -r mode rows lane job campaign memory dependency; do
+        [[ "$job" =~ ^[0-9]+$ ]] || continue
+        submitted["${mode}_${lane}_${rows}"]=$job
+        if [[ "$mode" == full ]]; then
+            last_job[$lane]=$job
+            job_for_case["${lane}_${rows}"]=$job
+        fi
+    done < "$ledger/jobs.tsv"
+fi
+schedule_retry() {
+    local -a gpu_jobs
+    mapfile -t gpu_jobs < <(squeue -h -u "$USER" -p l40s \
+        -o '%A' | sort -u)
+    ((${#gpu_jobs[@]})) || {
+        echo 'GPU submission blocked with no active GPU job to wait for.' >&2
+        exit 3
+    }
+    local joined command controller
+    joined=$(IFS=:; echo "${gpu_jobs[*]}")
+    printf -v command 'bash %q --resume %q' \
+        "$suite/submit_matrix.sh" "$ledger/jobs.tsv"
+    controller=$(sbatch --parsable --account=immunology --partition=ada \
+        --cpus-per-task=1 --mem=2G --time=00:20:00 \
+        --job-name=feR_deep_matrix_resume \
+        --output="$base/benchmark_logs/feR_deep_resume_%j.out" \
+        --error="$base/benchmark_logs/feR_deep_resume_%j.err" \
+        --dependency="afterany:$joined" --export=ALL \
+        --wrap="$command")
+    printf 'controller_job\t%s\nwait_for_gpu_jobs\t%s\n' \
+        "$controller" "$joined" > "$ledger/resume.tsv"
+    printf 'GPU quota reached; matrix resume %s will retry later.\n' \
+        "$controller"
+}
 submit_case() {
     local mode=$1 rows=$2 lane=$3 dependency=$4
+    [[ -z "${submitted["${mode}_${lane}_${rows}"]:-}" ]] || return 0
     case_details "$lane"
     local output record job campaign memory
     memory=$(case_memory "$mode" "$rows" "$lane")
-    output=$(DEEP1B_FIT_MODE="$mode" \
+    if ! output=$(DEEP1B_FIT_MODE="$mode" \
         DEEP1B_FULLGRAPH_ROWS="$rows" \
         DEEP1B_BACKEND_FILTER="$backend" \
         DEEP1B_CPU_CORES="$cores" \
         DEEP1B_GPU_DEVICES="$devices" \
         DEEP1B_JOB_MEMORY="$memory" \
         DEEP1B_AFTER_JOB="$dependency" \
-        bash "$suite/submit_fullgraph5m.sh" deep)
+        bash "$suite/submit_fullgraph5m.sh" deep 2>&1); then
+        if grep -q 'QOSMaxGRESPerUser' <<< "$output"; then
+            schedule_retry
+            exit 0
+        fi
+        echo "$output" >&2
+        exit 3
+    fi
     record=$(printf '%s\n' "$output" | awk -F '\t' \
         -v route="$backend" '$1 == "deep" && $2 == route')
     [[ -n "$record" ]] || { echo "$output" >&2; exit 1; }
@@ -166,6 +238,7 @@ submit_case() {
     printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
         "$mode" "$rows" "$lane" "$job" "$campaign" \
         "$memory" "${dependency:--}" >> "$ledger/jobs.tsv"
+    submitted["${mode}_${lane}_${rows}"]=$job
     if [[ "$mode" == full ]]; then
         last_job[$lane]=$job
         job_for_case["${lane}_${rows}"]=$job

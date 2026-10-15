@@ -41,6 +41,8 @@ printf '%s  %s\n' "$digest" "$image" > "$root/image.sha256"
 sha256sum "$suite/unified/launch.sh" \
     "$suite/unified/submit.sbatch" \
     "$suite/unified/submit_from_login.sh" \
+    "$suite/unified/stage_jss.sh" \
+    "$suite/unified/launch_jss.sh" \
     "$suite/jss-review-validation/submit_complete_campaign.sh" \
     "$suite/massive-data/deep1b/submit_matrix.sh" \
     > "$root/source.sha256"
@@ -51,41 +53,21 @@ export BASE_DIR="$base" IMAGE="$image"
 export TIMING_REPS=${TIMING_REPS:-5}
 
 set +e
-FULL_CUDA_PAIR=TRUE INCLUDE_NOMAD=TRUE \
-JSS_CAMPAIGN_ID="$(date -u +%Y%m%dT%H%M%SZ)_${SLURM_JOB_ID}_paired" \
-PREFLIGHT_ROOT="$root/jss_paired_preflight" \
-bash "$suite/jss-review-validation/submit_complete_campaign.sh" \
-    > "$root/jss_paired_launch.log" 2>&1 &
-jss_paired_pid=$!
-FULL_CUDA_PAIR=FALSE INCLUDE_NOMAD=FALSE \
-JSS_CAMPAIGN_ID="$(date -u +%Y%m%dT%H%M%SZ)_${SLURM_JOB_ID}_extended" \
-PREFLIGHT_ROOT="$root/jss_extended_preflight" \
-bash "$suite/jss-review-validation/submit_complete_campaign.sh" \
-    > "$root/jss_extended_launch.log" 2>&1 &
-jss_extended_pid=$!
+bash "$suite/unified/stage_jss.sh" "$root" \
+    > "$root/jss_stage_launch.log" 2>&1
+jss_status=$?
 bash "$suite/massive-data/deep1b/submit_matrix.sh" \
-    > "$root/deep1b_launch.log" 2>&1 &
-deep_pid=$!
-wait "$jss_paired_pid"
-jss_paired_status=$?
-wait "$jss_extended_pid"
-jss_extended_status=$?
-wait "$deep_pid"
+    > "$root/deep1b_launch.log" 2>&1
 deep_status=$?
 set -e
 printf 'campaign\tlaunch_exit_code\tlog\n' > "$root/launch_status.tsv"
-printf 'jss_paired_nomad\t%s\tjss_paired_launch.log\n' \
-    "$jss_paired_status" \
-    >> "$root/launch_status.tsv"
-printf 'jss_extended\t%s\tjss_extended_launch.log\n' \
-    "$jss_extended_status" \
+printf 'jss_staged\t%s\tjss_stage_launch.log\n' "$jss_status" \
     >> "$root/launch_status.tsv"
 printf 'deep1b\t%s\tdeep1b_launch.log\n' "$deep_status" \
     >> "$root/launch_status.tsv"
 printf 'Unified launch record: %s\n' "$root"
 cat "$root/launch_status.tsv"
-if ((jss_paired_status != 0 || jss_extended_status != 0 ||
-      deep_status != 0)); then
+if ((jss_status != 0 || deep_status != 0)); then
     echo 'Inspect both launch logs; submitted jobs were not canceled.' >&2
     exit 1
 fi

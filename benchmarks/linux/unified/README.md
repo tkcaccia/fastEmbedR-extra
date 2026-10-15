@@ -50,18 +50,42 @@ bash benchmark_scripts/unified/submit_from_login.sh
 The login helper reads `purequota` (or `myquota` where it is an executable)
 and submits a short CPU launcher. On UCT, `myquota` is only an interactive
 alias, so noninteractive submissions use `purequota`.
-Container checks and both campaign submissions run on a compute node.
-The two JSS launches and Deep1B launch start independently, so an L40S
-queue does not block CPU cases. Within a Deep1B hardware lane, 1M and 10M
-are independent; 50M/100M cases wait for earlier same-lane jobs to finish
+Container checks and campaign staging run on a compute node. JSS submits
+one strict CPU and one strict CUDA preflight first, then independent paired
+NOMAD and extended campaign controllers after both pass. A GPU quota
+refusal schedules a small CPU retry controller; it does not stop the
+independent Deep1B CPU jobs. Deep1B resumes unsubmitted GPU lanes the
+same way, without duplicating jobs recorded in its ledger. The unified
+launch status records staging, not final benchmark success. Within a
+Deep1B hardware lane, 1M and 10M are independent; 50M/100M cases wait
+for earlier same-lane jobs to finish
 and release scratch. These storage-only dependencies use `afterany`, so a
 failed smaller case does not suppress larger independent evidence. The
-16-CPU 100M case also waits for the 4-CPU
-100M case. The 2-GPU 100M case waits for the 1-GPU 100M case, and the
+16-CPU 100M case also waits for the 4-CPU 100M case. The 2-GPU 100M
+case waits for the 1-GPU 100M case, and the
 4-GPU 100M case waits for the 2-GPU 100M case. These cross-lane
 dependencies cap concurrent large payloads under the
 explicit quota reserve. Jobs, identities, dependencies, and launch failures
 are recorded in `fastEmbedR-results/unified/` and the Deep1B matrix ledger.
+If a previous launcher stopped after submitting some Deep1B jobs, resume
+its existing matrix instead of rerunning `submit_from_login.sh`:
+
+```sh
+MATRIX_ROOT=/scratch/firenze/NN/fastEmbedR-results/massive-data
+MATRIX=$MATRIX_ROOT/deep1b_matrix/MATRIX_RUN_ID/jobs.tsv
+bash benchmark_scripts/massive-data/deep1b/submit_matrix.sh \
+  --resume "$MATRIX"
+FASTEMBEDR_IMAGE_SHA256=IMAGE_SHA256 \
+  bash benchmark_scripts/unified/stage_jss.sh \
+  /scratch/firenze/NN/fastEmbedR-results/unified/UNIFIED_RUN_ID
+```
+
+Use the actual run IDs and verified image hash. Matrix resume checks the
+image identity, reuses every recorded job, and records the new scheduler
+source hash. A GPU quota refusal creates a dependent CPU retry job; if a
+four-GPU request still fails after all other GPU jobs finish, it stops
+and reports the account limit instead of looping.
+
 After jobs finish, make a compact `methods.csv`:
 
 ```sh

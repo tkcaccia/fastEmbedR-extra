@@ -99,6 +99,10 @@ class MatrixPlanTest(unittest.TestCase):
                 (suite / name).write_text("# fixture\n")
             (suite / "submit_fullgraph5m.sh").write_text(
                 "#!/bin/bash\n"
+                "if [[ \"${TEST_BLOCK_CUDA4:-}\" == 1 && "
+                "\"$DEEP1B_GPU_DEVICES\" == 0,1,2,3 ]]; then\n"
+                "  echo QOSMaxGRESPerUser >&2; exit 1\n"
+                "fi\n"
                 "base=$DEEP1B_BASE\n"
                 "next=$(cat \"$base/counter\")\n"
                 "next=$((next+1))\n"
@@ -118,8 +122,15 @@ class MatrixPlanTest(unittest.TestCase):
             bin_dir = base / "bin"
             bin_dir.mkdir()
             for name, contents in (
-                ("squeue", "#!/bin/sh\nexit 0\n"),
-                ("df", "#!/bin/sh\nprintf 'Avail\\n9999999999999\\n'\n")):
+                ("squeue", "#!/bin/sh\n"
+                 "if [ \"${TEST_GPU_JOBS:-}\" = 1 ]; then\n"
+                 "  printf '2001\\n2002\\n'\nfi\n"),
+                ("df", "#!/bin/sh\nprintf 'Avail\\n9999999999999\\n'\n"),
+                ("purequota", "#!/bin/sh\n"
+                 "echo '/scratch 999999GB 0GB 0%'\n"),
+                ("sbatch", "#!/bin/sh\n"
+                 "printf '%s\\n' \"$@\" > \"$DEEP1B_BASE/sbatch_args\"\n"
+                 "echo 9999\n")):
                 command = bin_dir / name
                 command.write_text(contents)
                 command.chmod(0o755)
@@ -164,6 +175,24 @@ class MatrixPlanTest(unittest.TestCase):
             self.assertEqual(two_gpu["dependency"], ":".join((
                 lookup[("full", "50000000", "cuda2")]["job"],
                 lookup[("full", "100000000", "cuda1")]["job"])))
+            lines = ledger.read_text().splitlines()
+            ledger.write_text("\n".join(lines[:-4]) + "\n")
+            blocked_env = dict(env, TEST_BLOCK_CUDA4="1",
+                               TEST_GPU_JOBS="1")
+            resume = subprocess.run(
+                ["bash", str(suite / SCRIPT.name), "--resume",
+                 str(ledger)], env=blocked_env, capture_output=True,
+                text=True)
+            self.assertEqual(resume.returncode, 0, resume.stderr)
+            self.assertEqual(len(csv_rows(ledger)), 22)
+            self.assertIn("2001:2002", (base / "sbatch_args").read_text())
+            self.assertIn("controller_job\t9999",
+                          (ledger.parent / "resume.tsv").read_text())
+            resume = subprocess.run(
+                ["bash", str(suite / SCRIPT.name), "--resume",
+                 str(ledger)], env=env, capture_output=True, text=True)
+            self.assertEqual(resume.returncode, 0, resume.stderr)
+            self.assertEqual(len(csv_rows(ledger)), 26)
 
 
 if __name__ == "__main__":
