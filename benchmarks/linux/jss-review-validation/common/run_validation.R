@@ -390,6 +390,10 @@ longrun_output_dir <- function(name, used_backend, seed, grid, iterations,
     file.path(output_root, "tsne_longrun", name, used_backend, config)
 }
 
+tsne_record_costs <- function(used_backend) {
+    identical(used_backend, "cpu")
+}
+
 run_longrun_tsne <- function() {
     require_expected_version()
     assert_backend(backend)
@@ -419,7 +423,8 @@ run_longrun_tsne <- function() {
             n_iter = normal_iterations, exaggeration = 1,
             initial_momentum = 0.8, final_momentum = 0.8,
             max_step_norm = 5, negative_gradient_method = "fft",
-            record_costs = TRUE, auto_config = FALSE
+            record_costs = tsne_record_costs(backend),
+            auto_config = FALSE
         )
     })[["elapsed"]]
     assert_layout_backend(layout, backend)
@@ -601,7 +606,8 @@ run_tsne_once <- function(knn, init, multiplier, seed, used_backend) {
         early_exaggeration = 12, n_iter = 500L,
         exaggeration = 1, initial_momentum = 0.8,
         final_momentum = 0.8, max_step_norm = "auto",
-        negative_gradient_method = "fft", record_costs = TRUE,
+        negative_gradient_method = "fft",
+        record_costs = tsne_record_costs(used_backend),
         auto_config = FALSE, verbose = FALSE
     )
     if (multiplier == 1) {
@@ -744,7 +750,8 @@ run_matched_quality_fit <- function(method, shared, seed) {
             exaggeration = 1, initial_momentum = 0.8,
             final_momentum = 0.8, max_step_norm = 5,
             negative_gradient_method = "fft",
-            record_costs = TRUE, auto_config = FALSE
+            record_costs = tsne_record_costs(backend),
+            auto_config = FALSE
         ))
     }
     fastEmbedR::umap_knn(
@@ -766,7 +773,8 @@ run_workflow_quality_fit <- function(method, x, shared, seed) {
             exaggeration = 1, initial_momentum = 0.8,
             final_momentum = 0.8, max_step_norm = 5,
             negative_gradient_method = "fft",
-            record_costs = TRUE, auto_config = FALSE
+            record_costs = tsne_record_costs(backend),
+            auto_config = FALSE
         ))
     }
     fastEmbedR::umap(

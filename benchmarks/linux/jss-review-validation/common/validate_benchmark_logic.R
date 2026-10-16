@@ -76,8 +76,17 @@ load_functions <- function(path, names) {
 load_functions(file.path(root, "common", "run_validation.R"), c(
     "workflow_timing_eligibility", "cuda_workflow_ratios",
     "umap_binary_vs_fuzzy", "scaling_stages",
-    "scaling_stage_size", "summarize_scaling"
+    "scaling_stage_size", "summarize_scaling", "tsne_record_costs"
 ))
+stopifnot(isTRUE(tsne_record_costs("cpu")),
+    identical(tsne_record_costs("cuda"), FALSE),
+    identical(tsne_record_costs("cuda2"), FALSE))
+load_functions(file.path(root, "common", "score_full_cuda_pair.R"),
+    "quality_fit_status")
+stopifnot(quality_fit_status("cuml_tsne", "success"),
+    quality_fit_status("cuml_tsne", "invalid_fitted_kl"),
+    !quality_fit_status("cuml_umap", "invalid_fitted_kl"),
+    !quality_fit_status("cuml_tsne", "failed"))
 scaling_fixture <- expand.grid(
     threads = c(1L, 2L, 4L, 8L, 12L), replicate = 1:2
 )

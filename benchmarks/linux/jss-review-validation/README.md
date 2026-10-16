@@ -82,7 +82,7 @@ full-resolution `embedding.png`, `embedding.csv.gz`, timing repetitions, and
 status under
 `results/workflow_comparators/{r_cuda,python_cuda}/DATASET/METHOD/`.
 If cuML reports invalid fitted KL after 1,000 iterations, its finite layout
-and independent quality metrics are retained for inspection, but its status
+and independent post-fit quality metrics are retained for inspection, but its status
 is `invalid_fitted_kl` and its timing is ineligible. An incomplete pair is
 visibly marked and fails the final audit.
 
@@ -466,10 +466,10 @@ input and benchmark waves are submitted.
 - CUDA jobs sample device memory every 0.05 seconds and retain both the raw
   GPU memory and the increment above the pre-run allocator baseline. Missing
   device IDs and failed samples fail the measurement with a diagnostic.
-  Sampling uses job-visible CUDA/NVML IDs; `*.gpu_identity.csv` maps each
-  such ID to the Slurm physical ID and GPU UUID. Physical Slurm IDs may be
-  renumbered inside the allocation and must not be passed directly to
-  `nvidia-smi -i` there.
+  `*.gpu_identity.csv` records the CUDA-visible, NVML, and Slurm IDs with
+  the GPU UUID. A single allocated GPU can have different CUDA and NVML
+  indices; the monitor resolves that unambiguous case. Ambiguous multi-GPU
+  mappings fail instead of reporting memory for the wrong device.
 - The support experiment separates repeated timing at seed 4 from independent
   embedding seeds. The warm-up run is never included in timing summaries.
 - Timing summaries never use one run per seed as timing replicates. They report

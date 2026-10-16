@@ -24,6 +24,12 @@ if (identical(Sys.getenv("INCLUDE_NOMAD"), "TRUE")) {
         mode = "python_cuda", method = "nomad"))
 }
 
+quality_fit_status <- function(method, status) {
+    identical(status, "success") ||
+        (identical(method, "cuml_tsne") &&
+            identical(status, "invalid_fitted_kl"))
+}
+
 score_method <- function(index, high, labels, quality_rows, source_n,
                          perplexity) {
     mode <- methods$mode[[index]]
@@ -31,8 +37,10 @@ score_method <- function(index, high, labels, quality_rows, source_n,
     directory <- file.path(output_root, "workflow_comparators", mode,
         dataset, method)
     fit_status <- file.path(directory, "status.csv")
-    if (!file.exists(fit_status) ||
-            utils::read.csv(fit_status)$status[[1L]] != "success") {
+    status <- if (file.exists(fit_status)) {
+        utils::read.csv(fit_status)$status[[1L]]
+    } else NA_character_
+    if (!quality_fit_status(method, status)) {
         return(data.frame(method = method, status = "fit_unavailable",
             error = NA_character_))
     }
@@ -67,7 +75,7 @@ score_method <- function(index, high, labels, quality_rows, source_n,
         quality_sample_n = length(quality_rows),
         analysis = "posthoc_R"
     ), quality), file.path(directory, "quality.csv"))
-    data.frame(method = method, status = "success",
+    data.frame(method = method, status = status,
         error = NA_character_)
 }
 
@@ -92,7 +100,7 @@ main <- function() {
     summary <- do.call(rbind, reports)
     directory <- file.path(output_root, "posthoc_quality", dataset)
     write_csv_atomic(summary, file.path(directory, "status.csv"))
-    if (!all(summary$status == "success")) {
+    if (!all(summary$status %in% c("success", "invalid_fitted_kl"))) {
         stop("Full-row quality pass has missing or failed methods.")
     }
 }

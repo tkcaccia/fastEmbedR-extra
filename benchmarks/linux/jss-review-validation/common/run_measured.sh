@@ -21,6 +21,7 @@ GPU_ERROR="${PREFIX}.gpu_monitor.err"
 GPU_READY="${PREFIX}.gpu_monitor.ready"
 EXIT_FILE="${PREFIX}.exit_status"
 declare -A BASELINES=()
+declare -A NVML_IDS=()
 MONITOR_PID=""
 
 gnu_time_bin() {
@@ -107,28 +108,42 @@ if [[ "$BACKEND" == "cuda" ]]; then
   }
   : > "$GPU_ERROR"
   rm -f "$GPU_READY"
-  printf 'gpu_id,slurm_physical_id,gpu_uuid\n' > "$GPU_IDENTITY_FILE"
+  printf 'gpu_id,nvml_id,slurm_physical_id,gpu_uuid\n' \
+    > "$GPU_IDENTITY_FILE"
   PHYSICAL_TEXT=${SLURM_JOB_GPUS:-}
   PHYSICAL_IDS=( ${PHYSICAL_TEXT//,/ } )
   GPU_POSITION=0
   for GPU_ID in ${GPU_IDS//,/ }; do
-    BASELINES["$GPU_ID"]="$(nvidia-smi -i "$GPU_ID" \
+    NVML_ID="$GPU_ID"
+    BASELINE="$(nvidia-smi -i "$NVML_ID" \
       --query-gpu=memory.used --format=csv,noheader,nounits \
-      2>> "$GPU_ERROR" | tr -d '[:space:]')"
-    [[ "${BASELINES[$GPU_ID]}" =~ ^[0-9]+$ ]] || {
+      2>/dev/null | tr -d '[:space:]')"
+    if [[ ! "$BASELINE" =~ ^[0-9]+$ ]]; then
+      mapfile -t VISIBLE_NVML < <(nvidia-smi --query-gpu=index \
+        --format=csv,noheader,nounits 2>> "$GPU_ERROR")
+      if [[ "$GPU_IDS" != *,* && ${#VISIBLE_NVML[@]} -eq 1 ]]; then
+        NVML_ID="${VISIBLE_NVML[0]}"
+        BASELINE="$(nvidia-smi -i "$NVML_ID" \
+          --query-gpu=memory.used --format=csv,noheader,nounits \
+          2>> "$GPU_ERROR" | tr -d '[:space:]')"
+      fi
+    fi
+    [[ "$BASELINE" =~ ^[0-9]+$ ]] || {
       echo "Invalid GPU memory baseline for device $GPU_ID" \
         >> "$GPU_ERROR"
       cat "$GPU_ERROR" >&2
       exit 1
     }
-    GPU_UUID="$(nvidia-smi -i "$GPU_ID" --query-gpu=uuid \
+    BASELINES["$GPU_ID"]="$BASELINE"
+    NVML_IDS["$GPU_ID"]="$NVML_ID"
+    GPU_UUID="$(nvidia-smi -i "$NVML_ID" --query-gpu=uuid \
       --format=csv,noheader 2>> "$GPU_ERROR" | tr -d '[:space:]')"
     [[ "$GPU_UUID" == GPU-* || "$GPU_UUID" == MIG-* ]] || {
       echo "Invalid UUID for visible GPU $GPU_ID" >> "$GPU_ERROR"
       cat "$GPU_ERROR" >&2
       exit 1
     }
-    printf '%s,%s,%s\n' "$GPU_ID" \
+    printf '%s,%s,%s,%s\n' "$GPU_ID" "$NVML_ID" \
       "${PHYSICAL_IDS[$GPU_POSITION]:-NA}" "$GPU_UUID" \
       >> "$GPU_IDENTITY_FILE"
     GPU_POSITION=$((GPU_POSITION + 1))
@@ -142,7 +157,8 @@ if [[ "$BACKEND" == "cuda" ]]; then
   (
     while true; do
       for GPU_ID in ${GPU_IDS//,/ }; do
-        USED="$(nvidia-smi -i "$GPU_ID" --query-gpu=memory.used \
+        USED="$(nvidia-smi -i "${NVML_IDS[$GPU_ID]}" \
+          --query-gpu=memory.used \
           --format=csv,noheader,nounits 2>> "$GPU_ERROR" |
           tr -d '[:space:]')"
         BASELINE="${BASELINES[$GPU_ID]}"
