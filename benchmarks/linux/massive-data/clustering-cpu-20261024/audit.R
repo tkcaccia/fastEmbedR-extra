@@ -4,11 +4,9 @@ campaign <- normalizePath(args[[1L]], mustWork = TRUE)
 jobs <- read.delim(file.path(campaign, "jobs.tsv"),
     stringsAsFactors = FALSE)
 rows <- lapply(jobs$stage, function(stage) {
-    method <- if (grepl("louvain", stage)) "louvain" else "leiden"
-    out <- file.path(campaign, if (stage == "build") "build" else
-        paste0(stage, if (grepl("^vote", stage)) "_leiden" else
-            if (stage == "landmark1m" || stage == "landmark100m")
-                "_leiden" else paste0("_", method)))
+    suffix <- if (grepl("^vote", stage) ||
+        stage %in% c("landmark1m", "landmark100m")) "_leiden" else ""
+    out <- file.path(campaign, paste0(stage, suffix))
     metrics <- file.path(out, "metrics.csv")
     if (!file.exists(metrics)) return(data.frame(stage = stage,
         status = "INCOMPLETE", seconds = NA_real_,
