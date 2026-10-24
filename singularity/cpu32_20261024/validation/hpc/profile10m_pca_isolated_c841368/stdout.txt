@@ -1,0 +1,3 @@
+  PCA mean pass: 100%
+  PCA covariance pass: 100%
+  PCA projection pass: 100%

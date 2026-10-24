@@ -1,0 +1,6 @@
+status=PASS
+backend=cpu
+workers=32
+faissR=0.1
+fastEmbedR=0.1
+gpuinfo=0.2.0
