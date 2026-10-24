@@ -47,3 +47,8 @@ Run `Rscript audit.R CAMPAIGN` after the jobs finish. It writes
 `audit_recall_100m.R` independently scans the 50,000-landmark reference
 for 128 untouched, evenly spaced 100M query rows; its ID recall is a
 sample estimate, not a guarantee for every row.
+`submit_scale10m.sh` sends five independent CPU-only landmark jobs at
+1, 4, 8, 16, and 32 cores on the same 10M-row window. It records full
+elapsed time, HNSW build/query time, label time, effective settings,
+external peak RSS, and output hashes. This is a separate scaling campaign;
+it does not alter or block the 100M feasibility run.
