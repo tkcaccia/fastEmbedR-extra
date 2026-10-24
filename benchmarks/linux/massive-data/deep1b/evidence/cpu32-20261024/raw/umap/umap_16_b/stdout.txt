@@ -1,0 +1,2 @@
+  UMAP epochs: 50%
+  UMAP epochs: 100%

@@ -1,0 +1,1 @@
+EXPERIMENTAL out-of-core PCA: 1e+07 x 96; method=streamed_covariance; backend=cpu; CPU workers=16; chunk rows=500000; estimated algorithm RAM=188 MB; scores=76 MB

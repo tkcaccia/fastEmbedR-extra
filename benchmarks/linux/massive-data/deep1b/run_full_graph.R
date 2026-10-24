@@ -16,6 +16,15 @@ if (length(script_arg) != 1L) stop("Cannot locate benchmark script.")
 source(file.path(dirname(sub("^--file=", "", script_arg)),
     "reclaim_fullgraph_storage.R"))
 smoke <- identical(Sys.getenv("DEEP1B_SMOKE"), "1")
+resume_text <- Sys.getenv("DEEP1B_RESUME", "0")
+checkpoint_text <- Sys.getenv("DEEP1B_CHECKPOINT", "0")
+if (!resume_text %in% c("0", "1") ||
+    !checkpoint_text %in% c("0", "1") ||
+    (resume_text == "1" && checkpoint_text != "1")) {
+    stop("DEEP1B_RESUME requires DEEP1B_CHECKPOINT=1; use 0 or 1.")
+}
+resume <- resume_text == "1"
+checkpoint <- checkpoint_text == "1"
 first_row <- as.numeric(Sys.getenv("DEEP1B_FIRST_ROW",
     if (smoke) "1" else "1000001"))
 fit_mode <- Sys.getenv("DEEP1B_FIT_MODE", "full")
@@ -29,9 +38,15 @@ rebuild_knn <- rebuild_text == "1"
 memory_limit <- Sys.getenv("DEEP1B_MEMORY_LIMIT", "8GB")
 cpu_cores <- as.integer(Sys.getenv("DEEP1B_CPU_CORES", "4"))
 if (length(cpu_cores) != 1L || is.na(cpu_cores) ||
-    !cpu_cores %in% c(1L, 4L, 8L, 16L)) {
-    stop("DEEP1B_CPU_CORES must be 1, 4, 8, or 16.")
+    !cpu_cores %in% c(1L, 4L, 8L, 16L, 32L)) {
+    stop("DEEP1B_CPU_CORES must be 1, 4, 8, 16, or 32.")
 }
+umap_cpu_update <- Sys.getenv("DEEP1B_UMAP_CPU_UPDATE", "sgd")
+if (!umap_cpu_update %in% c("sgd", "synchronized") ||
+    (backend != "cpu" && umap_cpu_update != "sgd")) {
+    stop("DEEP1B_UMAP_CPU_UPDATE requires cpu and sgd or synchronized.")
+}
+umap_cores <- if (umap_cpu_update == "synchronized") cpu_cores else 1L
 device_text <- Sys.getenv("DEEP1B_GPU_DEVICES", "")
 devices <- if (nzchar(device_text)) {
     as.integer(strsplit(device_text, ",", fixed = TRUE)[[1L]])
@@ -44,6 +59,8 @@ if (!is.null(devices) && (backend != "cuda" ||
 }
 prep_cores <- if (backend == "cpu") cpu_cores else 4L
 knn_cores <- if (length(devices) > 1L) 1L else prep_cores
+pca_chunk_rows <- if (backend == "cpu" && cpu_cores == 32L)
+    1000000L else if (backend == "cpu") 100000L else 10000L
 if (!fit_mode %in% c("full", "pca", "full_tsne", "full_umap")) {
     stop("Invalid fit mode.")
 }
@@ -65,8 +82,33 @@ if ((!smoke && source$nrow != 1e9) ||
 view <- fastEmbedR:::massive_matrix_rows(source, first_row, rows)
 work <- file.path(root, "work")
 dir.create(work, recursive = TRUE, showWarnings = FALSE)
+resume_path <- file.path(work, "source_identity.rds")
+identity <- list(
+    source = fastEmbedR:::massive_checkpoint_source_identity(view),
+    implementation = fastEmbedR:::
+        massive_checkpoint_implementation_identity(),
+    backend = backend, rows = rows, first_row = first_row,
+    mode = fit_mode, rebuild_knn = rebuild_knn,
+    checkpoint = checkpoint,
+    memory_limit = memory_limit, cpu_cores = cpu_cores,
+    pca_chunk_rows = pca_chunk_rows,
+    umap_cpu_update = umap_cpu_update,
+    devices = devices, gpu_identity = if (length(devices))
+        fastEmbedR:::massive_cuda_device_uuids(devices) else NULL)
+if (resume) {
+    saved_identity <- tryCatch(readRDS(resume_path),
+        error = function(e) NULL)
+    if (!identical(saved_identity, identity)) stop(
+        "Full-graph resume identity does not match the input or build.")
+} else {
+    if (file.exists(resume_path)) stop(
+        "Existing full-graph identity requires DEEP1B_RESUME=1.")
+    saveRDS(identity, resume_path)
+}
 case <- function(method) file.path(root, "results", paste0(
     backend, "_", method, "_", sprintf("%.0f", rows), "_fullgraph"))
+if (resume && file.exists(file.path(root, "knn.csv"))) stop(
+    "This runner resumes interrupted KNN only, not later stages.")
 methods <- c("pca", if (fit_mode %in% c("full", "full_tsne"))
     "tsne", if (fit_mode %in% c("full", "full_umap")) "umap")
 cluster_supported <- backend == "cpu" || length(devices) >= 2L
@@ -96,6 +138,22 @@ check_devices <- function(fit, method) {
     }
 }
 record_optimizer <- function(fit, method, key) {
+    if (backend == "cpu" && method %in% c("tsne", "umap")) {
+        workers <- fit$resources$effective_cpu_workers
+        expected <- if (method == "tsne") cpu_cores else umap_cores
+        if (!identical(workers, expected)) stop(
+            "CPU optimizer worker accounting is invalid.")
+    }
+    if (backend == "cpu" && method == "tsne") {
+        stages <- unlist(fit$stage_seconds)
+        if (length(stages) != 3L || any(!is.finite(stages)) ||
+            any(stages < 0)) stop(
+            "CPU t-SNE phase accounting is invalid.")
+        write.csv(data.frame(stage = names(stages), seconds = stages),
+            file.path(root, "tsne_stage_seconds.csv"),
+            row.names = FALSE)
+        return(invisible(NULL))
+    }
     if (length(devices) < 2L) return(invisible(NULL))
     work <- as.numeric(fit$resources[[key]])
     if (length(work) != length(devices) ||
@@ -167,7 +225,12 @@ record_pca_fit <- function(fit) {
         fitted_rows = rows_fit, fit_seconds = seconds),
         file.path(root, "pca_fit_device_work.csv"), row.names = FALSE)
 }
-timings <- list()
+stages_path <- file.path(root, "stages.csv")
+timings <- if (resume && file.exists(stages_path)) {
+    previous <- read.csv(stages_path)
+    stats::setNames(lapply(seq_len(nrow(previous)), function(i)
+        previous[i, , drop = FALSE]), previous$stage)
+} else list()
 measure <- function(stage, expr) {
     start <- proc.time()[[3L]]
     value <- force(expr)
@@ -185,7 +248,7 @@ measure <- function(stage, expr) {
             !is.null(devices))
             paste(devices, collapse = ",") else "",
         rows = rows, first_row = first_row, smoke = smoke)
-    write.csv(do.call(rbind, timings), file.path(root, "stages.csv"),
+    write.csv(do.call(rbind, timings), stages_path,
         row.names = FALSE)
     value
 }
@@ -212,28 +275,53 @@ make_tsne_init <- function(scores, output) {
     }
 }
 pca_path <- file.path(case("pca"), "output.f32")
-pca_fit <- measure("pca", fastEmbedR::pca(view, ncomp = 2L,
+pca_done <- resume && file.exists(pca_path) &&
+    file.exists(paste0(pca_path, ".manifest.rds"))
+pca_fit <- if (pca_done) {
+    message("Reopening verified completed PCA scores.")
+    fastEmbedR::massive_open_pca(pca_path)
+} else measure("pca", fastEmbedR::pca(view, ncomp = 2L,
     massive = "out_of_core", output = pca_path, backend = backend,
     n.cores = if (backend == "cuda") 1L else cpu_cores,
-    seed = 4L, chunk_rows = 10000L,
+    seed = 4L, chunk_rows = pca_chunk_rows,
     memory_limit = memory_limit, devices = devices))
+if (!identical(pca_fit$implementation_identity,
+        identity$implementation) || pca_fit$backend != backend ||
+    pca_fit$scores$nrow != rows) stop(
+    "Completed PCA does not match the requested run.")
 scores <- pca_fit$scores
 check_devices(pca_fit, "PCA")
 record_pca_fit(pca_fit)
 write.csv(data.frame(status = "ok", rows = rows, components = 2L,
     first_row = first_row, backend = backend, mode = "full_graph",
-    fit_mode = fit_mode, effective_cores = if (backend == "cpu")
+    fit_mode = fit_mode,
+    pca_chunk_rows = pca_fit$resources$chunk_rows,
+    effective_cores = if (backend == "cpu")
         cpu_cores else 1L,
     devices = if (is.null(devices)) "" else
         paste(devices, collapse = ",")),
     file.path(case("pca"), "metrics.csv"), row.names = FALSE)
 if (fit_mode == "pca") quit(status = 0L)
-build_knn <- function() massive_full_knn_graph(view, k = 30L,
+build_knn <- function() {
+    prefix <- file.path(work, "knn")
+    sidecar <- paste0(prefix, if (length(devices) > 1L)
+        ".multigpu.checkpoint.rds" else ".checkpoint.rds")
+    knn_resume <- resume && file.exists(sidecar)
+    orphan <- any(file.exists(c(
+            paste0(prefix, c(".indices.u32", ".distances.f32")),
+            paste0(prefix, c(".indices.u32.part",
+                ".distances.f32.part"))))) ||
+        length(Sys.glob(paste0(prefix, ".candidates*"))) > 0L
+    if (resume && !knn_resume && orphan) stop(
+        "KNN files have no checkpoint; cannot safely resume.")
+    massive_full_knn_graph(view, k = 30L,
     output = file.path(work, "knn"), backend = backend,
     method = if (backend == "cpu") "hnsw_sharded" else "ivf_sharded",
     n.cores = knn_cores, chunk_rows = 10000L,
     reference_chunk_rows = 200000L, memory_limit = memory_limit,
-    audit_rows = if (smoke) 4L else 128L, devices = devices)
+    audit_rows = if (smoke) 4L else 128L, devices = devices,
+    checkpoint = checkpoint, resume = knn_resume)
+}
 knn <- measure("knn", build_knn())
 check_devices(knn, "KNN")
 record_knn_devices(knn)
@@ -300,6 +388,8 @@ if ("tsne" %in% methods) attempt("tsne", {
     write.csv(data.frame(status = "ok", rows = rows,
         components = 2L, first_row = first_row, backend = backend,
         mode = "full_graph",
+        effective_cores = if (backend == "cpu")
+            tsne$resources$effective_cpu_workers else 1L,
         devices = if (is.null(devices)) "" else
             paste(devices, collapse = ",")),
         file.path(case("tsne"), "metrics.csv"), row.names = FALSE)
@@ -364,7 +454,8 @@ if ("umap" %in% methods && !is.null(fuzzy)) attempt("umap", {
     umap <- measure("umap", massive_umap_optimize(fuzzy, scores,
         output = file.path(case("umap"), "output.f32"),
         n_epochs = 200L, min_dist = 0.01, seed = 4L,
-        backend = backend, n.cores = 1L, memory_limit = memory_limit,
+        backend = backend, n.cores = umap_cores,
+        cpu_update = umap_cpu_update, memory_limit = memory_limit,
         layout_storage = if (backend == "cpu") "mmap" else "memory",
         devices = devices))
     check_devices(umap, "UMAP")
@@ -374,6 +465,9 @@ if ("umap" %in% methods && !is.null(fuzzy)) attempt("umap", {
     write.csv(data.frame(status = "ok", rows = rows,
         components = 2L, first_row = first_row, backend = backend,
         mode = "full_graph",
+        optimizer = umap$optimizer,
+        effective_cores = if (backend == "cpu")
+            umap$resources$effective_cpu_workers else 1L,
         devices = if (is.null(devices)) "" else
             paste(devices, collapse = ",")),
         file.path(case("umap"), "metrics.csv"), row.names = FALSE)

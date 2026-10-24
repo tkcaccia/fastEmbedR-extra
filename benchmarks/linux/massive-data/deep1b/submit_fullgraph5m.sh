@@ -12,11 +12,35 @@ fi
 rebuild_knn=${DEEP1B_REBUILD_KNN_FOR_UMAP:-$default_rebuild}
 backend_filter=${DEEP1B_BACKEND_FILTER:-all}
 cpu_cores=${DEEP1B_CPU_CORES:-4}
+umap_cpu_update=${DEEP1B_UMAP_CPU_UPDATE:-sgd}
 job_memory=${DEEP1B_JOB_MEMORY:-64G}
+job_time=${DEEP1B_JOB_TIME:-2-00:00:00}
+memory_limit=${DEEP1B_MEMORY_LIMIT:-}
+[[ "$job_time" == 02:00:00 || "$job_time" == 04:00:00 ||
+   "$job_time" == 08:00:00 || "$job_time" == 1-00:00:00 ||
+   "$job_time" == 2-00:00:00 ||
+   "$job_time" == 3-00:00:00 ]] || {
+    echo 'DEEP1B_JOB_TIME must be 2h, 4h, 8h, or 1-3 days.' >&2
+    exit 2
+}
 gpu_devices=${DEEP1B_GPU_DEVICES:-}
 dataset_filter=${1:-all}
 after_job=${DEEP1B_AFTER_JOB:-}
 dependency_type=${DEEP1B_DEPENDENCY_TYPE:-afterok}
+prepare_only=${DEEP1B_PREPARE_ONLY:-0}
+checkpoint=${DEEP1B_CHECKPOINT:-0}
+[[ "$checkpoint" == 0 || "$checkpoint" == 1 ]] || {
+    echo "DEEP1B_CHECKPOINT must be 0 or 1." >&2
+    exit 2
+}
+[[ "${DEEP1B_RESUME:-0}" == 0 ]] || {
+    echo "Resume the existing campaign, not a new submission." >&2
+    exit 2
+}
+[[ "$prepare_only" == 0 || "$prepare_only" == 1 ]] || {
+    echo "DEEP1B_PREPARE_ONLY must be 0 or 1." >&2
+    exit 2
+}
 [[ "$dependency_type" == afterok || \
    "$dependency_type" == afterany ]] || {
     echo "Invalid dependency type." >&2
@@ -48,15 +72,36 @@ if [[ "$rebuild_knn" == 1 && "$mode" != full ]]; then
 fi
 [[ "$backend_filter" == all || "$backend_filter" == cpu || \
    "$backend_filter" == cuda ]] || exit 2
+if [[ "$backend_filter" != cpu &&
+      "${FASTEMBEDR_HPC_GPU_PAUSED:-1}" != 0 ]]; then
+    echo 'UCT GPU submissions remain paused; select cpu only.' >&2
+    exit 2
+fi
 [[ "$cpu_cores" == 1 || "$cpu_cores" == 4 || \
-   "$cpu_cores" == 8 || "$cpu_cores" == 16 ]] || {
-    echo "DEEP1B_CPU_CORES must be 1, 4, 8, or 16." >&2
+   "$cpu_cores" == 8 || "$cpu_cores" == 16 || \
+   "$cpu_cores" == 32 ]] || {
+    echo "DEEP1B_CPU_CORES must be 1, 4, 8, 16, or 32." >&2
+    exit 2
+}
+if [[ "$cpu_cores" == 32 && "$backend_filter" != cpu ]]; then
+    echo '32 CPU workers require the CPU-only benchmark lane.' >&2
+    exit 2
+fi
+[[ "$umap_cpu_update" == sgd || \
+   ( "$umap_cpu_update" == synchronized && \
+     "$backend_filter" == cpu ) ]] || {
+    echo 'Synchronized UMAP requires the CPU-only lane.' >&2
     exit 2
 }
 [[ "$job_memory" =~ ^[1-9][0-9]*G$ ]] || {
     echo "DEEP1B_JOB_MEMORY must be a positive number of GB." >&2
     exit 2
 }
+if [[ -n "$memory_limit" &&
+      ! "$memory_limit" =~ ^[1-9][0-9]*GB$ ]]; then
+    echo 'DEEP1B_MEMORY_LIMIT must be a positive number of GB.' >&2
+    exit 2
+fi
 [[ -z "$gpu_devices" || "$gpu_devices" == 0 || \
    "$gpu_devices" == 0,1 || "$gpu_devices" == 0,1,2 || \
    "$gpu_devices" == 0,1,2,3 ]] || {
@@ -142,6 +187,8 @@ for dataset in deep turing; do
             "$suite/deep1b/reclaim_fullgraph_storage.R" \
             "$suite/deep1b/run_classic_1m.R" \
             "$suite/deep1b/run_fullgraph_job.sh" \
+            "$suite/deep1b/run_short_cuda_bundle.sh" \
+            "$suite/deep1b/submit_short_cuda_bundle.sh" \
             "$suite/deep1b/submit_fullgraph5m.sh" \
             "$suite/deep1b/submit_deep_rebuild.sh" \
             "$suite/deep1b/submit_20m.sh" \
@@ -151,6 +198,7 @@ for dataset in deep turing; do
             "$suite/deep1b/disk_peak.py" \
             "$suite/deep1b/score.R" \
             "$suite/deep1b/score_fullgraph_leiden.R" \
+            "$suite/deep1b/audit_output.R" \
             "$suite/visualization/render_full_layouts.R" \
             > "$root/source.sha256"
         export DEEP1B_FULLGRAPH_ROOT="$root" BIGANN_DATASET="$dataset"
@@ -158,13 +206,22 @@ for dataset in deep turing; do
         export DEEP1B_FIT_MODE="$mode" DEEP1B_FIRST_ROW="$first_row"
         export DEEP1B_REBUILD_KNN_FOR_UMAP="$rebuild_knn"
         export DEEP1B_CPU_CORES="$cpu_cores"
+        export DEEP1B_UMAP_CPU_UPDATE="$umap_cpu_update"
         export DEEP1B_GPU_DEVICES="$gpu_devices"
-        if ((rows >= 1000000000)); then
+        export DEEP1B_CHECKPOINT="$checkpoint" DEEP1B_RESUME=0
+        if [[ -n "$memory_limit" ]]; then
+            export DEEP1B_MEMORY_LIMIT="$memory_limit"
+        elif ((rows >= 1000000000)); then
             export DEEP1B_MEMORY_LIMIT=64GB
         else
             export DEEP1B_MEMORY_LIMIT=8GB
         fi
-        args=(--parsable --chdir="$base" --time=2-00:00:00 \
+        if [[ "$prepare_only" == 1 ]]; then
+            printf '%s\t%s\t%s\t%s\tPREPARED\t%s\n' \
+                "$dataset" "$backend" "$mode" "$rows" "$root"
+            continue
+        fi
+        args=(--parsable --chdir="$base" --time="$job_time" \
             --output="$base/benchmark_logs/feR_fg_%j.out" \
             --error="$base/benchmark_logs/feR_fg_%j.err" \
             --job-name="feR_fg_${dataset}_${backend}")

@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-run_test <- function() {
+run_test <- function(cores, expected_chunk) {
 source_files <- vapply(sys.frames(), function(frame) {
     if (is.null(frame$ofile)) "" else frame$ofile
 }, character(1))
@@ -24,7 +24,8 @@ writeBin(as.vector(t(matrix(rnorm(96000L), 1000L, 96L))),
 close(stream)
 
 keys <- c("DEEP1B_SMOKE", "DEEP1B_FIRST_ROW", "DEEP1B_FIT_MODE",
-    "DEEP1B_REBUILD_KNN_FOR_UMAP", "DEEP1B_MEMORY_LIMIT")
+    "DEEP1B_REBUILD_KNN_FOR_UMAP", "DEEP1B_MEMORY_LIMIT",
+    "DEEP1B_CPU_CORES")
 old <- Sys.getenv(keys, unset = NA_character_)
 on.exit(for (i in seq_along(keys)) {
     if (is.na(old[[i]])) Sys.unsetenv(keys[[i]]) else
@@ -32,7 +33,8 @@ on.exit(for (i in seq_along(keys)) {
 }, add = TRUE)
 Sys.setenv(DEEP1B_SMOKE = "1", DEEP1B_FIRST_ROW = "1",
     DEEP1B_FIT_MODE = "full", DEEP1B_REBUILD_KNN_FOR_UMAP = "1",
-    DEEP1B_MEMORY_LIMIT = "512MB")
+    DEEP1B_MEMORY_LIMIT = "512MB",
+    DEEP1B_CPU_CORES = as.character(cores))
 
 scope <- new.env(parent = environment())
 builds <- 0L
@@ -55,10 +57,18 @@ scope$massive_tsne_affinities <- function(...) {
 }
 error <- tryCatch(source(file.path(suite, "run_full_graph.R"),
     local = scope), error = conditionMessage)
+if (!grepl("injected affinity failure", error, fixed = TRUE)) stop(error)
+identity <- readRDS(file.path(root, "work", "source_identity.rds"))
+pca_metrics <- read.csv(file.path(root, "results",
+    "cpu_pca_1000_fullgraph", "metrics.csv"))
 stopifnot(grepl("injected affinity failure", error, fixed = TRUE),
+    identity$pca_chunk_rows == expected_chunk,
+    pca_metrics$pca_chunk_rows == 1000L,
     builds == 1L,
     !file.exists(file.path(root, "knn_rebuild.csv")))
-cat("Failed t-SNE does not rebuild KNN: PASS\n")
+cat("Failed t-SNE does not rebuild KNN at ", cores,
+    " cores: PASS\n", sep = "")
 }
 
-run_test()
+run_test(4L, 100000L)
+run_test(32L, 1000000L)

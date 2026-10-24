@@ -1,5 +1,123 @@
 # Deep1B and Turing disk-backed benchmark (experimental)
 
+UCT HPC GPU submission is paused. No CUDA matrix, retry, bundle, or
+GPU-capable controller may be submitted until the user explicitly lifts
+the pause and HPC administrators approve a restart. The local launchers
+fail closed by default; plans and read-only result summaries remain usable.
+Do not treat a passing mocked submission test as GPU lifecycle approval.
+The matrix does not schedule a deferred retry controller after a GPU
+quota rejection; it exits nonzero and retains the partial ledger.
+
+## Source-locked Deep1B matrix
+
+`submit_matrix.sh --plan` previews the Deep1B full-row matrix. CPU4,
+CPU8, CPU16, GPU1, and GPU2 each run at 1M and 10M rows. Set
+`DEEP1B_LANE_GROUP=cpu` or `cuda` to submit the hardware
+groups separately; the default is `all`. Pin `DEEP1B_IMAGE` and
+`DEEP1B_IMAGE_SHA256` to the same validated SIF in both groups. The
+GPU group rejects overlapping GPU campaigns to protect the quota. Each
+submission writes a separate `deep1b_matrix/*/jobs.tsv` and image/source
+identity. All 1M and 10M cases have no Slurm job dependencies. No CPU
+case waits for a GPU job. An active CPU group does
+not block a separate CUDA submission, or vice versa. The ledger hashes
+the actual launcher path, so a revised launcher can be staged separately
+without changing the identity of running jobs. Before submission, the
+launcher checks the quota-aware peak estimate for its selected group.
+The later graph-stage check remains authoritative if measured buckets
+exceed that estimate. Run `python3 test_submit_matrix.py` on Linux to
+verify the printed and submitted dependency graph. The 100M two-GPU
+case and final 1B two-GPU case are not in this matrix: end-to-end
+resume, exact-image interruption tests, and a quota-aware worst-case
+storage preflight must pass before either is scheduled.
+
+The default is one CUDA case per allocation. The optional
+`DEEP1B_BUNDLE_SHORT_CUDA=1` stages
+the classic and file-backed full-row one-million-row cases separately,
+then runs them sequentially in one single-GPU, two-hour L40S job.
+`plan.tsv` labels both rows `short_cuda1`; `jobs.tsv` gives them the same
+job ID but distinct campaign paths. The bundle's `status.tsv` retains
+per-case exit codes and wall times, while each case keeps its own image,
+source hashes, fit metrics, GPU trace, audit, and figures. A failed first
+case now suppresses the second, and the bundle job fails immediately.
+This fail-fast change does not prove that a failed native GPU process or
+its device context has been cleaned up. Keep bundled GPU cases disabled
+until that lifecycle gate is validated. Larger full-graph cases remain
+independent jobs. The separate
+1M two-GPU arm requests
+four hours; GPU 10M cases request eight hours. CPU jobs request three
+days. Existing jobs
+retain their original Slurm time limits. Set
+`DEEP1B_BUNDLE_SHORT_CUDA=0` to use one job per case. Do not change this option
+when resuming a matrix. These edits do not alter already submitted jobs;
+stage the revised suite only for a new campaign after the active one ends.
+
+Read-only post-run reporting is separated by hardware. For each CPU-only
+and CUDA-only `jobs.tsv`, run `summarize_matrix.py LEDGER --backend cpu`
+or `--backend cuda` with separate output paths. Then run
+`compare_matrix.py CPU_JOBS_TSV CUDA_JOBS_TSV --output COMPARISON.csv`.
+The comparator requires identical image and benchmark source hashes,
+matching method and row counts, passing case audits, valid stage times,
+and the declared full-graph sampled-recall gate. An empty ratio is not
+zero or a speedup; inspect `comparison_status` and the original ledgers.
+No comparison script submits jobs.
+
+After quality scoring and all figures pass, `run_fullgraph_job.sh`
+removes generated `work/` files and full-row layout binaries, retaining
+small metrics, sampled coordinates, PNGs, and SHA-256/byte records of
+removed outputs. Failed cases retain their payloads for diagnosis.
+
+For long full-graph cases, set `DEEP1B_CHECKPOINT=1` before submission.
+The package then commits completed kNN query blocks and reference-shard
+boundaries. A cancelled job can restart in the **same campaign directory**
+with `DEEP1B_CHECKPOINT=1 DEEP1B_RESUME=1` and identical input, image,
+backend, core count, GPU identities, memory limit, and kNN controls.
+The runner verifies those identities, reopens a completed PCA fit, and
+passes `resume=TRUE` to `massive_full_knn_graph()` only when its matching
+sidecar exists. It refuses orphaned `.part` files. This runner currently
+resumes interrupted kNN construction only, not a completed kNN graph or
+later t-SNE, UMAP, and clustering stages. Checkpointed CPU HNSW builds
+each reference index with one thread to keep resumption reproducible;
+query search still uses the requested CPU count. Record that distinction
+when comparing timings. Existing campaigns launched without checkpoints
+cannot recover work from their partial kNN files.
+The standalone `benchmark_recovery.py` exercises this behavior without
+Slurm. It makes a fresh checkpointed kNN graph, terminates a second run
+after a committed reference shard, resumes it, and checks that both
+graph binaries and effective search settings match the fresh run. It
+records shards skipped, wall time for each process, sampled process-tree
+RSS, sampled per-GPU VRAM when available, and checkpoint/graph bytes.
+The process-tree RSS sum can double-count shared pages; use it as a
+diagnostic observed value rather than a strict memory bound.
+Use a new output directory; the runner never changes an existing one.
+By default it removes only the two graph binaries it generated after
+verifying their hashes, retaining compact logs and metrics. Add
+`--retain-graphs` to keep them for inspection. For example:
+
+```bash
+python3 benchmark_recovery.py --output /tmp/recovery_cpu \
+  --backend cpu --rows 8000 --columns 16 --k 5 \
+  --reference-rows 2000 --query-rows 1000 --cores 2 \
+  --memory-limit 512MB
+python3 benchmark_recovery.py --output /tmp/recovery_cuda \
+  --backend cuda --rows 8000 --columns 16 --k 5 \
+  --reference-rows 2000 --query-rows 1000 --cores 1 \
+  --memory-limit 512MB
+```
+
+Pass `--input /path/to/base.fbin` to use an existing file-backed source
+without copying it. The `--rows` prefix must fit inside that source.
+The output `summary.json` is a recovery audit, not a source-data backup;
+verify large input hashes separately. Container users can pass a complete
+Rscript invocation with `--rscript 'singularity exec --nv IMAGE
+Rscript --vanilla'`. The development smoke records in
+`evidence/recovery_20261017/` used an isolated candidate R library over
+the prior container; they do not certify a frozen publication image.
+Before scheduling a checkpointed CUDA case, run
+`DEEP1B_TEST_CUDA=1 Rscript test_fullgraph_resume.R` inside the exact
+source-locked image on a CUDA node. The pre-fix image fails this smoke
+test during its first IVF shard; a separately built candidate with the
+IVF checkpoint fix passes it. Do not substitute an image mid-campaign.
+
 For multiple full-graph Deep1B routes under a shared SSD quota, preview
 `submit_storage_budgeted.py --quota-free-bytes BYTES` first. It groups
 CPU, one-GPU, and two-GPU runs into waves whose summed graph-stage bounds
@@ -114,6 +232,46 @@ records a whole-file SHA-256 in the manifest. A normal launch checks that
 metadata and the header without rereading 384 GB; `--verify-sha256` performs
 a one-time full rehash when source integrity must be re-established.
 
+### CPU resource selection
+
+For the file-backed full-graph route, PCA covariance/projection and t-SNE
+FFT/attraction/update use the requested CPU workers. In a same-node 10M-row
+diagnostic, 16 rather than eight CPUs reduced PCA-call latency by about
+1.27x and two t-SNE iteration times by about 1.60x. PCA used about 1.57x
+more core-seconds, so eight workers may be more economical when latency is
+not the priority. These short diagnostics are not full-fit quality or
+large-scale speedup claims; raw measurements are in
+[PCA CPU evidence](evidence/pca-cpu-scaling-20261024/README.md) and
+[optimizer CPU evidence](evidence/cpu-optimizer-profile-20261024/README.md).
+
+CPU full-graph UMAP defaults to one worker for ordered in-place SGD.
+An explicit `cpu_update = "synchronized"` opt-in permits multicore CPU
+execution using deterministic fixed-point deltas and an epoch barrier.
+This changes the optimizer trajectory; compare quality on matched rows
+before using its timing in a manuscript. The synchronized route needs
+an additional `16 * rows` bytes of RAM for 2D deltas, including when
+the layout is mapped. Existing full-graph campaign results use ordered
+SGD, so their UMAP tail is not a multicore acceleration result.
+
+`profile_cpu32.R` and `profile_cpu32.sbatch` measure PCA, t-SNE and
+synchronized UMAP independently on the 10M-row Deep graph using 8, 16
+and 32 native workers on the same 32-core allocation. The UMAP stage
+also measures one synchronized worker; each method has its own CPU-only
+Slurm job with two balanced
+repeats, package/image hashes, output-row checks, stage time and peak RSS.
+These short runs diagnose throughput and do not establish full-fit quality.
+In the source-locked [32-core diagnostic](evidence/cpu32-20261024/README.md),
+the 16-to-32-worker change helped t-SNE attraction but barely changed
+synchronized UMAP. PCA needed larger read chunks: at 32 workers,
+1,000,000-row chunks were about 13% faster than 100,000-row chunks,
+with higher peak RSS. The full-graph CPU runner now accepts
+`DEEP1B_CPU_CORES=32` and selects that chunk size for PCA; its default
+UMAP optimizer remains ordered single-worker SGD. To benchmark the
+distinct multicore update rule, set `DEEP1B_UMAP_CPU_UPDATE=synchronized`
+in a CPU-only lane; the result records the optimizer and worker count.
+Neither short throughput results nor the changed UMAP trajectory prove
+matched full-fit quality or a publication-grade speedup.
+
 ## Experiment phases
 
 | Phase | Rows | Runs | Purpose |
@@ -170,6 +328,17 @@ scan, landmark-label agreement, community count, and confidence. These
 unlabeled ANN datasets cannot provide ARI or biological cluster validity.
 
 ## Reclaim result space
+
+The `run_fullgraph_job.sh` route removes `work/` intermediates,
+full-row `.f32` layouts, and cluster-label binaries after scoring,
+individual plots, and the combined plot have passed. It retains metrics,
+quality scores, sampled coordinates, figures, source checks, and the
+observed disk peak. `pruned_outputs.tsv` records the removed layouts'
+sizes and SHA-256 hashes; `pruned_payloads.tsv` records remaining work
+files. Failed jobs keep their binaries for diagnosis or recovery. This
+automatic cleanup applies only to jobs launched with the updated script;
+older source-locked campaigns retain their original behavior. Re-rendering
+or calculating new full-row metrics requires rerunning a pruned fit.
 
 For a comprehensive campaign that is still running, use the guarded
 per-stage cleaner below. It only offers final `.f32`/`.u32` payloads from
