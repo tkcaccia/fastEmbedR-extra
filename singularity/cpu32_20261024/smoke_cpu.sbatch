@@ -15,5 +15,6 @@ test -s "$image"
 test -s "$script"
 mkdir -p "$root"
 printf '%s  %s\n' "$expected" "$image" | sha256sum -c -
-singularity exec --cleanenv "$image" \
+singularity exec --cleanenv \
+    --bind /scratch/firenze/NN:/scratch/firenze/NN "$image" \
     /opt/r46/bin/Rscript "$script" "$root"
