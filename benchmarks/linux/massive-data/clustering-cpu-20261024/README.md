@@ -44,3 +44,6 @@ metrics, Slurm exit status, exact-neighbor recall,
 hashes, and disk/RSS evidence before using numbers in a manuscript.
 Run `Rscript audit.R CAMPAIGN` after the jobs finish. It writes
 `cpu_summary.csv` and rejects unequal 1/8/16/32-worker vote outputs.
+`audit_recall_100m.R` independently scans the 50,000-landmark reference
+for 128 untouched, evenly spaced 100M query rows; its ID recall is a
+sample estimate, not a guarantee for every row.
