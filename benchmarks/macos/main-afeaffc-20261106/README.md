@@ -146,3 +146,24 @@ case limit; they remain failed evidence, not CPU timings for a speedup
 ratio. The v2 controller then deferred the remaining corresponding large
 CPU1/CPU4 cases and started the Metal seed-17 case at index 463. This is
 one large-case development result; quality and timing replication remain.
+
+## Continuation-aware audit
+
+`audit_continued_panel.py` independently combines the original queue and
+versioned continuation logs. It checks queue indices, controller and queue
+hashes, result and package identity, recorded shape and backend, quality,
+timing, swap and cleanup. It reports completed, failed, deferred, running
+and pending cases separately. The original `audit_panel.py` remains the
+historical audit of an uninterrupted queue; it cannot represent the two
+continuations correctly. The new audit's fixture suite passed 10 tests,
+including a deferred case and a tampered controller hash.
+
+A read-only audit snapshot at 2026-11-06 14:32 UTC reported 460 completed,
+two failed 1,800-second CPU cases, two explicitly deferred CPU cases, one
+running Metal case, and 228 pending cases out of 693 planned, with no
+provenance or result-audit problems. PID 59214 was independently observed
+live; a log entry alone is not proof that a worker is still running.
+The snapshot is preserved under
+`/Users/silvanopiazza/Documents/Stefano/fastEmbedR-main-afeaffc-audit-v2-20261106/snapshot-20261106-1432.json`.
+The audit script SHA-256 is
+`5f9a2c94bc415baab37a00b3b30d14b75296dd08770df082777b20f12550ec7f`.
