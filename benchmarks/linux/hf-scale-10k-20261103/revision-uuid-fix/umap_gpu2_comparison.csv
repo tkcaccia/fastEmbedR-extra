@@ -1,0 +1,2 @@
+"method","devices","execution_status","quality_status","comparison_scope","max_absolute_difference","relative_rmse","pairwise_distance_spearman","baseline_ring_quality","candidate_ring_quality","ring_quality_delta","shape_sample_rows","strict_coordinate_match","output_rows"
+"umap",2,"complete_finite_rows","diagnostic_only","same_synchronized_owner_update",0,0,1,0.00719810798181824,0.00719810798181824,0,512,TRUE,10000

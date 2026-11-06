@@ -52,17 +52,17 @@ records <- lapply(c("louvain", "leiden"), function(method) {
         method = method, selection = selection$value,
         backend = "cpu", n.cores = 4L, chunk_rows = 4096L,
         memory_limit = "512MB", seed = 4L))
-    baseline <- stamp(massive_cluster(graph, method = method,
+    baseline <- stamp(graph_cluster(graph, method = method,
         massive = "out_of_core_graph",
         output = file.path(output, paste0(method, "_baseline.u32")),
         backend = "cpu", n.cores = 1L, chunk_rows = 8192L,
         memory_limit = "512MB", seed = 4L))
-    seeded <- stamp(massive_cluster(graph, method = method,
+    seeded <- stamp(graph_cluster(graph, method = method,
         massive = "out_of_core_graph",
         output = file.path(output, paste0(method, "_seeded.u32")),
         initial = initial$value, backend = "cpu", n.cores = 1L,
         chunk_rows = 8192L, memory_limit = "512MB", seed = 4L))
-    first <- massive_read_cluster_rows(initial$value, 1L, 70000L)$membership
+    first <- massive_read_rows(initial$value, 1L, 70000L)$membership
     a <- readBin(baseline$value$membership_path, integer(),
         n = 70000L, size = 4L, endian = "little")
     b <- readBin(seeded$value$membership_path, integer(),

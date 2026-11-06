@@ -12,6 +12,8 @@
 #SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_fb_ram_%A_%a.out
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_fb_ram_%A_%a.err
 set -euo pipefail
+echo "policy_rejected: archived HPC worker is file-backed or bundles scientific tests." >&2
+exit 78
 SUITE="${SUITE:-benchmark_scripts/fastembedr_jss_review_validation}"
 bash "$SUITE/file_backed/run_cases.sh" \
   boundary "${SLURM_ARRAY_TASK_ID:-0}"

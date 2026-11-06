@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Submit four source-locked dataset/backend lanes.
 set -euo pipefail
+echo "policy_rejected: archived file-backed HPC launcher is disabled." >&2
+exit 78
 
 [[ $# -le 2 ]] || {
     echo "Usage: submit_comprehensive.sh [TIMING_REPEATS]" \
@@ -18,6 +20,11 @@ selected_lane=${2:-all}
     echo "Backend must be cpu, cuda, or all." >&2
     exit 2
 }
+if [[ "$selected_lane" != cpu &&
+      "${FASTEMBEDR_HPC_GPU_PAUSED:-1}" != 0 ]]; then
+    echo 'UCT GPU submissions remain paused; select cpu only.' >&2
+    exit 2
+fi
 base=${DEEP1B_BASE:-/scratch/firenze/NN}
 suite=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 export DEEP1B_SUITE=$suite

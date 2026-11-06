@@ -8,6 +8,8 @@
 #SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_unified_%j.out
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_unified_%j.err
 set -euo pipefail
+echo "policy_rejected: archived unified HPC campaign includes file-backed work." >&2
+exit 78
 
 base=${FASTEMBEDR_BASE:-/scratch/firenze/NN}
 bash "$base/benchmark_scripts/unified/launch.sh"

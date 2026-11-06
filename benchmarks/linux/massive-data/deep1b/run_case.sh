@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
+echo "policy_rejected: archived Deep1B worker uses file-backed calculation on HPC." >&2
+exit 78
 export OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1
 

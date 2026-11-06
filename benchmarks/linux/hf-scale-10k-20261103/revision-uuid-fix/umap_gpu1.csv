@@ -1,0 +1,2 @@
+"method","devices","neighbors","epochs","iterations","chunk_rows","seconds","synchronization_seconds","finalization_block_seconds","repulsion_enqueue_seconds","repulsion_gpu_seconds","attraction_block_seconds","graph_visit_seconds","device_step_seconds","output_rows","output_bytes","optimizer","graph_feeder","per_device_work","gpu_uuids","owner_wall_seconds","fft_owner_device"
+"umap","0",30,20,NA,2048,1.597,0.000366406,0.000643112,NA,NA,NA,0.046102815,0.0420838,10000,120000,"synchronized_cuda_nccl","concurrent_owner","5600000","GPU-8956F53F-770E-20CC-5FAC-B9B3B09ADD14",NA,NA

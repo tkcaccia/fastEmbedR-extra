@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --time=24:00:00
-#SBATCH --array=0-131%40
+#SBATCH --array=0-35,48-131%24
 #SBATCH --job-name=feR_JSS_q_c
 #SBATCH --chdir=/scratch/firenze/NN
 #SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_JSS_q_c_%A_%a.out

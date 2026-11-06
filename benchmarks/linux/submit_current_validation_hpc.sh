@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+echo 'policy_rejected: archived HPC validation launcher is disabled; use the resident-only workflow after policy review.' >&2
+exit 78
+
 BASE_DIR=/scratch/firenze/NN
 BUNDLE_DIR="${BASE_DIR}/current_fastembedr_validation"
 RUN_ID="current_$(date +%Y%m%d_%H%M%S)"

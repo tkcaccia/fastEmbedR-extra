@@ -29,7 +29,8 @@
   transformation, landmarking, PCA, and graph clustering. A separate
   September 29 campaign supplies the illustrative embedding gallery.
   Neither campaign passed its final audit; results are not release-level
-  speed claims.
+  speed claims. The experimental Deep1B file-backed protocol is specified
+  separately, without treating unfinished runs as results.
 }
 
 \Keywords{dimensionality reduction, t-SNE, UMAP, reproducible benchmarks}
@@ -79,6 +80,135 @@ and -- not run or no status.
 
 \input{generated/table_all_methods_runtime_supp.tex}
 
+The following figures inventory the failed-audit diagnostic campaign.
+They are not the frozen-source figures required for a runtime claim.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.98\textwidth]{figures/diagnostic_runtime_pca.pdf}
+\caption{Observed PCA elapsed times in diagnostic campaign
+  20260930T203319Z. Circles denote CPU, triangles CUDA, and fastEmbedR
+  retains one color across all three figures. Points show archived
+  medians without quartile intervals. R-call and Python-fit boundaries,
+  single fits, and failures are identified in the workflow table.}
+\label{fig:diagnostic-runtime-pca}
+\end{figure}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.98\textwidth]{figures/diagnostic_runtime_tsne.pdf}
+\caption{Diagnostic two-dimensional t-SNE medians. Circles denote CPU
+  and triangles CUDA. Public R calls and direct Python fits retain
+  different timing boundaries; single fits and missing cases remain in
+  the workflow table.}
+\label{fig:diagnostic-runtime-tsne}
+\end{figure}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.98\textwidth]{figures/diagnostic_runtime_umap.pdf}
+\caption{Diagnostic two-dimensional UMAP medians, excluding the secondary
+  binary route. Circles denote CPU and triangles CUDA. Binary UMAP is
+  retained in the sensitivity table; mixed timing boundaries and
+  incomplete cases preclude a release-level speed ratio.}
+\label{fig:diagnostic-runtime-umap}
+\end{figure}
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Reserved frozen-source workflow comparison. XXX denotes a
+  result not yet verified, not zero or a completed fit. R public-call
+  and direct-Python fit boundaries remain distinct; their times must not
+  form a ratio. Quality differences require the same fixed sample.
+  NOMAD has a distinct objective and is descriptive only.}
+\label{tab:pending-workflow}
+\begin{tabular}{llrrrr}
+\toprule
+Family & Comparator and scope & Pairs & fastEmbedR (s) &
+  Comparator (s) & Quality difference \\
+\midrule
+PCA & irlba, R call & XXX & XXX & XXX & XXX \\
+PCA & scikit-learn, Python fit & XXX & XXX & XXX & XXX \\
+PCA & cuML, Python fit & XXX & XXX & XXX & XXX \\
+t-SNE & Rtsne, R call & XXX & XXX & XXX & XXX \\
+t-SNE & FIt-SNE, process wall & XXX & XXX & XXX & XXX \\
+t-SNE & openTSNE, Python fit & XXX & XXX & XXX & XXX \\
+t-SNE & scikit-learn, Python fit & XXX & XXX & XXX & XXX \\
+t-SNE & cuML, Python fit & XXX & XXX & XXX & XXX \\
+UMAP & uwot, R call & XXX & XXX & XXX & XXX \\
+UMAP & umap, R call & XXX & XXX & XXX & XXX \\
+UMAP & umap-learn, Python fit & XXX & XXX & XXX & XXX \\
+UMAP & cuML, Python fit & XXX & XXX & XXX & XXX \\
+Other & NOMAD, CUDA fit & XXX & -- & XXX & XXX \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The replacement PCA, t-SNE, and UMAP figures must use the same frozen
+package image, method manifest, complete-case inventory, and timing
+boundaries as this table. Failed cases remain in the denominator, rather
+than disappearing when a median of successful cases is computed. The
+quality-difference column will name its metric and direction when filled.
+
+A separate candidate-image paired CUDA run fitted all 11 complete source
+data sets for each of six requested methods (66 full-row layouts). Its
+benchmark manifest and archived source files passed SHA-256 verification.
+The audit reported one warning: cuML t-SNE on
+FlowRepository\_FR-FCM-ZYRM\_files returned zero native fitted KL, whereas
+its independent 2,000-row sampled KL was 2.2245 and trustworthiness was
+0.9471. This supports a nondegenerate embedding but does not recover the
+full fitted objective. cuML 26.06 floors normalized probabilities at
+\texttt{FLT\_EPSILON} in its FFT KL kernel; the typical normalized
+edge weight for 5.22 million rows and 90 neighbors is below that floor.
+Numerical flooring is a plausible cause, not a proven diagnosis for every
+edge. We retain the native zero and exclude its 853.9-second median fit
+time from ratios. We reported the observation and a kernel-level
+counterexample in \href{https://github.com/NVIDIA/cuml/issues/8795}{NVIDIA/cuml
+issue 8795}; no corrected cuML release has been verified for this benchmark.
+The paired campaign therefore has 65 timing-eligible
+method--data-set results. Table~\ref{tab:paired-candidate-quality} reports
+descriptive differences on the shared post-fit quality sample. It is not
+a cross-language speed comparison, and it does not complete the separate
+extended JSS or Deep1B audits.
+
+The extended JSS run subsequently ended without a final passing audit.
+Its archived failure ledger records a failed CUDA-pair worker, a cancelled
+CUDA quality task, a failed CUDA controller, and a cancelled long CPU
+quality task. These cases remain in the requested denominator; completed
+CPU or CUDA files do not constitute a paired comparison. The Deep1B
+matrix ledgers likewise contain both passing cases and failed or missing
+case audits. Until a source-matched, complete comparison passes, the
+reserved timing and scaling cells below remain unfilled. UCT HPC GPU
+submission is suspended pending user and administrator approval.
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Candidate-image paired CUDA quality differences, fastEmbedR
+  minus cuML, with data set as the unit of aggregation. Entries are the
+  median of 11 within-data-set differences, not the difference of two
+  pooled medians. The cuML t-SNE quality sample remains scored for the
+  invalid-KL data set, but its timing is excluded. These within-sample
+  scores do not establish full-reference neighborhood preservation.}
+\label{tab:paired-candidate-quality}
+\begin{tabular}{lrrr}
+\toprule
+Pair & Quality pairs & Timing-eligible pairs &
+  Median $\Delta$ trust / Preserve@30 \\
+\midrule
+t-SNE / cuML t-SNE & 11 & 10 & $+0.01546 / +0.01223$ \\
+Fuzzy UMAP / cuML UMAP & 11 & 11 & $-0.00346 / -0.00055$ \\
+Binary UMAP / cuML UMAP & 11 & 11 & $+0.00383 / +0.00800$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+NOMAD also completed 11 full-row layouts in that run but has a distinct
+objective, so it is omitted from these within-family differences. The
+candidate container SHA-256 begins \texttt{91387e35888b}; the full image,
+source archive, DLL, and benchmark hashes remain in its campaign manifest.
+
 \section{Comparator grid and timing boundaries}
 
 In the revised two-dimensional t-SNE protocol, \pkg{fastEmbedR} reports its
@@ -108,6 +238,34 @@ The 7,200-second per-method limit and failed campaign audit are reflected
 in Table~\ref{tab:all-method-performance}. The embedding gallery below
 comes from a separate, capped September 29 campaign and must not be
 read as visual evidence for the September 30 timings.
+
+\section{Approximate-neighbor calibration}
+
+The reported CPU HNSW workflows used a fixed, shape- and $k$-based policy,
+not a search over parameters fitted to each evaluation data set. The
+requested 0.99 recall is therefore an objective rather than a measured
+guarantee. Exact-reference queries in the campaign were used for auditing
+after settings had been chosen; their cost is diagnostic, not a hidden
+component of the fixed-policy fit time. A result below 0.99 remains a
+recall miss regardless of its runtime.
+
+A data-adaptive comparison requires a separate arm. Candidate index-build
+settings ($M$ and \code{efConstruction}) must be distinguished from the
+runtime search setting \code{efSearch}. Candidate selection may use exact
+neighbors of a seeded tuning-query sample, but not the disjoint holdout
+queries used to report final recall. The selected settings and their
+selection rule must be frozen before the holdout and downstream UMAP or
+t-SNE quality evaluations. End-to-end adaptive time includes exact-reference
+generation, candidate construction and search, and the final index and
+embedding fit. Search-only time and projections amortized over repeated
+queries are reported separately, never substituted for that total. The
+calibration budget, query IDs, source identity, build/search parameters,
+thread count, and observed recall distribution must accompany each result.
+An untouched query set checks selection within a data set, whereas transfer
+to new data sets checks whether the policy itself generalizes. A data set
+used to design the candidate grid is not an independent test of that grid.
+No adaptive-policy speed or recall result is inferred from the fixed-policy
+campaign in this supplement.
 
 \section{Data-set-level CUDA embedding quality}
 
@@ -226,6 +384,423 @@ not represented.
 
 \input{generated/diagnostic_clustering_table.tex}
 
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Reserved frozen-source resident same-graph clustering validation
+  across the available labeled data sets. Metal rows use resident stored
+  graphs, not unsupported file-backed full-graph Metal clustering.
+  The denominator includes attempted
+  failures. Adjusted Rand index (ARI) compares each membership with
+  genuine source labels; paired ARI against igraph is separate.
+  XXX denotes an unaudited result.}
+\label{tab:pending-clustering}
+\begin{tabular}{llrrrrr}
+\toprule
+Method & Backend & Completed/attempted & Time (s) & Modularity &
+  Label ARI & Paired ARI \\
+\midrule
+Louvain & CPU & XXX/XXX & XXX & XXX & XXX & XXX \\
+Leiden & CPU & XXX/XXX & XXX & XXX & XXX & XXX \\
+Walktrap & CPU & XXX/XXX & XXX & XXX & XXX & XXX \\
+Louvain & CUDA & XXX/XXX & XXX & XXX & XXX & XXX \\
+Leiden & CUDA & XXX/XXX & XXX & XXX & XXX & XXX \\
+Louvain & Metal & XXX/XXX & XXX & XXX & XXX & XXX \\
+Leiden & Metal & XXX/XXX & XXX & XXX & XXX & XXX \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The frozen PCA accuracy rerun must also resolve or retain the ImageNet
+CPU rank-2 outlier: aligned score agreement XXX under the same centered
+SVD reference, with elapsed time and peak memory from the tested build.
+
+\section{Experimental Deep1B file-backed study}
+
+The current design uses one source-locked row window of the Deep1B
+96-variable float32 input. The first fitted row is source row 1,000,001;
+the 1- and 10-million-row cases use nested prefixes of that window.
+This is a test of real-data execution and scaling, not an independent
+cross-data-set generalization experiment. Table~\ref{tab:file-backed-design}
+lists requested jobs, not completed observations. The ordinary 1-million-row
+fit and the file-backed 1-million-row fit are the only matched-input route
+comparison. An explicit full-row graph optimizer receives every row; it is
+not equivalent to landmark fitting. The candidate graph can still use
+approximate HNSW or IVF neighbors.
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Requested Deep1B evaluation arms. These are a protocol inventory,
+  not speed or memory results. CPU counts denote allocated workers; a stage
+  can use fewer effective workers.}
+\label{tab:file-backed-design}
+\begin{tabular}{llll}
+\toprule
+Input route & Fitted rows & Allocation & Requested work \\
+\midrule
+Ordinary matrix & 1 million & CPU 4 & PCA, t-SNE, UMAP \\
+Ordinary matrix & 1 million & CUDA 1 & PCA, t-SNE, UMAP \\
+File-backed full row & 1, 10 million & CPU 4, 8, 16 &
+  PCA, KNN, t-SNE, UMAP, clustering \\
+File-backed full row & 1, 10 million & CUDA 1 &
+  PCA, KNN, t-SNE, UMAP \\
+File-backed full row & 1, 10 million & CUDA 2 &
+  PCA, KNN, t-SNE, UMAP, Leiden, Louvain \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For every file-backed case, the output-row count and finite coordinates
+must be checked against the requested fitted rows. A separate 100-million-
+row, two-GPU case and a final billion-row case remain gated on an audited
+end-to-end restart and a quota-aware storage preflight; neither belongs to
+the current matrix. The 100-million-row input window is 38.4~GB, which
+alone cannot establish a source matrix beyond GPU or host memory. Output
+and intermediate file sizes must be recorded separately from the
+persistent source file. Full-row rasterized density plots are descriptive
+and cannot establish neighborhood quality. Deep1B has no class labels in
+this protocol, so neither invented labels nor inferred communities color
+the embedding. Quality is assessed on a fixed 4,096-row sample, and
+nearest-neighbor recall on 128 exact-reference query rows. The latter is
+a sampled check, not a guarantee for every graph edge.
+Current trustworthiness and Preserve@30 compare neighbors \emph{within}
+the 4,096 sampled observations, not against all fitted rows.
+Full-reference neighborhood preservation remains a separate,
+unmeasured quantity; the two scopes must not be combined.
+
+Execution audit, search quality, and hardware-use audit are distinct.
+The file-backed CPU study records effective stage-level core counts;
+the present CPU UMAP, Leiden, and Louvain optimizer calls request one
+worker even in four-, eight-, or 16-core allocations. Their allocation
+comparison is not an optimizer strong-scaling experiment.
+Device-wide memory samples must name
+each allocated GPU and distinguish its baseline from its peak. Two-GPU
+PCA must distinguish distributed fitting from score projection. The
+coordinated multi-GPU optimizers require per-device work and quality
+checks; allocation alone is not proof of acceleration. An incomplete
+multi-device memory trace is a measurement
+failure even when the PCA fit itself finishes. A plot generated by an
+otherwise failed job remains diagnostic.
+
+The measured KNN stage includes its exact-reference audit. Build, query,
+and audit times are stored separately; its combined stage time must not be
+compared with a search-only comparator. The CPU HNSW record must include
+effective per-shard $M$, \code{efConstruction}, and \code{efSearch}.
+The fixed 128-query sample is not an untouched tuning holdout. A 0.99
+recall claim requires its stated statistic and a separate holdout check;
+an execution \texttt{PASS} with a recall warning is not a quality pass.
+
+The source-locked extended campaign did not pass as a whole: its file-backed
+audit recorded 18 passes, five failures, and 21 blocked cases. Within it,
+the Deep1B CPU boundary-PCA case and the paired flow18 full-versus-landmark
+cases passed their individual audits. They are reported below as scoped
+observations, not as a matched Deep1B workflow or a multi-GPU result.
+Coordinated multi-GPU optimization is requested but not yet a validated
+performance result. No beyond-physical-host-RAM full-method test passed.
+
+The Deep1B boundary case read the 384,000,000,008-byte input file and wrote
+8,000,000,000 bytes of two-column float32 PCA scores, exactly one billion
+row slots. Its elapsed time was 6,924.096 seconds; measured peak process
+RSS was 451,850,240 bytes (431 MiB). Slurm recorded a 48 GiB memory
+request for the completed job. Seven dispersed output rows, including the
+first and last, were finite; this is not an exhaustive finite-value audit.
+The node reported 403.6 GB of physical RAM, larger than the source file,
+so the result shows execution within a smaller requested job allocation,
+not an input larger than physical host RAM. The PCA route alone completed;
+KNN, UMAP, t-SNE, and clustering did not complete on one billion rows.
+
+The flow18 pair fitted the same 50,000 rows on one GPU, with 5,000
+landmarks in the landmark arm. Preserve@30 compares neighborhoods within
+the same fixed 256 sampled rows, not against the full fitted reference.
+Both pairs passed the case-level source and quality-row identity audit.
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Source-locked, single-case flow18 full-versus-landmark diagnostic.
+  GPU peaks are incremental observed MiB on device 0; no multi-seed
+  inference or whole-campaign speed claim is implied.}
+\label{tab:flow18-single-pair}
+\begin{tabular}{llrrrr}
+\toprule
+Method & Route & Time (s) & RSS (MiB) & GPU (MiB) & Preserve@30 \\
+\midrule
+UMAP & Full & 4.703 & 692 & 581 & 0.571 \\
+UMAP & Landmark & 2.442 & 617 & 1128 & 0.552 \\
+t-SNE & Full & 10.411 & 689 & 665 & 0.534 \\
+t-SNE & Landmark & 2.982 & 734 & 976 & 0.541 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+These observations come from extended campaign
+\texttt{20261017T091542Z\_jssrepair\_CCu2\_extended}, candidate image
+SHA-256 beginning \texttt{91387e35888b}, and package DLL SHA-256 beginning
+\texttt{5db59c0bfd57}. The landmark arms ran faster in this case but used
+more observed GPU memory; the 100,000-row, three-seed reviewer-closure
+experiment remains unmeasured.
+
+\subsection{Checkpoint and restart audit}
+
+The experimental full-graph kNN builders commit completed reference
+shards to a checkpoint sidecar. To test recovery independently of layout
+optimization, we generated the same 8,000-row, 16-variable float32
+input for CPU HNSW and one-device CUDA IVF, with $k=5$, four 2,000-row
+reference shards, 1,000-row query blocks, and seed 19. Each arm built a
+fresh checkpointed graph, killed a second process after a committed
+shard, and restarted it from the same partial files. The audit required
+the restart log to begin after the last committed shard, identical
+effective search settings, and byte-identical final neighbor-ID and
+float32-distance files. Exact-reference recall was sampled on 32 query
+rows. The 512-MB control constrained algorithm buffers, not process RSS.
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Development kill-and-resume pilot on Chiamaka, not a Deep1B
+  performance result. Seconds are external wall time including process
+  startup. RSS and VRAM are sampled observed peaks, not strict maxima.
+  The interrupted and resumed times are added; lower is better only for
+  matched long-running work.}
+\label{tab:recovery-pilot}
+\begin{tabular}{lrrrrrr}
+\toprule
+Backend & Reused shards & Fresh (s) & Killed (s) & Restart (s) &
+  Total (s) & Recall@5 \\
+\midrule
+CPU HNSW & 1/4 & 3.42 & 2.52 & 3.22 & 5.73 & 1.00 \\
+CUDA IVF & 2/4 & 3.19 & 2.49 & 3.10 & 5.58 & 1.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Both recovered graphs matched their uninterrupted counterparts byte for
+byte. The candidate installed R library had package version 0.1 and DLL
+SHA-256 prefix \texttt{f341dcc75118}; the same synthetic input SHA-256
+prefix was \texttt{c24ddaf96dd5} in both arms. The two pilot records,
+code hashes, effective settings, and full digests are retained with the
+benchmark scripts. Sampled fresh/restarted RSS was 511/499~MB on CPU
+and 861/845~MB on CUDA; CUDA VRAM was 409/273~MB.
+The RSS monitor sums process-tree resident values and can double-count
+shared pages; these figures are diagnostic rather than a memory bound.
+The small test took
+longer to kill and resume than to rerun from scratch because restart and
+container startup outweighed saved shard work. It establishes restart
+correctness for these routes, not a recovery speedup or a 100-million-row
+claim. A final Deep1B experiment should kill at a stated completed shard,
+report checkpoint and partial-output bytes, compare total lost and reused
+work against a same-controls fresh run, and repeat on the frozen image.
+Recovery of a completed graph, layout optimizer, or multi-device job is
+outside this audited scope. The billion-row two-GPU case must not be
+submitted on the strength of this kNN-only restart test.
+
+The following XXX tables and figure are editorial placeholders. A case
+that fails execution, recall, row coverage, or device monitoring receives
+its failure code rather than an imputed number. All row windows share the
+same first source row. The final comparison also requires the package,
+container, and benchmark-suite hashes for every case.
+
+{\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{longtable}{llrrrrr}
+\caption{Reserved Deep1B file-backed stage times in seconds. KNN is
+  build plus query; exact-reference audit time is separate. Clustering
+  shows Leiden/Louvain. XXX is pending and -- is unsupported.}
+\label{tab:pending-deep-stages}\\
+\toprule
+Rows & Allocation & PCA & KNN & t-SNE & UMAP & Clustering \\
+\midrule
+\endfirsthead
+\toprule
+Rows & Allocation & PCA & KNN & t-SNE & UMAP & Clustering \\
+\midrule
+\endhead
+1M & CPU 4 & XXX & XXX & XXX & XXX & XXX/XXX \\
+1M & CPU 8 & XXX & XXX & XXX & XXX & XXX/XXX \\
+1M & CPU 16 & XXX & XXX & XXX & XXX & XXX/XXX \\
+1M & CUDA 1 & XXX & XXX & XXX & XXX & -- \\
+1M & CUDA 2 & XXX & XXX & XXX & XXX & XXX/XXX \\
+10M & CPU 4 & XXX & XXX & XXX & XXX & XXX/XXX \\
+10M & CPU 8 & XXX & XXX & XXX & XXX & XXX/XXX \\
+10M & CPU 16 & XXX & XXX & XXX & XXX & XXX/XXX \\
+10M & CUDA 1 & XXX & XXX & XXX & XXX & -- \\
+10M & CUDA 2 & XXX & XXX & XXX & XXX & XXX/XXX \\
+\bottomrule
+\end{longtable}
+}
+
+{\scriptsize
+\setlength{\tabcolsep}{2.5pt}
+\begin{longtable}{llrrrrrr}
+\caption{Reserved Deep1B validity and resource observations for the
+  same rows as Table~\ref{tab:pending-deep-stages}. GPU peak is the
+  largest observed per-device value; final data must include each GPU.
+  Scratch excludes the shared input and container. Recall is an
+  exact-reference sample, not every graph edge. XXX is unverified.}
+\label{tab:pending-deep-validity}\\
+\toprule
+Rows & Allocation & Fit (s) & RSS (GiB) & GPU (GiB) &
+  Scratch (GiB) & Recall@30 & Row audit \\
+\midrule
+\endfirsthead
+\toprule
+Rows & Allocation & Fit (s) & RSS (GiB) & GPU (GiB) &
+  Scratch (GiB) & Recall@30 & Row audit \\
+\midrule
+\endhead
+1M & CPU 4 & XXX & XXX & -- & XXX & XXX & XXX \\
+1M & CPU 8 & XXX & XXX & -- & XXX & XXX & XXX \\
+1M & CPU 16 & XXX & XXX & -- & XXX & XXX & XXX \\
+1M & CUDA 1 & XXX & XXX & XXX & XXX & XXX & XXX \\
+1M & CUDA 2 & XXX & XXX & XXX & XXX & XXX & XXX \\
+10M & CPU 4 & XXX & XXX & -- & XXX & XXX & XXX \\
+10M & CPU 8 & XXX & XXX & -- & XXX & XXX & XXX \\
+10M & CPU 16 & XXX & XXX & -- & XXX & XXX & XXX \\
+10M & CUDA 1 & XXX & XXX & XXX & XXX & XXX & XXX \\
+10M & CUDA 2 & XXX & XXX & XXX & XXX & XXX & XXX \\
+\bottomrule
+\end{longtable}
+}
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Reserved Deep1B embedding-quality check on fixed row IDs.
+  T and P@30 use a fixed within-sample reference; Full-P@30 compares
+  those queries with all fitted rows and therefore needs a separate
+  validated neighbor search. XXX is unverified, not a quality pass.}
+\label{tab:pending-deep-quality}
+\begin{tabular}{lllrrrr}
+\toprule
+Rows & Backend & Method & T & P@30 & Full-P@30 & Stress \\
+\midrule
+1M & CPU 4 & PCA & XXX & XXX & XXX & XXX \\
+1M & CPU 4 & t-SNE & XXX & XXX & XXX & XXX \\
+1M & CPU 4 & UMAP & XXX & XXX & XXX & XXX \\
+1M & CUDA 1 & PCA & XXX & XXX & XXX & XXX \\
+1M & CUDA 1 & t-SNE & XXX & XXX & XXX & XXX \\
+1M & CUDA 1 & UMAP & XXX & XXX & XXX & XXX \\
+10M & CPU 4 & PCA & XXX & XXX & XXX & XXX \\
+10M & CPU 4 & t-SNE & XXX & XXX & XXX & XXX \\
+10M & CPU 4 & UMAP & XXX & XXX & XXX & XXX \\
+10M & CUDA 1 & PCA & XXX & XXX & XXX & XXX \\
+10M & CUDA 1 & t-SNE & XXX & XXX & XXX & XXX \\
+10M & CUDA 1 & UMAP & XXX & XXX & XXX & XXX \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Reserved multi-GPU work and quality audit, paired with the
+  one-GPU row of the same size and source window. Time ratio is one-GPU
+  divided by multi-GPU complete-fit time. Quality differences are
+  multi-GPU minus one-GPU within-sample trustworthiness/Preserve@30.
+  Per-device work and memory must name every allocated GPU.}
+\label{tab:pending-multigpu}
+\begin{tabular}{llrrrrr}
+\toprule
+Rows & GPUs & Active/allocated & Work by GPU & Peak GiB by GPU &
+  Time ratio & Quality $\Delta$ (T/P@30) \\
+\midrule
+1M & 2 & XXX & XXX & XXX & XXX & XXX/XXX \\
+10M & 2 & XXX & XXX & XXX & XXX & XXX/XXX \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\fbox{\parbox[c][32mm][c]{0.9\textwidth}{\centering
+  XXX: audited full-row Deep1B PCA, t-SNE, and UMAP layouts\\
+  1M and 10M rows; no invented labels or community colors}}
+\caption{Reserved full-row visualization panel. The eventual rasterized
+  views must represent every fitted row; row count and finite-coordinate
+  audits, not pixels, establish output coverage. The box contains no
+  measured embedding.}
+\label{fig:pending-deep-layouts}
+\end{figure}
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Deep1B five-million-row HNSW pilot and disjoint-query holdout.
+  Case 2 was selected using tuning queries only, among four measured
+  candidate/order runs, by projected build-plus-query time subject to
+  mean recall@30 of 0.99. Each split contains 8,192 exact-reference
+  queries. The last row uses the same settings with a new insertion order.
+  Build/query are pilot-run seconds, not a billion-row timing. Turing
+  remains unavailable because its source input is absent.}
+\label{tab:pending-hnsw}
+\begin{tabular}{llrrrrrrr}
+\toprule
+Data & Evaluation & $M$ & $ef_C$ & $ef_S$ & Mean recall &
+  Minimum & Rows $<0.99$ & Build/query (s) \\
+\midrule
+Deep1B & Tune & 24 & 160 & 45 & 0.99768 & 0.733 & 199 & 250.1/35.8 \\
+Deep1B & Holdout & 24 & 160 & 45 & 0.99750 & 0.667 & 200 & 250.1/35.8 \\
+Deep1B & Holdout, new order & 24 & 160 & 45 & 0.99747 & 0.700 & 198 & 264.0/38.9 \\
+Turing & Unavailable & -- & -- & -- & -- & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The corrected holdout auditor passed its prespecified \emph{mean}-recall
+gate. It did not establish a per-query 0.99 guarantee: the selected
+holdout had 200 of 8,192 query rows below 0.99, although its tenth
+percentile recall was 1. The two insertion orders are diagnostic, not
+independent data sets. The results do not validate a billion-row graph
+or the end-to-end embedding quality. The original audit had a numeric
+format/ranking defect; only its corrected v2 result is used here.
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Reserved route-validation analyses. Full and landmark fits must
+  use identical source rows and comparable seeds; the quality reference
+  is stated in the final result. A bounded-RAM result requires an enforced
+  allocation below the input payload and complete output coverage. XXX
+  denotes an unrun or unaudited experiment, not success.}
+\label{tab:pending-route-validation}
+\begin{tabular}{llrrrr}
+\toprule
+Data and test & Method & Time (s) & Peak RSS (GiB) &
+  Preserve@30 & Other audit \\
+\midrule
+flow18 100k full, seeds 4/17/42 & t-SNE & XXX & XXX & XXX & XXX \\
+flow18 100k landmark, same seeds & t-SNE & XXX & XXX & XXX & XXX \\
+flow18 100k full, seeds 4/17/42 & UMAP & XXX & XXX & XXX & XXX \\
+flow18 100k landmark, same seeds & UMAP & XXX & XXX & XXX & XXX \\
+Deep1B 10M bounded RAM & Full UMAP & XXX & XXX & XXX & XXX \\
+Deep1B 1M restart & Full UMAP & XXX & XXX & XXX & XXX \\
+Deep1B 1M restart & Full t-SNE & XXX & XXX & XXX & XXX \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The full-versus-landmark comparison must not substitute the earlier
+50,000-row diagnostic for the independently scheduled 100,000-row flow18
+cases. The new arm draws one fixed random source sample (sampling seed
+20261018), uses fit seeds 4, 17, and 42 and a 20-percent landmark
+fraction, and holds the 1,024 evaluation IDs fixed within each pair.
+It records all-row finiteness and checksums, complete-call time, peak RSS,
+sampled per-device VRAM, trustworthiness, and Preserve@30. An identical
+layout across seed requests is reported as no observed seed variation,
+not three independent stability observations. The restart analysis
+must compare completed coordinates or quality under a declared numerical
+tolerance and record additional wall time and disk writes. The current
+fixed 128-row KNN audit cannot fill the untouched holdout rows in
+Table~\ref{tab:pending-hnsw}.
+
+A separate candidate-image preflight completed on 100,000 synthetic rows
+and two L40S devices. It checked full-row finite PCA, t-SNE, and UMAP
+outputs, observed work on both devices, and sampled exact-neighbor
+recall of 1. This checks route execution, not Deep1B quality, speedup,
+memory scaling, or four-device correctness. It is not pooled with the
+publication benchmark.
+
 \section{Campaign identity and unresolved gates}
 
 The source archive and the installed native library are recorded
@@ -262,21 +837,165 @@ Benchmark manifest SHA-256 &
 \end{table}
 
 The experimental file-backed phase was added after this image and campaign
-were created. No BigANN 1-billion-row or two-GPU result from that phase
-appears in these tables. Its six planned analyses are matched correctness,
-real-data scaling, memory boundary, full versus landmark, multi-GPU, and
-checkpoint recovery. The phase must be rerun with source and output
-checksums before any result is included in a release-level comparison.
+were created. The revised Deep1B matrix above covers route matching at
+one million rows and requests scaling to ten million rows. A resumable
+100-million-row two-GPU fit and a final billion-row two-GPU fit remain
+separate, unsubmitted gates. The matrix does not supply a memory-boundary
+test, a matched
+full-versus-landmark analysis, or completed multi-GPU performance
+comparison. None of its observations is pooled with the diagnostic tables
+above; a new release-level comparison requires passing source, output,
+recall, and memory audits.
 
 \section{Embedding gallery}
 
 The gallery uses coordinates from campaign 20260929T210526Z, separate
-from the full-data timing campaign in Table~S1. Only seed-4 layouts are
+from the full-data timing campaign in
+Table~\ref{tab:all-method-performance}. Only seed-4 layouts are
 shown. Other seeds contribute to numerical summaries but are not
 illustrated. That campaign also failed its audit; these plots are
 visual diagnostics, not release-level validation. Missing panels are
 labelled and are never filled from another campaign.
 
 \input{generated/all_methods_embedding_gallery.tex}
+
+\section{Native library roles}
+
+Table~\ref{tab:native-libraries} describes the current source interfaces,
+not the library versions or enabled features of the older diagnostic image.
+An optional build route is not evidence that its runtime or numerical quality
+was measured in that campaign. The package's own kernels implement the UMAP,
+t-SNE, graph, and clustering steps; none is delegated to cuML or cuGraph.
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Direct and transitive numerical-library interfaces. A requested
+  unavailable accelerator route fails rather than switching to CPU.}
+\label{tab:native-libraries}
+\begin{tabular}{p{0.17\textwidth}p{0.27\textwidth}p{0.46\textwidth}}
+\toprule
+Stage & Library or framework & Direct role and build condition \\
+\midrule
+CPU numerical core & R BLAS, LAPACK, Fortran & Matrix products and small
+  decompositions through R's configured toolchain. \\
+CPU HNSW & \pkg{faissR}, FAISS & Versioned \pkg{faissR} C API builds and
+  queries HNSW; FAISS is a dependency of \pkg{faissR}, not a direct
+  \pkg{fastEmbedR} link. CPU exact search remains package-native. \\
+Apple GPU & Metal, Metal Performance Shaders, MPS Graph, Accelerate,
+  Foundation & Linked Apple SDK frameworks for native Metal kernels,
+  transforms, and linear algebra; no CUDA libraries. \\
+CUDA execution & CUDA runtime & Device allocation, transfers, native
+  kernels, streams, and captured CUDA graphs. \\
+CUDA neighbors & cuVS C API & Brute-force exact and IVF-Flat search when
+  matrix-derived CUDA neighbors are requested. cuVS uses RAFT internally;
+  this does not select fastEmbedR's direct RAFT PCA adapter. \\
+CUDA PCA & cuBLAS, cuSOLVER, cuRAND & Native randomized-SVD products,
+  factorizations, and sketches. Optional direct RAFT/RMM enables resident
+  truncated SVD; it is not the file-backed PCA algorithm. \\
+CUDA t-SNE & cuFFT & FFT repulsion and package-owned attraction and update
+  kernels; cuVS is used only if neighbors must first be constructed. \\
+Multi-GPU KNN/PCA & CUDA runtime, cuVS when searching & Separate device
+  row partitions and a host-side merge or output stage; an allocation of
+  two GPUs alone does not prove a speedup. \\
+Multi-GPU UMAP/t-SNE & NCCL & Direct collectives coordinate a single
+  embedding across devices in experimental kernels. RAFT communications
+  and distributed cuFFT are not called by this route. \\
+Diagnostics & \pkg{gpuinfo} & Suggested package for external inspection;
+  not used as a production compute backend. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+RAFT's single-node multi-GPU resources could manage device streams and
+memory for the existing cuVS exact/IVF KNN route. The current implementation
+instead stages bounded file-backed shards and partitions queries itself;
+the cuVS resource handle alone would not remove its disk and merge stages.
+For embedding optimization, RAFT's communication abstraction could replace
+some direct NCCL plumbing, but would not provide the UMAP updates or global
+t-SNE repulsion. A comparative adapter would need identical graph,
+initialization, precision, device count, stopping rule, and output audit,
+followed by per-device memory and end-to-end time measurements. Until then,
+direct NCCL is the described optimizer implementation and RAFT multi-GPU
+acceleration is not a result.
+
+\section{Graph-supported layout-guided cluster merging}
+
+The optional \code{layout\_merge} control in \code{graph\_cluster()} is an
+exploratory postprocessing rule for a resident graph, not a replacement for
+Leiden, Louvain, or Walktrap. PAGA motivates assessing connectivity between
+partitions on the original neighbor graph rather than inferring it from the
+distance between two-dimensional clusters \citep{wolf2019paga}. For each
+pair of communities, our rule divides the number of positive-weight
+cross-edges by its expected count under random assignment of graph edge
+ends. It also divides the median plotted length of those cross-edges by
+the median plotted length of all within-community graph edges. A pair is
+eligible only when it has at least two cross-edges, connectivity at least
+0.2, and length ratio at most 2. Eligible pairs are joined by connected
+components. These thresholds are explicit defaults, not a calibrated
+biological criterion; the rule and its layout condition are our adaptation,
+\emph{not} the published PAGA estimator or a claim that visual proximity
+establishes a shared cell state. t-SNE geometry in particular depends on
+its visualization settings \citep{kobak2019}.
+
+Figure~\ref{fig:layout-merge-synthetic} is a controlled 18-vertex synthetic
+example generated by \code{analysis/layout\_merge\_showcase.R}. The two
+adjacent six-vertex communities have three original-graph links and meet
+both gates (connectivity 0.258; length ratio 1.00); the third also has
+three links but fails the layout gate (ratio 28.78). The result contains
+the original and merged memberships, both modularity values, resolved
+thresholds, and a pair-level decision table. This is a mechanism
+demonstration, not evidence that clustering accuracy improves on the
+benchmark data sets; such a claim needs labels or independent structure
+and sensitivity analysis across UMAP/t-SNE seeds.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\textwidth]{figures/layout_merge_synthetic.pdf}
+\caption{Original and layout-guided communities on the same synthetic
+  graph. Colors are algorithmic community labels, not biological classes.
+  The large empty space is an intentionally constructed negative control.}
+\label{fig:layout-merge-synthetic}
+\end{figure}
+
+\section{Principal workflow settings}
+
+Table~\ref{tab:workflow-parameters-supp} separates PCA used to initialize a
+layout from PCA feature preprocessing. ``Policy matched'' denotes an
+initialization class, not shared coordinates; the full-call timings include
+each implementation's initialization. Additional seed, precision, optimizer,
+and thread settings remain in the machine-readable campaign manifest.
+
+\begin{table}[H]
+\centering
+\caption{Principal settings in the revised workflow protocol. This is the
+  requested protocol, not a claim that every diagnostic fit completed.}
+\label{tab:workflow-parameters-supp}
+\scriptsize
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabular}{p{0.16\textwidth}p{0.13\textwidth}
+  p{0.12\textwidth}p{0.17\textwidth}p{0.16\textwidth}
+  p{0.14\textwidth}}
+\toprule
+Method & Init. & PCA features & Iterations/epochs & Support & Learning rate \\
+\midrule
+\fastEmbedR t-SNE & PCA & None & 250 + 750 & $k=P=30$ &
+$\max(n/12,200)$ \\
+\pkg{Rtsne} & PCA & None & 1,000 & Internal $3P$ & 200 \\
+FIt-SNE & PCA & None & 1,000 & Internal $3P$ & Automatic \\
+openTSNE & PCA & None & 250 + 750 & Internal $3P$ & Automatic \\
+scikit-learn t-SNE & PCA & None & 1,000 & Internal $3P$ & Automatic \\
+cuML t-SNE & PCA & None & 1,000 & $3P$ requested & Capped $n/48$ \\
+\midrule
+\fastEmbedR UMAP & Spectral & None & 500, 300, or 200 & $k=30$ & 1 or 1.25 \\
+\pkg{uwot} & Spectral & None & Size-dependent & $k=30$ & 1 \\
+\pkg{umap} & Spectral & None & 200 & $k=30$ & 1 \\
+umap-learn & Spectral & None & 500 or 200 & $k=30$ & 1 \\
+cuML UMAP & Spectral & None & 500 or 200 & $k=30$ & 1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\bibliography{fastEmbedR_JSS}
 
 \end{document}

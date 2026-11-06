@@ -54,6 +54,8 @@ source(file.path(
   repo_root, "benchmarks", "linux", "jss-review-validation",
   "common", "common.R"
 ))
+source(file.path(repo_root, "analysis", "gallery_pca_gate.R"))
+source(file.path(repo_root, "analysis", "runtime_figure_style.R"))
 
 datasets <- c(
   "COIL20", "USPS", "FashionMNIST",
@@ -469,9 +471,6 @@ writeLines(c(
 ), file.path(generated_dir, "table_peak_memory.tex"))
 
 render_runtime <- function(family) {
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("ggplot2 is required for runtime figures.", call. = FALSE)
-  }
   methods <- spec[spec$family == family, , drop = FALSE]
   data <- merge(
     runtime, methods,
@@ -486,80 +485,12 @@ render_runtime <- function(family) {
   seconds <- suppressWarnings(as.numeric(data$elapsed_median_sec))
   data <- data[is.finite(seconds) & seconds > 0, ]
   data$elapsed_median_sec <- as.numeric(data$elapsed_median_sec)
-  data$elapsed_q1_sec <- as.numeric(data$elapsed_q1_sec)
-  data$elapsed_q3_sec <- as.numeric(data$elapsed_q3_sec)
-  data$elapsed_q1_sec[!is.finite(data$elapsed_q1_sec)] <-
-    data$elapsed_median_sec[!is.finite(data$elapsed_q1_sec)]
-  data$elapsed_q3_sec[!is.finite(data$elapsed_q3_sec)] <-
-    data$elapsed_median_sec[!is.finite(data$elapsed_q3_sec)]
   data$dataset <- factor(data$dataset, levels = datasets,
                          labels = unname(dataset_labels[datasets]))
-  data$plot_label <- data$title
-  data$plot_label <- sub("^fastEmbedR fuzzy UMAP",
-                         "fastEmbedR fuzzy", data$plot_label)
-  data$plot_label <- sub("^fastEmbedR binary UMAP",
-                         "fastEmbedR binary", data$plot_label)
-  data$plot_label <- sub("^fastEmbedR (t-SNE|PCA)",
-                         "fastEmbedR", data$plot_label)
-  data$plot_label <- sub("^RAPIDS cuML.*\\[CUDA\\]$",
-                         "cuML CUDA", data$plot_label)
-  data$plot_label <- sub("^scikit-learn (t-SNE|PCA)",
-                         "scikit-learn", data$plot_label)
-  data$plot_label <- sub(" \\[Python\\]$", "", data$plot_label)
-  data$plot_label <- sub(" \\[(CPU|CUDA)\\]$",
-                         " \\1", data$plot_label)
-  data$scope_label <- paste0(
-    ifelse(data$scope == "R total", "R call", "Python fit"),
-    ifelse(tolower(as.character(data$timing_eligible)) == "true",
-           "; repeated", "; one fit")
-  )
-  position <- ggplot2::position_dodge(width = 0.78)
-  plot <- ggplot2::ggplot(data, ggplot2::aes(
-    dataset, elapsed_median_sec, colour = plot_label,
-    shape = scope_label, group = plot_label
-  )) +
-    ggplot2::geom_errorbar(ggplot2::aes(
-      ymin = elapsed_q1_sec, ymax = elapsed_q3_sec
-    ), width = 0.12, position = position) +
-    ggplot2::geom_point(position = position, size = 3.4) +
-    ggplot2::scale_y_log10() +
-    ggplot2::scale_shape_manual(values = c(
-      "R call; repeated" = 16, "R call; one fit" = 1,
-      "Python fit; repeated" = 17, "Python fit; one fit" = 2
-    )) +
-    ggplot2::coord_flip() +
-    ggplot2::labs(
-      x = NULL, y = "Elapsed time (s, log scale)",
-      colour = NULL, shape = "Timing boundary"
-    ) +
-    ggplot2::theme_minimal(base_size = 14) +
-    ggplot2::theme(
-      axis.text.y = ggplot2::element_text(size = 13),
-      legend.position = "bottom",
-      legend.box = "vertical",
-      legend.text = ggplot2::element_text(size = 10),
-      legend.title = ggplot2::element_text(size = 10),
-      plot.margin = ggplot2::margin(8, 18, 8, 8)
-    ) +
-    ggplot2::guides(
-      colour = ggplot2::guide_legend(
-        ncol = 3L, byrow = TRUE,
-        override.aes = list(shape = 16)
-      ),
-      shape = ggplot2::guide_legend(nrow = 2L)
-    )
-  ggplot2::ggsave(
-    file.path(dirname(figure_dir), paste0(
-      "diagnostic_runtime_", family, ".pdf"
-  )), plot, width = 7.2, height = 6.8, units = "in"
-  )
-  ggplot2::ggsave(
-    file.path(dirname(figure_dir), paste0(
-      "diagnostic_runtime_", family, ".png"
-  )), plot, width = 7.2, height = 6.8, units = "in", dpi = 180
-  )
+  render_diagnostic_runtime(data, family, dirname(figure_dir))
 }
 
+if (!runtime_only) check_gallery_pca(results_root, input_rows)
 render_runtime("pca")
 render_runtime("tsne")
 render_runtime("umap")
@@ -579,12 +510,15 @@ draw_placeholder <- function(title) {
   text(0.5, 0.5, "Unavailable", cex = 0.82, col = "#666666")
 }
 
-draw_output <- function(path, title) {
+draw_output <- function(path, title, expected_rows = NULL) {
   if (is.na(path) || !file.exists(path)) {
     draw_placeholder(title)
   } else {
     data <- read_embedding_csv(path)
     layout <- data$layout
+    if (!is.null(expected_rows) && nrow(layout) != expected_rows) {
+      stop("Incomplete PCA embedding: ", path, call. = FALSE)
+    }
     plot(
       layout[, 1L], layout[, 2L], pch = 16,
       cex = point_size(nrow(layout)),
@@ -619,7 +553,12 @@ render_family <- function(dataset, family) {
     paths[[index]] <- find_output(
       dataset, methods$method[[index]], methods$route[[index]]
     )
-    draw_output(paths[[index]], methods$title[[index]])
+    expected <- if (family == "pca") {
+      input_rows$benchmark_n[input_rows$dataset == dataset]
+    } else {
+      NULL
+    }
+    draw_output(paths[[index]], methods$title[[index]], expected)
   }
   empty <- rows * 3L - nrow(methods)
   if (empty > 0L) for (index in seq_len(empty)) plot.new()

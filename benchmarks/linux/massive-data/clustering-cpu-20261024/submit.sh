@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+echo "policy_rejected: archived file-backed HPC launcher is disabled." >&2
+exit 78
 root=/scratch/firenze/NN
 suite=$root/benchmark_scripts/massive-data/clustering-cpu-20261024
 image=${CLUSTER_IMAGE:?Set source-locked candidate SIF path}

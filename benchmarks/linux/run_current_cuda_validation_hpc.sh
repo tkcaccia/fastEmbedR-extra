@@ -14,6 +14,9 @@
 
 set -euo pipefail
 
+echo 'policy_rejected: archived HPC CUDA worker is disabled.' >&2
+exit 78
+
 BASE_DIR=/scratch/firenze/NN
 BUNDLE_DIR="${BASE_DIR}/current_fastembedr_validation"
 DATA_ROOT="${BASE_DIR}/Data"

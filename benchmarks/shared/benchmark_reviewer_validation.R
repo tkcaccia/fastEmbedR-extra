@@ -1367,20 +1367,23 @@ run_method <- function(method, dataset_data) {
         x_fast, perplexity = perplexity, backend = "cuda", n.cores = threads,
         seed = seed, record_costs = FALSE
       ),
-      fastEmbedR_tsne_cpu_landmark = fastEmbedR::landmark_tsne(
-        x_fast, landmarks = landmark_fraction, n_neighbors = k,
+      fastEmbedR_tsne_cpu_landmark = fastEmbedR::tsne(
+        x_fast, landmarks = landmark_fraction, affinity_k = k,
+        transform_k = k,
         perplexity = perplexity, standardize = FALSE, backend = "cpu",
         n.cores = threads, seed = seed, keep_knn = FALSE,
         verbose = FALSE
       ),
-      fastEmbedR_tsne_metal_landmark = fastEmbedR::landmark_tsne(
-        x_fast, landmarks = landmark_fraction, n_neighbors = k,
+      fastEmbedR_tsne_metal_landmark = fastEmbedR::tsne(
+        x_fast, landmarks = landmark_fraction, affinity_k = k,
+        transform_k = k,
         perplexity = perplexity, standardize = FALSE, backend = "metal",
         n.cores = threads, seed = seed, keep_knn = FALSE,
         verbose = FALSE
       ),
-      fastEmbedR_tsne_cuda_landmark = fastEmbedR::landmark_tsne(
-        x_fast, landmarks = landmark_fraction, n_neighbors = k,
+      fastEmbedR_tsne_cuda_landmark = fastEmbedR::tsne(
+        x_fast, landmarks = landmark_fraction, affinity_k = k,
+        transform_k = k,
         perplexity = perplexity, standardize = FALSE, backend = "cuda",
         n.cores = threads, seed = seed, keep_knn = FALSE,
         verbose = FALSE
@@ -1448,17 +1451,17 @@ run_method <- function(method, dataset_data) {
         x_fast, n_neighbors = k, backend = "cuda", n.cores = threads,
         graph_mode = "binary", seed = seed
       ),
-      fastEmbedR_umap_cpu_binary_landmark = fastEmbedR::landmark_umap(
+      fastEmbedR_umap_cpu_binary_landmark = fastEmbedR::umap(
         x_fast, landmarks = landmark_fraction, n_neighbors = k,
         standardize = FALSE, backend = "cpu", n.cores = threads,
         seed = seed, keep_knn = FALSE, verbose = FALSE
       ),
-      fastEmbedR_umap_metal_binary_landmark = fastEmbedR::landmark_umap(
+      fastEmbedR_umap_metal_binary_landmark = fastEmbedR::umap(
         x_fast, landmarks = landmark_fraction, n_neighbors = k,
         standardize = FALSE, backend = "metal", n.cores = threads,
         seed = seed, keep_knn = FALSE, verbose = FALSE
       ),
-      fastEmbedR_umap_cuda_binary_landmark = fastEmbedR::landmark_umap(
+      fastEmbedR_umap_cuda_binary_landmark = fastEmbedR::umap(
         x_fast, landmarks = landmark_fraction, n_neighbors = k,
         standardize = FALSE, backend = "cuda", n.cores = threads,
         seed = seed, keep_knn = FALSE, verbose = FALSE

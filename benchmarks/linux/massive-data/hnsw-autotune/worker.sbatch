@@ -2,6 +2,8 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 set -euo pipefail
+echo "policy_rejected: archived HNSW worker uses file-backed calculation on HPC." >&2
+exit 78
 
 export OPENBLAS_NUM_THREADS=1
 export MKL_NUM_THREADS=1
@@ -24,6 +26,8 @@ elif [[ "$HNSW_PHASE" == pilot_audit ]]; then
     python3 "$HNSW_SUITE/pilot_report.py" "$HNSW_ROOT"
 elif [[ "$HNSW_PHASE" == audit_5m ]]; then
     python3 "$HNSW_SUITE/audit_5m.py" "$HNSW_ROOT"
+elif [[ "$HNSW_PHASE" == audit_deep_holdout ]]; then
+    python3 "$HNSW_SUITE/audit_deep_holdout.py" "$HNSW_ROOT"
 elif [[ "$HNSW_PHASE" == audit_refine ]]; then
     python3 "$HNSW_SUITE/audit_refine.py" "$HNSW_ROOT"
 elif [[ "$HNSW_PHASE" == audit_representative ]]; then

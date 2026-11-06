@@ -1,0 +1,18 @@
+native-knn: ...............................................................................................................................................................Timing stopped at: 0.02 0.001 0.021
+...................Timing stopped at: 0.002 0 0.003
+.SSSSSS
+
+══ Skipped ═════════════════════════════════════════════════════════════════════
+1. native CUDA exact KNN remains resident and matches the exact oracle ('test-native-knn.R:639:5') - Reason: native CUDA KNN is unavailable
+
+2. persistent exact CUDA KNN uses the selected second GPU ('test-native-knn.R:670:5') - Reason: isTRUE(native_cuda_knn_available_cpp()) is not TRUE
+
+3. native CUDA exact KNN preserves float32 matrix layout ('test-native-knn.R:691:5') - Reason: native CUDA KNN is unavailable
+
+4. native CUDA exact query KNN matches the CPU oracle ('test-native-knn.R:713:5') - Reason: native CUDA KNN is unavailable
+
+5. native CUDA query KNN bounds temporary query memory ('test-native-knn.R:735:5') - Reason: native CUDA KNN is unavailable
+
+6. native CUDA IVF query KNN reuses its batch buffer ('test-native-knn.R:758:5') - Reason: native CUDA KNN is unavailable
+
+══ DONE ════════════════════════════════════════════════════════════════════════

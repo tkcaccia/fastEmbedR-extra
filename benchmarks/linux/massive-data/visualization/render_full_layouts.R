@@ -1,5 +1,6 @@
 #!/usr/bin/env Rscript
 # Rasterize every fitted row without inventing class labels.
+stop("policy_rejected: file-backed layout rendering is disabled on HPC.")
 args <- commandArgs(trailingOnly = TRUE)
 if (!(length(args) %in% 4:6) ||
     !args[[2L]] %in% c("deep", "turing")) {

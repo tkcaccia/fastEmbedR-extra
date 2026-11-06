@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+echo "policy_rejected: archived file-backed HPC launcher is disabled." >&2
+exit 78
 
 base=${DEEP1B_BASE:-/scratch/firenze/NN}
 suite=$base/benchmark_scripts/massive-data/deep1b

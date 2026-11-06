@@ -165,4 +165,6 @@ def selected_250k(root):
 
 
 if __name__ == "__main__":
-    submit(Path(sys.argv[1]))
+    print("policy_rejected: archived HPC follow-up is disabled.",
+          file=sys.stderr)
+    raise SystemExit(78)

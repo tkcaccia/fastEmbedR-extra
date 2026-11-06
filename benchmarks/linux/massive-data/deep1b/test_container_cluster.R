@@ -26,7 +26,7 @@ for (method in c("leiden", "louvain",
         devices = if (backend == "cuda") 0L else NULL,
         output = output, chunk_rows = 128L,
         memory_limit = "512MB", seed = 7L)
-    sample <- massive_read_cluster_rows(fit, 1L, 1024L)
+    sample <- massive_read_rows(fit, 1L, 1024L)
     stopifnot(fit$backend == backend, fit$graph_backend == backend,
               length(sample$membership) == 1024L,
               all(sample$membership >= 1L),

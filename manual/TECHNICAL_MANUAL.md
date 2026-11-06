@@ -118,11 +118,11 @@ bounded readers materialize only the requested rows.
 | Function | Implementation and result | Source owner |
 |---|---|---|
 | `massive_graph_modularity()` | Scans weighted graph edges to score supplied communities. | `R/massive_graph_modularity.R` |
-| `massive_louvain_level()` | Performs one CPU file-backed Louvain level. | `R/massive_louvain_level.R` |
-| `massive_leiden_refine_level()` | Refines one CPU Leiden level. | `R/massive_leiden.R` |
-| `massive_leiden()` | Runs CPU multilevel Leiden with file-backed assignments. | `R/massive_leiden.R` |
+| `massive_louvain_level()` | Performs one file-backed Louvain level; CPU accepts 1-32 workers for row-candidate preparation. | `R/massive_louvain_level.R` |
+| `massive_leiden_refine_level()` | Refines one file-backed Leiden level; CPU accepts 1-32 workers for row-candidate preparation. | `R/massive_leiden.R` |
+| `massive_leiden()` | Runs multilevel Leiden with file-backed assignments and bounded CPU candidate preparation. | `R/massive_leiden.R` |
 | `massive_read_leiden_rows()` | Reads a bounded assignment range. | `R/massive_leiden.R` |
-| `massive_louvain()` | Runs CPU multilevel Louvain with file-backed assignments. | `R/massive_louvain_level.R` |
+| `massive_louvain()` | Runs multilevel Louvain with file-backed assignments and bounded CPU candidate preparation. | `R/massive_louvain_level.R` |
 | `massive_read_louvain_rows()` | Reads a bounded assignment range. | `R/massive_louvain_level.R` |
 | `massive_walktrap()` | CPU partitioned Walktrap approximation, not exact global Walktrap. | `R/massive_walktrap.R` |
 | `massive_read_walktrap_rows()` | Reads a bounded assignment range. | `R/massive_walktrap.R` |
@@ -217,6 +217,15 @@ persist or resume an IVF index partway through a shard. Single-GPU
 `sharded_ivf` checkpointing remains unsupported, and no backend or
 algorithm fallback is used. The coarse restart avoids treating a newly
 built approximate index as identical to an interrupted one.
+This limitation names the landmark `sharded_ivf` route. The separate
+single-GPU full-graph `ivf_sharded` route can checkpoint completed
+reference shards and query blocks in the isolated candidate build.
+Its restart rebuilds each needed index, validates effective IVF settings
+and a pilot signature, and rejects changed source or controls. A small
+kill-and-resume audit in `benchmarks/linux/massive-data/deep1b/` checks
+byte-identical IDs and float32 distances against a fresh graph. The
+current Deep1B runner reopens completed PCA scores but resumes only
+initial KNN construction; optimizer-stage restart remains separate.
 
 The Metal file-backed entry points are `massive_full_knn_graph(x, k,
 output, backend = "metal", method = "exact")` and
@@ -281,6 +290,13 @@ process-tree RSS rose from 0.59 to 2.54 GB across those configurations.
 The raw source identities and per-device memory traces are in
 `benchmarks/linux/massive-data/evidence/hf-multigpu-core/README.md`.
 Larger, beyond-host-RAM validation remains a separate release gate.
+On CPU, the covariance and score passes partition row blocks among
+`n.cores` workers; the small decomposition is serial. In a same-node
+10M-row Deep1B diagnostic with 100,000-row blocks, 16 workers reduced
+PCA-call time from about 8.9 to 7.0 seconds versus eight workers. That
+is a latency gain of about 1.27x for about 1.57x the core-seconds; the
+best allocation depends on queue and CPU-hour cost, not only elapsed
+time. See [PCA CPU scaling evidence](../benchmarks/linux/massive-data/deep1b/evidence/pca-cpu-scaling-20261024/README.md).
 File-backed Metal PCA reads bounded row blocks, first computes column
 means, then accumulates centered cross-products with the native Metal
 matrix-multiply kernel, and writes projected score blocks to a float32 file.
@@ -321,6 +337,30 @@ may page through host RAM. The default CUDA full layout must fit available
 VRAM. Multi-GPU CUDA synchronizes updates through NCCL, but currently
 replicates the full layout on each GPU. It should not be described as a
 memory-distributed layout or an automatic acceleration.
+The default CPU full-graph optimizer applies ordered online SGD updates
+and accepts one worker. For explicit `cpu_update = "synchronized"`, CPU
+workers scan disjoint source-row ranges against the same epoch snapshot,
+accumulate fixed-point coordinate deltas atomically, then apply them at
+an epoch barrier. This is a distinct update rule, not a thread-count
+setting that preserves the default SGD trajectory. Its results record
+`optimizer = "synchronized_cpu_fixed_point"`, effective CPU workers and
+delta RAM (`16 * rows` bytes for 2D). The delta buffer must fit the
+declared host-memory budget even if the layout is mapped. Small-fixture
+tests verify worker-invariant output, row coverage and restart identity;
+full-data quality and scaling require separate matched measurements.
+The 10M-row [CPU scaling diagnostic](../benchmarks/linux/massive-data/deep1b/evidence/cpu32-20261024/README.md)
+found little synchronized-UMAP gain from 16 to 32 workers, whereas
+t-SNE attraction continued to improve. PCA fitting also gained when
+the 32-worker run read 1,000,000-row chunks rather than 100,000-row
+chunks, at the cost of higher peak RSS and core-seconds. The CPU
+full-graph runner accepts 32 workers, selects the larger PCA chunk,
+and leaves ordered UMAP SGD unchanged unless the synchronized update
+rule is requested explicitly. These are short throughput observations,
+not full-fit quality or universal scaling claims.
+To use more CPUs without changing the ordered algorithm, run independent
+UMAP fits as separate one-CPU jobs. A short 10M-row warm-cache profile
+of ordered SGD found RAM and mapped layouts within about 6% for two
+epochs; a cold first run was much slower.
 The coordinated optimizer accumulates quantized edge deltas before each
 owner update. Fixed-point 100,000-row synthetic runs matched independent
 repeats and checkpoint restarts on two and four GPUs; these do not replace
@@ -389,6 +429,14 @@ CUDA. It uses fixed early and normal iteration counts, not automatic KL
 stopping. A two-to-four-GPU CUDA fit coordinates attraction and state
 updates via NCCL, while global FFT repulsion remains on one GPU. Running
 independent per-GPU embeddings would not produce a valid full-data t-SNE.
+On CPU, sparse attraction partitions source rows across workers; each
+worker reads a disjoint CSR range and writes only its own source-row
+gradient. FFT repulsion and coordinate updates use the requested worker
+count too. Native phase times and `effective_cpu_workers` are recorded.
+A short same-node 10M-row profile of two iterations improved about 1.60x
+from eight to sixteen workers, chiefly because attraction time nearly
+halved. This is a throughput diagnostic, not a full-fit quality result;
+see [CPU optimizer profile evidence](../benchmarks/linux/massive-data/deep1b/evidence/cpu-optimizer-profile-20261024/README.md).
 Full-graph CUDA t-SNE resolves the FFT grid at planning time, records that
 grid in the checkpoint identity, forces the same value during the native
 call, and rejects a reported grid mismatch. A resumed fit therefore cannot
@@ -419,6 +467,19 @@ represented as exact global Walktrap. Full-graph CUDA Leiden/Louvain have
 an optional cuGraph-Dask bridge through `massive_cluster()`. A small
 two-GPU modularity audit passed, but four-GPU, large-graph, and
 beyond-VRAM validation remain open.
+
+For an ordinary resident graph, `graph_cluster(graph, layout_merge =
+list(layout = fit$layout))` optionally merges detected communities. It
+requires positive-weight cross-edges in the original graph and short
+cross-edge lengths in the supplied 2D UMAP or t-SNE layout. Defaults require
+two cross-edges, inter-partition connectivity at least 0.2 relative to a
+random-edge baseline, and median cross-edge length at most twice the median
+within-community edge length. The returned object retains original labels,
+original modularity, merged modularity, pair scores, and thresholds. The
+rule is **PAGA-inspired**, not PAGA itself
+([Wolf et al., 2019](https://doi.org/10.1186/s13059-019-1663-x)); it has no
+automatic file-backed route or validated biological accuracy claim. A
+synthetic negative-control illustration is in the supplement.
 
 File-backed Metal landmark Leiden/Louvain selects a bounded reference,
 constructs its KNN graph with native Metal search, and runs native Metal

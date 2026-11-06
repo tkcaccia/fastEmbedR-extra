@@ -1,0 +1,10 @@
+args <- commandArgs(trailingOnly = TRUE)
+.libPaths(c(args[[1L]], '/Users/silvanopiazza/Documents/Stefano/data/Rlib', .libPaths()))
+library(fastEmbedR)
+e <- new.env(parent = emptyenv())
+load('/Users/silvanopiazza/Documents/Stefano/data/data/FashionMNIST_n5000/FashionMNIST_n5000_float32.RData', envir = e)
+x <- float::dbl(e$dataset$data)
+init <- umap_init(x, n_neighbors = 30L, backend = 'cpu', seed = 711L)
+w <- as.numeric(init$prepared$graph$weights)
+threshold <- max(w) / 400
+print(c(edges = length(w), filtered = sum(w < threshold), filtered_weight = sum(w[w < threshold]), total_weight = sum(w), max_weight = max(w), min_weight = min(w)))

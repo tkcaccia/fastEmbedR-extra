@@ -1,8 +1,17 @@
 # fastEmbedR JSS reviewer-validation suite
 
+This suite is archived and cannot run on the UCT HPC. It includes
+file-backed scientific work, which the current HPC policy forbids on both
+CPU and GPU. Its submission and controller entrypoints reject execution.
+The remaining sections describe the historical design and saved evidence.
+Use [`../resident-one-case-20261103/`](../resident-one-case-20261103/)
+for a resident-only candidate; UCT GPU work remains paused under the
+separate administrator and user approval gates. No remote source-locked
+job script has been replaced.
+
 ## File-backed opening phase
 
-The complete campaign starts with the six file-backed analyses described in
+The archived complete campaign started with file-backed analyses described in
 [`file_backed/README.md`](file_backed/README.md). The 44-case registry, raw
 case outputs, and strict audit are source-locked with the suite. Incomplete
 BigANN downloads and unavailable two-GPU allocations are BLOCKED, not PASS.
@@ -81,10 +90,19 @@ KL diagnostic is not cuML's fitted objective. Each method also retains its
 full-resolution `embedding.png`, `embedding.csv.gz`, timing repetitions, and
 status under
 `results/workflow_comparators/{r_cuda,python_cuda}/DATASET/METHOD/`.
-If cuML reports invalid fitted KL after 1,000 iterations, its finite layout
-and independent post-fit quality metrics are retained for inspection, but its status
-is `invalid_fitted_kl` and its timing is ineligible. An incomplete pair is
-visibly marked and fails the final audit.
+If cuML reports zero fitted KL after 1,000 iterations, the audit requires a
+positive finite independently sampled KL and retains the full layout and
+quality metrics. The native value remains zero, status is
+`invalid_fitted_kl`, timing is ineligible, and the final audit is `WARN`.
+This does not assert that sampled KL equals the full fitted objective.
+In cuML 26.06's FFT implementation, both normalized probabilities are
+floored at `FLT_EPSILON` in the native KL kernel. With 5,220,347 rows and
+90 neighbors per row, the mean normalized edge weight is roughly
+`2.1e-9`, below that `1.2e-7` floor. This is a plausible numerical cause
+of FlowRepository's native zero, not proof that every edge is floored.
+The [upstream kernel](https://github.com/rapidsai/cuml/blob/v26.06.00/cpp/src/tsne/utils.cuh)
+requires a library-level correction; changing the comparator's algorithm
+or accepting a zero native KL as valid would undermine the matched run.
 
 The fastEmbedR time is an R public-call measurement; the cuML time is a
 direct-Python fit measurement. Their input/output boundary is recorded, but
@@ -426,6 +444,16 @@ all eleven pairs, finite stage timings and quality values, and passing
 method-specific status rows. `validate_benchmark_logic.R` checks pairing and
 duplicate-row trustworthiness before a campaign is submitted.
 
+The CPU recall-and-quality stage submits observed KNN recall and each
+embedding configuration as independent Slurm array tasks. FlowRepository
+configurations use 16 CPU cores, 128 GB RAM, and a 72-hour limit per task;
+the other datasets use four cores and a 24-hour limit per configuration.
+FlowRepository's twelve tasks correspond to the two comparison boundaries,
+two methods, and three seeds. They fit all 5,220,347 source rows; the fixed
+2,000-row sample is only for post-fit quality evaluation. The result CSV
+records the effective thread count. A cancelled or timed-out configuration
+remains missing evidence, never a completed quality comparison.
+
 The cuVS KNN and embedding fits use every source row. Quality metrics use
 fixed sampled evaluation rows, without changing the fitted input. Their
 elapsed values are never divided or presented as components of the same
@@ -463,7 +491,7 @@ input and benchmark waves are submitted.
   records `sstat` peak RSS with `measurement_source = slurm_sstat`. If neither
   source exists, peak RSS is explicitly unavailable rather than aborting the
   calculation.
-- CUDA jobs sample device memory every 0.05 seconds and retain both the raw
+- CUDA jobs sample device memory every second and retain both the raw
   GPU memory and the increment above the pre-run allocator baseline. Missing
   device IDs and failed samples fail the measurement with a diagnostic.
   `*.gpu_identity.csv` records the CUDA-visible, NVML, and Slurm IDs with
@@ -482,6 +510,11 @@ input and benchmark waves are submitted.
   `aggregate/workflow_comparator_outcomes.csv`; only Slurm's
   `OUT_OF_MEMORY` state is labelled `memory_limit`. Missing outcomes remain
   explicit in Table 5 rather than appearing as zero-time results.
+- A failed or timed-out method stops its CUDA bundle immediately. No later
+  method starts in that allocation. This prevents a second fit from running
+  after a failed shutdown; it cannot make an unresponsive native process
+  killable. GPU jobs on the UCT HPC remain paused pending administrator
+  approval and a separate native-CUDA validation.
 - Comparator peak host memory covers the complete isolated worker, including
   input loading, the excluded warm-up, repetitions, and quality calculation.
   It is deliberately not presented as fit-only memory. GPU sampling uses the
@@ -727,6 +760,7 @@ bash \
   benchmark_scripts/fastembedr_jss_review_validation/submit_recall_quality_compact.sh
 ```
 
+This is a separate manual route, not the complete campaign's extended stage.
 It submits 11 dataset tasks per backend. Within each task, observed KNN recall
 is measured once and the 12 boundary, method, and seed quality configurations
 run sequentially. A failed subrun is recorded without preventing later
@@ -876,6 +910,11 @@ The gallery builder requires one campaign result directory as its first
 argument. It reads only that campaign's `embedding.csv.gz` files (or older
 `embedding.csv` files) and never scans
 older PNG files by timestamp. This prevents mixed-release galleries.
+The full JSS comparator campaign schedules `sklearn_pca` in the Python CPU
+array and `cuml_pca` in the CUDA PCA bundle. The separate full CUDA pair arm
+does not include PCA. A gallery build now stops if either Python PCA output
+or its complete row coverage is missing; the old diagnostic galleries with
+empty PCA panels are not publication-ready.
 
 Generate galleries on the HPC before copying results locally. To copy only
 lightweight evidence and rendered plots, exclude input matrices and full
@@ -904,7 +943,7 @@ Rscript analysis/build_table5_and_embedding_gallery.R \
 ```
 
 The PCA, t-SNE, and UMAP timing table and gallery are generated from that same
-campaign root. Failed or unavailable combinations remain explicit empty
+campaign root. Other failed or unavailable combinations remain explicit empty
 positions rather than being replaced by results from another run.
 
 Metal is not runnable on the Linux HPC. The same R driver can be used for a

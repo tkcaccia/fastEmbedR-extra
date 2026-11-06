@@ -25,6 +25,20 @@ EOF
 cat > "$TEST_ROOT/bin/sacct" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
+for ((i = 1; i < $#; i++)); do
+  if [[ "${!i}" == -j ]]; then
+    next=$((i + 1))
+    id="${!next}"
+    if [[ "$id" == "${JSS_FAKE_PENDING_ID:-none}" ]]; then
+      printf '%s|PENDING|0:0\n' "$id"
+      exit 0
+    fi
+    if [[ "$id" == "${JSS_FAKE_FAILED_ID:-none}" ]]; then
+      printf '%s|FAILED|1:0\n' "$id"
+      exit 0
+    fi
+  fi
+done
 if [[ "${JSS_FAKE_PREFLIGHT_FAIL:-FALSE}" == TRUE ]]; then
   printf 'FAILED|1:0\n'
   exit 0
@@ -70,6 +84,7 @@ fi
 grep -q 'requires METHOD_TIMEOUT_SECONDS=7200' \
   "$TEST_ROOT/timeout_rejection.log"
 export JSS_FAKE_COUNTER="$TEST_ROOT/counter"
+export FASTEMBEDR_HPC_GPU_PAUSED=0
 export BASE_DIR="$TEST_ROOT"
 export IMAGE="$TEST_ROOT/image.sif"
 export INPUT_ROOT="$TEST_ROOT/input"
@@ -92,10 +107,66 @@ run_stage() {
   fi
 }
 
+run_stage comparator_preflight
+cpu_preflight="$(campaign_existing_job worker comparator_preflight_cpu)"
+cuda_preflight="$(campaign_existing_job worker comparator_preflight_cuda)"
+shared="$(campaign_existing_job controller controller_shared_inputs)"
+[[ "$(awk -F '\t' -v id="$shared" '$6 == id {print $7}' \
+    "$JSS_LEDGER")" == "afterok:$cpu_preflight" ]]
+run_stage shared_inputs
+mkdir -p "$OUTPUT_ROOT/comparator_preflight/cuda"
+printf 'experiment,status\npreflight,success\n' \
+  > "$OUTPUT_ROOT/comparator_preflight/cuda/status.csv"
 run_stage comparator_inputs
+cpu_fork="$(campaign_existing_job controller \
+  controller_affinity_scaling)"
+[[ "$(awk -F '\t' -v id="$cpu_fork" '$6 == id {print $7}' \
+    "$JSS_LEDGER")" != *"$cuda_preflight"* ]]
+
+export JSS_CAMPAIGN_ID=pending_gpu
+export JSS_CAMPAIGN_DIR="$TEST_ROOT/pending_gpu"
+export JSS_LEDGER="$JSS_CAMPAIGN_DIR/jobs.tsv"
+run_stage comparator_preflight
+cuda_preflight="$(campaign_existing_job worker comparator_preflight_cuda)"
+run_stage shared_inputs
+export JSS_FAKE_PENDING_ID="$cuda_preflight"
+run_stage comparator_inputs
+cpu_fork="$(campaign_existing_job controller \
+  controller_affinity_scaling)"
+cuda_fork="$(campaign_existing_job controller \
+  controller_comparators_cuda)"
+cpu_dependency="$(awk -F '\t' -v id="$cpu_fork" \
+  '$6 == id {print $7}' "$JSS_LEDGER")"
+cuda_dependency="$(awk -F '\t' -v id="$cuda_fork" \
+  '$6 == id {print $7}' "$JSS_LEDGER")"
+[[ "$cpu_dependency" == afterany:* ]]
+[[ "$cpu_dependency" != *"$cuda_preflight"* ]]
+[[ "$cuda_dependency" == "$cpu_dependency,afterok:$cuda_preflight" ]]
+unset JSS_FAKE_PENDING_ID
+export JSS_CAMPAIGN_ID=test
+export JSS_CAMPAIGN_DIR="$TEST_ROOT/campaign"
+export JSS_LEDGER="$JSS_CAMPAIGN_DIR/jobs.tsv"
 run_stage file_backed
 run_stage file_backed_audit
 run_stage file_backed_done
+
+export JSS_CAMPAIGN_ID=failed_gpu
+export JSS_CAMPAIGN_DIR="$TEST_ROOT/failed_gpu"
+export JSS_LEDGER="$JSS_CAMPAIGN_DIR/jobs.tsv"
+run_stage cuda_pairs
+export JSS_FAKE_FAILED_ID
+JSS_FAKE_FAILED_ID="$(campaign_existing_job worker cuda_pairs)"
+if JSS_STAGE=support_cuda bash "$CONTROLLER" \
+    > "$TEST_ROOT/failed_gpu.log" 2>&1; then
+  echo 'GPU controller continued after failed worker.' >&2
+  exit 1
+fi
+[[ -z "$(campaign_existing_job worker support_cuda)" ]]
+grep -q 'previous worker stage failed' "$TEST_ROOT/failed_gpu/stages.tsv"
+unset JSS_FAKE_FAILED_ID
+export JSS_CAMPAIGN_ID=test
+export JSS_CAMPAIGN_DIR="$TEST_ROOT/campaign"
+export JSS_LEDGER="$JSS_CAMPAIGN_DIR/jobs.tsv"
 for stage in comparators_cuda cuda_pairs support_cuda support_sweep_cuda \
   recall_quality_cuda \
   transform_cuda landmark_memory_cuda pca_cuda \
@@ -130,6 +201,20 @@ with open(sys.argv[1], newline="") as handle:
     rows = list(csv.DictReader(handle, delimiter="\t"))
 workers = {row["job_id"]: row["stage"] for row in rows
            if row["role"] == "worker"}
+quality = {row["label"]: row for row in rows
+           if row["stage"] == "recall_quality_cpu" and
+           row["role"] == "worker"}
+assert set(quality) == {"recall_knn_cpu", "recall_quality_cpu",
+                        "recall_quality_flow_cpu"}
+assert quality["recall_knn_cpu"]["array"] == "0-10%11"
+assert quality["recall_quality_cpu"]["array"] == "0-35,48-131%24"
+assert quality["recall_quality_flow_cpu"]["array"] == "0-11%2"
+next_quality = [row for row in rows if row["label"] ==
+                "controller_transform_cpu"]
+assert len(next_quality) == 1
+assert set(next_quality[0]["dependency"].split(":")[1:]) == {
+    row["job_id"] for row in quality.values()
+}
 scaling = [row for row in rows if row["label"] == "scaling"]
 assert len(scaling) == 1
 assert scaling[0]["stage"] == "scaling"
@@ -287,9 +372,9 @@ if SLURM_ARRAY_TASK_ID=0 bash "$BUNDLE" transform_landmark \
   echo 'Bundled CUDA runner did not report a failed subrun.' >&2
   exit 1
 fi
-[[ "$(wc -l < "$JSS_BUNDLE_CALLS")" -eq 4 ]]
-grep -q $'^transform\tcuda\t1\t' "$JSS_BUNDLE_CALLS"
-grep -q $'^landmark_reconstruction\tcuda\t1\t0.2\t' \
+[[ "$(wc -l < "$JSS_BUNDLE_CALLS")" -eq 2 ]]
+grep -q $'^transform\tcuda\t0\t' "$JSS_BUNDLE_CALLS"
+grep -q $'^landmark_reconstruction\tcuda\t0\t0.2\t' \
   "$JSS_BUNDLE_CALLS"
 grep -q ',landmark_reconstruction,0,failed,7,' \
   "$OUTPUT_ROOT/scheduler_status/bundles/transform_landmark/555_0.csv"
@@ -302,6 +387,10 @@ if [[ "${JSS_FAIL_PAIR:-FALSE}" == TRUE && \
       "$1" == python_cuda && "$COMPARATOR_TASK_ID" == 14 ]]; then
   exit 7
 fi
+if [[ "$1" == "${JSS_FAIL_MODE:-}" && \
+      "$COMPARATOR_TASK_ID" == "${JSS_FAIL_TASK:-}" ]]; then
+  exit "${JSS_FAIL_CODE:-7}"
+fi
 EOF
 export JSS_PAIR_CALLS="$TEST_ROOT/pair_calls.tsv"
 export JSS_FAIL_PAIR=TRUE
@@ -312,13 +401,9 @@ if SLURM_ARRAY_TASK_ID=0 bash "$PAIR" \
   echo 'Full CUDA bundle did not report a failed method.' >&2
   exit 1
 fi
-[[ "$(wc -l < "$JSS_PAIR_CALLS")" -eq 6 ]]
+[[ "$(wc -l < "$JSS_PAIR_CALLS")" -eq 2 ]]
 grep -q $'^r_cuda\t21\tTRUE$' "$JSS_PAIR_CALLS"
 grep -q $'^python_cuda\t14\tTRUE$' "$JSS_PAIR_CALLS"
-grep -q $'^r_cuda\t22\tTRUE$' "$JSS_PAIR_CALLS"
-grep -q $'^python_cuda\t15\tTRUE$' "$JSS_PAIR_CALLS"
-grep -q $'^r_cuda\t23\tTRUE$' "$JSS_PAIR_CALLS"
-grep -q $'^python_nomad\t7\tTRUE$' "$JSS_PAIR_CALLS"
 grep -q ',python_cuda,tsne,14,failed,7,' \
   "$OUTPUT_ROOT/scheduler_status/full_cuda_pairs/555_0.csv"
 export JSS_FAIL_PAIR=FALSE
@@ -372,6 +457,22 @@ grep -q $'^r_cuda\t6\tFALSE$' "$JSS_PAIR_CALLS"
 grep -q $'^r_cuda\t7\tFALSE$' "$JSS_PAIR_CALLS"
 grep -q $'^python_cuda\t5\tFALSE$' "$JSS_PAIR_CALLS"
 [[ "$(wc -l < "$JSS_PLOT_CALLS")" -eq 2 ]]
+export JSS_FAIL_MODE=r_cuda
+export JSS_FAIL_TASK=5
+export JSS_FAIL_CODE=124
+: > "$JSS_PAIR_CALLS"
+: > "$JSS_PLOT_CALLS"
+if SLURM_ARRAY_TASK_ID=1 bash \
+    "$(dirname "$CONTROLLER")/run_cuda_pair.sh" \
+    > "$TEST_ROOT/failed_live_pair.log" 2>&1; then
+  echo 'CUDA pair continued after its first failed method.' >&2
+  exit 1
+else
+  [[ "$?" -eq 124 ]]
+fi
+[[ "$(wc -l < "$JSS_PAIR_CALLS")" -eq 1 ]]
+[[ ! -s "$JSS_PLOT_CALLS" ]]
+unset JSS_FAIL_MODE JSS_FAIL_TASK JSS_FAIL_CODE
 
 LAUNCH_BASE="$TEST_ROOT/launch_base"
 mkdir -p "$LAUNCH_BASE"

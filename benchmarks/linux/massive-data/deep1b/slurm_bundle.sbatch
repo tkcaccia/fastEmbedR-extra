@@ -2,6 +2,8 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 set -euo pipefail
+echo "policy_rejected: archived Deep1B bundle violates resident one-case HPC policy." >&2
+exit 78
 
 base=${DEEP1B_BASE:-/scratch/firenze/NN}
 suite=${DEEP1B_SUITE:-$base/benchmark_scripts/massive-data/deep1b}

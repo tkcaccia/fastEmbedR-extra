@@ -1,6 +1,7 @@
 """Exercise quota arithmetic and Slurm dependencies without submitting."""
 
 import subprocess
+import os
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -13,7 +14,8 @@ class StorageBudgetedTest(unittest.TestCase):
         script = Path(__file__).with_name("submit_storage_budgeted.py")
         result = subprocess.run(
             ["python3", str(script), "--submit", "--quota-free-bytes",
-             "2000000000000"], capture_output=True, text=True)
+             "2000000000000", "--routes", "cpu"],
+            capture_output=True, text=True)
         self.assertEqual(result.returncode, 2)
         self.assertIn("positive clustering reserve", result.stderr)
 
@@ -22,7 +24,9 @@ class StorageBudgetedTest(unittest.TestCase):
         result = subprocess.run(
             ["python3", str(script), "--submit", "--routes", "cuda",
              "--admission", "initial", "--quota-free-bytes",
-             "2000000000000"], capture_output=True, text=True)
+             "2000000000000"],
+            env=dict(os.environ, FASTEMBEDR_HPC_GPU_PAUSED="0"),
+            capture_output=True, text=True)
         self.assertEqual(result.returncode, 2)
         self.assertIn("--accept-late-space-failure", result.stderr)
 
@@ -71,36 +75,26 @@ class StorageBudgetedTest(unittest.TestCase):
                        cpu_reserve=488_000_000_000)
 
     @patch("submit_storage_budgeted.subprocess.run")
-    @patch.dict("submit_storage_budgeted.os.environ", {"USER": "test"})
-    def test_later_wave_waits_for_every_previous_job(self, run):
-        class Result:
-            def __init__(self, stdout):
-                self.stdout = stdout
-                self.stderr = ""
-
-        run.side_effect = [Result(""),
-                           Result("dataset\tbackend\tmode\trows\tjob\t"
-                                  "campaign\n"
-                                  "deep\tcpu\tfull\t1000000\t101\t/a\n"),
-                           Result("dataset\tbackend\tmode\trows\tjob\t"
-                                  "campaign\n"
-                                  "deep\tcuda\tfull\t1000000\t102\t/b\n"),
-                           Result("dataset\tbackend\tmode\trows\tjob\t"
-                                  "campaign\n"
-                                  "deep\tcuda\tfull\t1000000\t103\t/c\n")]
+    @patch.dict("submit_storage_budgeted.os.environ",
+                {"USER": "test", "FASTEMBEDR_HPC_GPU_PAUSED": "0"})
+    def test_archived_submit_rejects_before_any_scheduler_call(self, run):
         waves = make_waves(1_000_000,
                            ["cpu", "cuda", "cuda2"],
                            5_000_000_000, False)
-        result = submit_waves(waves, 1_000_000,
-                              5_000_000_000, False, Path("/suite"))
-        self.assertEqual([item["job"] for item in result],
-                         ["101", "102", "103"])
-        self.assertEqual(run.call_args_list[1].kwargs["env"][
-            "DEEP1B_AFTER_JOB"], "")
-        self.assertEqual(run.call_args_list[2].kwargs["env"][
-            "DEEP1B_AFTER_JOB"], "")
-        self.assertEqual(run.call_args_list[3].kwargs["env"][
-            "DEEP1B_AFTER_JOB"], "101:102")
+        with self.assertRaisesRegex(RuntimeError, "policy_rejected"):
+            submit_waves(waves, 1_000_000,
+                         5_000_000_000, False, Path("/suite"))
+        run.assert_not_called()
+
+    @patch("submit_storage_budgeted.subprocess.run")
+    def test_gpu_pause_blocks_future_wave_before_cpu_submission(self, run):
+        waves = make_waves(1_000_000, ["cpu", "cuda"],
+                           5_000_000_000, False)
+        with patch.dict(os.environ, {"FASTEMBEDR_HPC_GPU_PAUSED": "1"}):
+            with self.assertRaisesRegex(RuntimeError, "policy_rejected"):
+                submit_waves(waves, 1_000_000,
+                             5_000_000_000, False, Path("/suite"))
+        run.assert_not_called()
 
 
 if __name__ == "__main__":

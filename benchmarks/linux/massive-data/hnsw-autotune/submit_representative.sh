@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # One source-locked calibration with parallel dataset/window branches.
 set -euo pipefail
+echo "policy_rejected: archived file-backed HPC launcher is disabled." >&2
+exit 78
 
 [[ $# -eq 0 ]] || { echo 'Usage: submit_representative.sh' >&2; exit 2; }
 base=${HNSW_BASE:-/scratch/firenze/NN}

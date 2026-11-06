@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+echo "policy_rejected: archived full-graph launcher uses file-backed HPC cases." >&2
+exit 78
 base=${DEEP1B_BASE:-/scratch/firenze/NN}
 suite=$base/benchmark_scripts/massive-data
 image=${DEEP1B_IMAGE:-$base/singularity/fastembedr_cuda.sif}

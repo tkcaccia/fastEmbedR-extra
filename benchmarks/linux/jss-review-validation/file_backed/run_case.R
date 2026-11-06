@@ -1,4 +1,5 @@
 #!/usr/bin/env Rscript
+stop("policy_rejected: this archived HPC worker performs file-backed scientific calculation.")
 
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) != 3L) {
@@ -7,11 +8,19 @@ if (length(args) != 3L) {
 script <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE),
     value = TRUE)[[1L]])
 suite <- dirname(dirname(normalizePath(script)))
-cases <- utils::read.csv(file.path(suite, "file_backed", "cases.csv"),
+case_file <- Sys.getenv("FASTEMBEDR_CASES", file.path(suite,
+    "file_backed", "cases.csv"))
+cases <- utils::read.csv(case_file,
     stringsAsFactors = FALSE)
 selected <- cases[cases$id == args[[1L]], , drop = FALSE]
 if (nrow(selected) != 1L) stop("Unknown file-backed case")
 case <- as.list(selected[1L, ])
+case$seed <- if ("seed" %in% names(case)) {
+    as.integer(case$seed)
+} else 4L
+if (length(case$seed) != 1L || is.na(case$seed)) {
+    stop("Case seed must be one integer")
+}
 root <- normalizePath(args[[2L]], mustWork = TRUE)
 out <- file.path(args[[3L]], "file_backed", case$id)
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
@@ -56,7 +65,49 @@ blocked <- function(message) {
     stop(condition)
 }
 
-input_source <- function(case, root) {
+validate_bigann_identity <- function(manifest, dataset,
+                                     expected_bytes, expected_cols) {
+    identity <- jsonlite::fromJSON(manifest)
+    if (!identical(identity$dataset, dataset) ||
+        !identical(as.numeric(identity$rows), 1000000000) ||
+        !identical(as.numeric(identity$columns),
+            as.numeric(expected_cols)) ||
+        !identical(as.numeric(identity$bytes), expected_bytes) ||
+        !is.character(identity$sha256) ||
+        length(identity$sha256) != 1L ||
+        !grepl("^[0-9a-f]{64}$", identity$sha256)) {
+        blocked("BigANN download manifest does not match the input")
+    }
+    identity$sha256
+}
+
+reviewer_source_sample <- function(source, rows, out) {
+    set.seed(20261018L)
+    selected <- sort(sample.int(source$nrow, rows))
+    ids <- file.path(out, "source_sample_rows.csv")
+    utils::write.csv(data.frame(source_row = selected), ids,
+        row.names = FALSE)
+    path <- file.path(out, "source_sample.f32")
+    con <- file(path, "wb")
+    on.exit(try(close(con), silent = TRUE), add = TRUE)
+    for (first in seq(1, source$nrow, by = 10000L)) {
+        count <- min(10000L, source$nrow - first + 1L)
+        block_rows <- selected[selected >= first &
+            selected < first + count]
+        if (!length(block_rows)) next
+        block <- massive_read_rows(source, first, count)
+        values <- block[block_rows - first + 1L, , drop = FALSE]
+        writeBin(as.vector(t(values)), con, size = 4L,
+            endian = "little")
+    }
+    close(con)
+    list(data = massive_matrix(path, nrow = rows,
+        ncol = source$ncol, format = "f32", access = "stream"),
+        sample_rows_sha256 = strsplit(system2("sha256sum", ids,
+            stdout = TRUE), " +")[[1L]][1L])
+}
+
+input_source <- function(case, root, out) {
     if (case$dataset %in% c("turing", "deep")) {
         path <- file.path(Sys.getenv("BIGANN_DATA_ROOT",
             "/scratch/firenze/NN/Data/BigANN"), case$dataset,
@@ -71,16 +122,9 @@ input_source <- function(case, root) {
         if (file.info(path)$size != expected_bytes) {
             blocked("BigANN 1-billion-row download is incomplete")
         }
-        identity <- jsonlite::fromJSON(manifest)
         expected_cols <- if (case$dataset == "turing") 100L else 96L
-        if (identity$dataset != case$dataset ||
-            identity$rows != 1000000000 ||
-            identity$columns != expected_cols ||
-            identity$target_bytes != expected_bytes ||
-            !grepl("^[0-9a-f]{64}$", identity$sha256)) {
-            blocked("BigANN download manifest does not match the input")
-        }
-        data_sha256 <- identity$sha256
+        data_sha256 <- validate_bigann_identity(manifest,
+            case$dataset, expected_bytes, expected_cols)
         source <- massive_matrix(path, access = "stream")
     } else {
         base <- file.path(root, case$dataset, "workflow_comparators")
@@ -94,14 +138,24 @@ input_source <- function(case, root) {
         }
         source <- massive_matrix(path, nrow = meta$n[[1L]],
             ncol = meta$p[[1L]], format = "f32", access = "stream")
-        data_sha256 <- ""
+        data_sha256 <- if (case$analysis == "reviewer_landmark") {
+            strsplit(system2("sha256sum", path,
+                stdout = TRUE), " +")[[1L]][1L]
+        } else ""
     }
     if (case$rows > source$nrow) stop("Case exceeds available rows")
-    view <- if (case$rows == source$nrow) source else {
-        fastEmbedR:::massive_matrix_rows(source, 1L, case$rows)
+    sampled <- if (case$analysis == "reviewer_landmark") {
+        reviewer_source_sample(source, case$rows, out)
+    } else NULL
+    view <- if (!is.null(sampled)) sampled$data else {
+        if (case$rows == source$nrow) source else {
+            fastEmbedR:::massive_matrix_rows(source, 1L, case$rows)
+        }
     }
     list(data = view, path = path, manifest = manifest,
         data_sha256 = data_sha256,
+        sample_rows_sha256 = if (is.null(sampled)) "" else
+            sampled$sample_rows_sha256,
         source_rows = source$nrow)
 }
 
@@ -333,12 +387,49 @@ quality_sample <- function(source, layout, out, size = 256L) {
     }
     utils::write.csv(data.frame(source_row = rows),
         file.path(out, "quality_rows.csv"), row.names = FALSE)
-    neighbor_overlap(high, low, k = 30L)
+    high_distance <- as.matrix(stats::dist(high))
+    low_distance <- as.matrix(stats::dist(low))
+    diag(high_distance) <- Inf
+    diag(low_distance) <- Inf
+    k <- 30L
+    penalty <- 0
+    for (i in seq_len(nrow(high))) {
+        reference <- order(high_distance[i, ], method = "radix")
+        embedded <- order(low_distance[i, ], method = "radix")[seq_len(k)]
+        ranks <- integer(nrow(high))
+        ranks[reference] <- seq_along(reference)
+        missed <- embedded[!embedded %in% reference[seq_len(k)]]
+        penalty <- penalty + sum(ranks[missed] - k)
+    }
+    trust <- 1 - 2 * penalty /
+        (nrow(high) * k * (2 * nrow(high) - 3 * k - 1))
+    list(preserve_at_30_sample = neighbor_overlap(high, low, k),
+        trustworthiness_sample = trust,
+        quality_scope = paste0("within_fixed_", nrow(high), "_row_sample"))
+}
+
+scan_layout <- function(layout, rows) {
+    if (layout$nrow != rows || layout$ncol != 2L ||
+        file.info(layout$path)$size != rows * 2 * 4) {
+        stop("Full-row layout size or shape is incomplete")
+    }
+    for (first in seq(1, rows, by = 10000L)) {
+        block <- massive_read_rows(layout, first,
+            min(10000L, rows - first + 1L))
+        if (!all(is.finite(block))) stop("Nonfinite full-row layout")
+    }
+    rows
+}
+
+layout_sha256 <- function(layout) {
+    strsplit(system2("sha256sum", layout$path,
+        stdout = TRUE), " +")[[1L]][1L]
 }
 
 run_landmark <- function(source, out, case, devices) {
     common <- list(data = source, backend = case$backend, n.cores = 1L,
-        seed = 4L, massive = "landmark", output = file.path(out, "layout.f32"),
+        seed = case$seed, massive = "landmark",
+        output = file.path(out, "layout.f32"),
         landmarks = as.integer(case$landmarks),
         landmark_method = "random", transform_k = 30L,
         chunk_rows = 5000L, memory_limit = "4GB", devices = devices)
@@ -352,14 +443,17 @@ run_landmark <- function(source, out, case, devices) {
         fit$layout$nrow == source$nrow,
         fit$graph$backend == case$backend)
     check_devices(fit, devices)
-    sample <- massive_read_rows(fit$layout, 1L, 6L)
-    stopifnot(all(is.finite(sample)))
-    list(backend_observed = fit$backend,
+    verified <- scan_layout(fit$layout, source$nrow)
+    quality <- quality_sample(source, fit$layout, out,
+        size = if (case$analysis == "reviewer_landmark") 1024L else 256L)
+    c(list(backend_observed = fit$backend,
         output_bytes = file.info(fit$layout$path)$size,
         output_path = fit$layout$path,
+        layout_sha256 = layout_sha256(fit$layout),
+        finite_rows_verified = verified,
         landmark_rows = length(fit$selection$indices),
-        preserve_at_30_sample = quality_sample(source, fit$layout, out),
-        gpu_devices_observed = paste(fit$gpu_devices, collapse = ":"))
+        gpu_devices_observed = paste(fit$gpu_devices, collapse = ":")),
+        quality)
 }
 
 run_full <- function(source, out, case) {
@@ -374,7 +468,7 @@ run_full <- function(source, out, case) {
     knn_seconds <- proc.time()[[3L]] - started
     init <- fastEmbedR::pca(source, ncomp = 2L,
         massive = "out_of_core", output = file.path(out, "pca.f32"),
-        backend = "cuda", n.cores = 1L, seed = 4L,
+        backend = "cuda", n.cores = 1L, seed = case$seed,
         chunk_rows = 5000L, memory_limit = "4GB")
     pca_seconds <- proc.time()[[3L]] - started - knn_seconds
     if (case$method == "umap") {
@@ -387,7 +481,7 @@ run_full <- function(source, out, case) {
             knn_seconds - pca_seconds
         fit <- massive_umap_optimize(graph, init$scores,
             output = file.path(out, "layout.f32"), n_epochs = 200L,
-            min_dist = 0.01, seed = 4L, backend = "cuda",
+            min_dist = 0.01, seed = case$seed, backend = "cuda",
             n.cores = 1L, chunk_rows = 8192L,
             memory_limit = "4GB", checkpoint = TRUE,
             checkpoint_every = 50L)
@@ -409,18 +503,24 @@ run_full <- function(source, out, case) {
     }
     optimize_seconds <- proc.time()[[3L]] - started -
         knn_seconds - pca_seconds - graph_seconds
+    verified <- scan_layout(fit, rows)
     stopifnot(knn$backend == "cuda", init$backend == "cuda",
-        fit$nrow == rows, fit$ncol == 2L,
-        all(is.finite(massive_read_rows(fit, 1L, 6L))),
         fit$backend %in% c("cuda", "native_cuda_fft_graph_stream"))
-    list(backend_observed = fit$backend,
+    quality <- quality_sample(source, fit, out,
+        size = if (case$analysis == "reviewer_landmark") 1024L else 256L)
+    c(list(backend_observed = fit$backend,
         knn_method = knn$method,
+        knn_audit_rows = knn$audit_rows,
+        knn_recall_mean = knn$observed_recall,
+        knn_recall_min = knn$minimum_row_recall,
+        knn_rows_below_target = knn$sampled_rows_below_target,
         knn_seconds = knn_seconds, pca_seconds = pca_seconds,
         graph_seconds = graph_seconds,
         optimize_seconds = optimize_seconds,
         output_bytes = file.info(fit$path)$size,
         output_path = fit$path,
-        preserve_at_30_sample = quality_sample(source, fit, out))
+        layout_sha256 = layout_sha256(fit),
+        finite_rows_verified = verified), quality)
 }
 
 scaled_tsne_init <- function(scores, path) {
@@ -484,7 +584,7 @@ run_case <- function(case, input, out) {
 }
 
 started <- proc.time()[[3L]]
-input <- tryCatch(input_source(case, root), error = identity)
+input <- tryCatch(input_source(case, root, out), error = identity)
 result <- if (inherits(input, "error")) input else {
     tryCatch(run_case(case, input, out), error = identity)
 }
@@ -496,6 +596,7 @@ manifest_hash <- if (inherits(input, "error")) "" else {
 }
 record <- data.frame(id = case$id, analysis = case$analysis,
     dataset = case$dataset, method = case$method, route = case$route,
+    seed = case$seed,
     backend_requested = case$backend, rows = case$rows,
     source_rows = if (inherits(input, "error")) NA_real_ else
         input$source_rows,
@@ -504,6 +605,8 @@ record <- data.frame(id = case$id, analysis = case$analysis,
     source_manifest_sha256 = manifest_hash,
     source_data_sha256 = if (inherits(input, "error")) "" else
         input$data_sha256,
+    sample_rows_sha256 = if (inherits(input, "error")) "" else
+        input$sample_rows_sha256,
     source_path = if (inherits(input, "error")) "" else input$path,
     devices = case$devices, landmarks = case$landmarks,
     elapsed_seconds = unname(proc.time()[[3L]] - started),

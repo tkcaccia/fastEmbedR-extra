@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+echo "policy_rejected: archived HPC launcher violates the current resident one-case contract." >&2
+exit 78
 
 SUITE="${SUITE:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 export SUITE

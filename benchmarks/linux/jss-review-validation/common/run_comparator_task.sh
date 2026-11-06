@@ -72,7 +72,8 @@ fi
 
 [[ -n "$CONTAINER" ]] || { echo "container runtime not found" >&2; exit 1; }
 [[ -f "$IMAGE" ]] || { echo "missing image: $IMAGE" >&2; exit 1; }
-METHOD_DEADLINE_EPOCH="$(( $(date +%s) + METHOD_TIMEOUT_SECONDS ))"
+TASK_BUDGET_SECONDS="$METHOD_TIMEOUT_SECONDS"
+METHOD_DEADLINE_EPOCH="$(( $(date +%s) + TASK_BUDGET_SECONDS ))"
 
 BACKEND=cpu
 case "$MODE" in
@@ -150,6 +151,8 @@ case "$MODE" in
       BACKEND=cuda
       NV=(--nv)
       OUTPUT_MODE=python_cuda
+      TASK_BUDGET_SECONDS=36000
+      METHOD_DEADLINE_EPOCH="$(( $(date +%s) + TASK_BUDGET_SECONDS ))"
     elif [[ "$MODE" == python_cuda ]]; then
       METHODS=("${PYTHON_CUDA_METHODS[@]}")
       BACKEND=cuda
@@ -177,7 +180,7 @@ case "$MODE" in
       "--method=$METHOD" "--backend=$BACKEND" "--threads=$THREADS"
       "--n-components=$N_COMPONENTS"
       "--timing-reps=$TIMING_REPS"
-      "--timeout-seconds=$METHOD_TIMEOUT_SECONDS"
+      "--timeout-seconds=$TASK_BUDGET_SECONDS"
       "--deadline-epoch=$METHOD_DEADLINE_EPOCH"
     )
     ;;
@@ -210,7 +213,7 @@ if [[ "$MODE" != inputs ]]; then
   fi
   printf 'job_key,mode,dataset,method,timeout_seconds\n%s,%s,%s,%s,%s\n' \
     "$JOB_KEY" "${OUTPUT_MODE:-$MODE}" "$DATASET" "$METHOD" \
-    "$METHOD_TIMEOUT_SECONDS" > "$OUTPUT_DIR/task_identity.csv"
+    "$TASK_BUDGET_SECONDS" > "$OUTPUT_DIR/task_identity.csv"
 fi
 MEASURE_DIR="$OUTPUT_ROOT/measurement/$COMPARISON_DIR/$MODE"
 MEASURE_DIR+="/$DATASET/$METHOD"
@@ -225,7 +228,7 @@ if [[ "$MODE" != inputs ]]; then
   }
   MEASURED_COMMAND=(
     timeout --signal=TERM --kill-after=30s
-    "${METHOD_TIMEOUT_SECONDS}s" "${COMMAND[@]}"
+    "${TASK_BUDGET_SECONDS}s" "${COMMAND[@]}"
   )
 fi
 
@@ -244,7 +247,7 @@ if (( STATUS != 0 )); then
     DETAIL="process exited with code $STATUS"
     if [[ "$STATUS" == 124 ]]; then
       OUTCOME=timeout
-      DETAIL="GNU timeout reached ${METHOD_TIMEOUT_SECONDS}s"
+      DETAIL="GNU timeout reached ${TASK_BUDGET_SECONDS}s"
     elif [[ "$STATUS" == 137 ]]; then
       OUTCOME=killed_unclassified
       DETAIL="SIGKILL; inspect Slurm state for memory or time limit"
@@ -254,7 +257,7 @@ if (( STATUS != 0 )); then
 'timeout_seconds,exit_code'
       printf 'workflow_comparator,%s,%s,%s,"%s",%s,%s,%s\n' \
         "$DATASET" "${OUTPUT_MODE:-$MODE}" "$OUTCOME" "$DETAIL" \
-        "$METHOD" "$METHOD_TIMEOUT_SECONDS" "$STATUS"
+        "$METHOD" "$TASK_BUDGET_SECONDS" "$STATUS"
     } > "$OUTPUT_DIR/status.csv"
   fi
   exit "$STATUS"

@@ -1,0 +1,5 @@
+R_VERSION=4.6.1
+PACKAGE=/mnt/sata_ssd/fastEmbedR/in-progress/cuda-graph-options-20261102/validation-lib/fastEmbedR
+GRAPH_SECONDS=0.476
+0651d481a290cb41de4888b5288aab008ac91d971066a372f5fd1e5584e61e1a  /mnt/sata_ssd/fastEmbedR/tmp_source/fastEmbedR_src/_umap_cycle_cache/MNIST_centered_k15_faissR_auto_nn.rds
+3b51aecbd4d69334f5da67d3e13b22dda3a93d19f6bc444a4894f93ec9647689  /mnt/sata_ssd/fastEmbedR/Data/MNIST/MNIST_fastPLS_pca2_init.RData

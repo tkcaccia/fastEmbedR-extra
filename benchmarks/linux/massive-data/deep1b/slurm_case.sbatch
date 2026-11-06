@@ -5,6 +5,8 @@
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_deep1b_%A_%a.err
 
 set -euo pipefail
+echo "policy_rejected: archived Deep1B worker uses file-backed calculation on HPC." >&2
+exit 78
 base=${DEEP1B_BASE:-/scratch/firenze/NN}
 suite=${DEEP1B_SUITE:-$base/benchmark_scripts/massive-data/deep1b}
 bash "$suite/run_case.sh"

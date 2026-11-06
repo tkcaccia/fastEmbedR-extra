@@ -1,0 +1,2 @@
+"method","rows","landmark_rows","seconds","devices","uuids","shard_bytes","max_abs_error","model_identity"
+"landmark_pca_projection",10000,1000,1.498,"0,1","GPU-44B16BE0-E376-CC27-DFC7-B9AA4C37FEF4;GPU-71F1ADF4-B408-E316-F963-F1474EA911F4","60000;60000",1.26388251775467e-06,"d27788f9505e717f89250ebab1a442fe"

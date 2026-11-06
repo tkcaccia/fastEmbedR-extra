@@ -20,30 +20,24 @@ ARRAY_ID="${SLURM_ARRAY_TASK_ID:?array task ID required}"
 DATASET_INDEX="${PRIORITY[$ARRAY_ID]}"
 DATASET="${DATASETS[$DATASET_INDEX]}"
 CONTAINER="$(command -v apptainer || command -v singularity)"
-FAILED=0
-
 run_method() {
   local mode="$1" offset="$2" task_id stride
   stride=3
   [[ "$mode" != r_cuda ]] || stride=4
   task_id="$((DATASET_INDEX * stride + offset))"
   echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $DATASET $mode task=$task_id"
-  if ! COMPARATOR_TASK_ID="$task_id" \
-      bash "$SUITE/common/run_comparator_task.sh" "$mode"; then
-    FAILED=1
-  fi
+  COMPARATOR_TASK_ID="$task_id" \
+    bash "$SUITE/common/run_comparator_task.sh" "$mode"
 }
 
 publish_pair() {
   local family="$1"
-  if ! "$CONTAINER" exec --cleanenv --bind "$BASE_DIR:$BASE_DIR" \
-      --pwd "$BASE_DIR" "${FASTEMBEDR_CONTAINER_R_ENV[@]}" \
-      "$IMAGE" "$FASTEMBEDR_RSCRIPT" \
-      "$SUITE/common/plot_cuda_pair.R" \
-      "--dataset=$DATASET" "--family=$family" \
-      "--input-root=$INPUT_ROOT" "--output-root=$OUTPUT_ROOT"; then
-    FAILED=1
-  fi
+  "$CONTAINER" exec --cleanenv --bind "$BASE_DIR:$BASE_DIR" \
+    --pwd "$BASE_DIR" "${FASTEMBEDR_CONTAINER_R_ENV[@]}" \
+    "$IMAGE" "$FASTEMBEDR_RSCRIPT" \
+    "$SUITE/common/plot_cuda_pair.R" \
+    "--dataset=$DATASET" "--family=$family" \
+    "--input-root=$INPUT_ROOT" "--output-root=$OUTPUT_ROOT"
 }
 
 run_method r_cuda 1
@@ -53,4 +47,3 @@ run_method r_cuda 2
 run_method r_cuda 3
 run_method python_cuda 2
 publish_pair umap
-exit "$FAILED"

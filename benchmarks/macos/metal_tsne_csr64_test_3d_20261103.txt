@@ -1,0 +1,14 @@
+tsne-fft-3d: .................................SSSS.....S.......
+
+══ Skipped ═════════════════════════════════════════════════════════════════════
+1. 3D CUDA FFT follows the CPU one-step trajectory ('test-tsne-fft-3d.R:179:5') - Reason: embedding_cuda_available_cpp() is not TRUE
+
+2. CUDA t-SNE rejects unavailable cost traces ('test-tsne-fft-3d.R:220:5') - Reason: embedding_cuda_available_cpp() is not TRUE
+
+3. 3D CUDA FFT preserves neighborhood quality ('test-tsne-fft-3d.R:239:5') - Reason: embedding_cuda_available_cpp() is not TRUE
+
+4. 3D CUDA uses the large FFT grid above 5000 points ('test-tsne-fft-3d.R:280:5') - Reason: embedding_cuda_available_cpp() is not TRUE
+
+5. 3D CUDA one-call fit retains native PCA and FFT ('test-tsne-fft-3d.R:320:5') - Reason: embedding_cuda_available_cpp() is not TRUE
+
+══ DONE ════════════════════════════════════════════════════════════════════════

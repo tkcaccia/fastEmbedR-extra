@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
+echo "policy_rejected: archived PCA retry uses file-backed HPC calculation." >&2
+exit 78
+[[ "${FASTEMBEDR_HPC_GPU_PAUSED:-1}" == 0 ]] || {
+    echo 'UCT GPU submissions remain paused.' >&2
+    exit 2
+}
 
 base=${DEEP1B_BASE:-/scratch/firenze/NN}
 suite=$base/benchmark_scripts/massive-data

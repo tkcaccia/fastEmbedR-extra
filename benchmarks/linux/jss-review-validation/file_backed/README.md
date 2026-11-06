@@ -1,6 +1,11 @@
 # File-backed opening phase
 
-The complete JSS campaign starts this phase immediately after comparator input
+This historical phase is disabled on the UCT HPC. The shell and R scientific
+workers reject execution before loading data; the registry and results remain
+available for read-only audit. File-backed experiments now belong on
+Silvano's Mac or another explicitly permitted standalone host.
+
+The archived complete JSS campaign started this phase after comparator input
 preparation, alongside the ordinary CPU/CUDA benchmark lanes. `cases.csv` is
 the complete case registry. Each case writes `result.csv`; `audit.py` writes
 `summary.csv`, `paired_comparisons.csv`, and `audit.txt`. The final campaign

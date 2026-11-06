@@ -58,7 +58,7 @@ partitioned <- function(width) {
         file.path(scratch, paste0("walktrap-", width, ".u32")),
         chunk_rows = width, memory_limit = "256MB")
     elapsed <- proc.time()[[3L]] - start
-    final <- massive_read_walktrap_rows(fit, 1L, n)
+    final <- massive_read_rows(fit, 1L, n)
     data.frame(width = width, blocks = ceiling(n / width),
         full_seconds = reference_seconds,
         partition_seconds = elapsed,

@@ -1,5 +1,20 @@
 # Linux CPU and CUDA benchmark
 
+> The compact validation and complete JSS launchers below are archived.
+> Their HPC submission and worker entrypoints reject execution before
+> scheduling. Use `resident-one-case-20261103/` for candidate CPU-only
+> resident-memory checks. Do not run file-backed or streaming science on
+> the HPC. GPU submission remains subject to the project policy.
+
+Large image and dataset checksums must never run on an HPC login/head node.
+Use the digest saved by a prior compute job, or submit the isolated
+[`hpc_image_checksum_cpu_20261104.sbatch`](../../singularity/hpc_image_checksum_cpu_20261104.sbatch)
+helper as a one-core
+CPU job after authorization. The helper refuses direct shell execution
+without `SLURM_JOB_ID`. Do not hash the same immutable image in every
+benchmark case. The canonical rule is in the private Agent-guide's
+`03-hpc-slurm/resource-contract.md`.
+
 The Linux workflow is separate from the native macOS workflow. It uses one
 immutable fastEmbedR source identity, an isolated R library, and distinct
 Slurm jobs for multicore CPU and CUDA measurements.
@@ -38,16 +53,17 @@ This copies the Linux launchers, shared measurement engine, release lock, and
 a detached checkout of the locked package to
 `current_fastembedr_validation/`. It does not submit jobs.
 
-## Submit
+## Archived submission
 
-On the HPC login node:
+The historical command was:
 
 ```bash
 cd /scratch/firenze/NN
 bash current_fastembedr_validation/submit_current_validation_hpc.sh
 ```
 
-The dependency chain is preparation, CPU/CUDA benchmark jobs, and then the
+It now rejects before `sbatch`. The historical dependency chain was
+preparation, CPU/CUDA benchmark jobs, and then the
 identity/result gate. A run is valid only when the final gate writes an
 `identity_validated` status.
 
@@ -57,7 +73,7 @@ backend, timing boundary, and failure status.
 
 ## Complete JSS validation
 
-`jss-review-validation/` is the current comprehensive publication campaign.
+`jss-review-validation/` is an archived comprehensive publication campaign.
 It supplements the compact release workflow above with affinity-support,
 observed-neighbor-recall, backend-quality, held-out transformation,
 landmarking, strong-scaling, PCA, long-run t-SNE, numerical-component, timing,

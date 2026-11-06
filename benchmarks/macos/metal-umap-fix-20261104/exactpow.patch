@@ -1,0 +1,28 @@
+--- fastEmbedR-candidate-20261104b/source/src/embedding_metal_impl.mm	2026-11-03 17:29:37
++++ fastEmbedR-metal-umap-fix-20261104/exactpow-source/src/embedding_metal_impl.mm	2026-11-04 17:01:07
+@@ -1289,24 +1289,7 @@
+ // fast exponential idea, and is mirrored from the CPU implementation without
+ // vendoring third-party source.
+ float fast_positive_pow(float x, float b) {
+-  if (x <= 0.0f) return 0.0f;
+-  uint x_bits = as_type<uint>(x);
+-  const float exponent_bias_word = 1064866805.0f;
+-  int whole = int(b);
+-  float fractional = b - float(whole);
+-  uint interp_bits = uint(
+-    fractional * (float(x_bits) - exponent_bias_word) + exponent_bias_word
+-  );
+-  float fractional_pow = as_type<float>(interp_bits);
+-  float integer_pow = 1.0f;
+-  float base = x;
+-  int exponent = whole;
+-  while (exponent > 0) {
+-    if ((exponent & 1) != 0) integer_pow *= base;
+-    base *= base;
+-    exponent >>= 1;
+-  }
+-  return integer_pow * fractional_pow;
++  return pow(x, b);
+ }
+ 
+ float attractive_coeff(float d2, float weight, constant EmbedParams& p) {

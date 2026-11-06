@@ -1,8 +1,11 @@
 """Failed full-graph jobs must retain their output and scratch evidence."""
 
+import csv
+import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -13,6 +16,80 @@ SCRIPT = Path(__file__).with_name("run_fullgraph_job.sh")
 
 
 class FullGraphCleanupTest(unittest.TestCase):
+    def test_scored_outputs_are_pruned_only_after_figures_exist(self):
+        script = SCRIPT.read_text()
+        functions = []
+        for name in ("prune_outputs", "prune_work"):
+            match = re.search(rf"(?ms)^{name}\(\) \{{.*?^\}}", script)
+            self.assertIsNotNone(match)
+            functions.append(match.group())
+        harness = (
+            'set -euo pipefail\nroot=$1\nbackend=cpu\nrows=1000\n'
+            'label=fullgraph\n'
+            'case_name() { printf "%s_%s_%s_%s" '
+            '"$backend" "$1" "$rows" "$label"; }\n'
+            + "\n".join(functions) + '\nprune_outputs\nprune_work\n'
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            env = os.environ.copy()
+            if shutil.which("gstat"):
+                bin_dir = root / "bin"
+                bin_dir.mkdir()
+                (bin_dir / "stat").symlink_to(shutil.which("gstat"))
+                env["PATH"] = str(bin_dir) + os.pathsep + env["PATH"]
+            work = root / "work"
+            work.mkdir()
+            (work / "leiden_labels.u32").write_bytes(b"labels")
+            (work / "knn.indices.u32").write_bytes(b"graph")
+            expected = {}
+            for method in ("pca", "tsne", "umap"):
+                name = f"cpu_{method}_1000_fullgraph"
+                result = root / "results" / name
+                result.mkdir(parents=True)
+                data = method.encode()
+                (result / "output.f32").write_bytes(data)
+                (result / "coverage.csv").write_text(
+                    "rows_scanned,all_values_valid\n1000,TRUE\n")
+                (result / "quality.csv").write_text("score\n1\n")
+                figure = root / "figures" / f"{name}.png"
+                figure.parent.mkdir(exist_ok=True)
+                figure.write_bytes(b"png")
+                expected[f"results/{name}/output.f32"] = (
+                    str(len(data)), hashlib.sha256(data).hexdigest())
+            missing = root / "results/cpu_umap_1000_fullgraph/quality.csv"
+            missing.unlink()
+            failed = subprocess.run(["bash", "-c", harness, "bash",
+                                     str(root)], capture_output=True,
+                                    env=env)
+            self.assertNotEqual(failed.returncode, 0)
+            self.assertTrue((work / "knn.indices.u32").exists())
+            self.assertTrue(all((root / path).exists()
+                                for path in expected))
+            missing.write_text("score\n1\n")
+            coverage = (root / "results/cpu_umap_1000_fullgraph/"
+                        "coverage.csv")
+            coverage.unlink()
+            failed = subprocess.run(["bash", "-c", harness, "bash",
+                                     str(root)], capture_output=True,
+                                    env=env)
+            self.assertNotEqual(failed.returncode, 0)
+            self.assertTrue(all((root / path).exists()
+                                for path in expected))
+            coverage.write_text("rows_scanned,all_values_valid\n"
+                                "1000,TRUE\n")
+            passed = subprocess.run(["bash", "-c", harness, "bash",
+                                     str(root)], capture_output=True,
+                                    env=env)
+            self.assertEqual(passed.returncode, 0, passed.stderr)
+            self.assertFalse(any((root / path).exists()
+                                 for path in expected))
+            self.assertFalse(any(work.iterdir()))
+            with (root / "pruned_outputs.tsv").open(newline="") as stream:
+                rows = list(csv.DictReader(stream, delimiter="\t"))
+            self.assertEqual({row["path"]: (row["bytes"], row["sha256"])
+                              for row in rows}, expected)
+
     def test_classic_audit_expects_only_classic_runner_outputs(self):
         script = SCRIPT.read_text()
         classic = re.search(

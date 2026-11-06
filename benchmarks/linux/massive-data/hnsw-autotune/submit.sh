@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Submit exact truth, reused-index sweeps, and a final audit in one command.
 set -euo pipefail
+echo "policy_rejected: archived file-backed HPC launcher is disabled." >&2
+exit 78
 
 base=${HNSW_BASE:-/scratch/firenze/NN}
 suite=$base/benchmark_scripts/massive-data/hnsw-autotune

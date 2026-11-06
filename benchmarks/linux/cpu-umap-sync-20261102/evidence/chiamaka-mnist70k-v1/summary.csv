@@ -1,0 +1,5 @@
+"dataset","backend","optimizer","workers_requested","workers_effective","graph_edges","epochs","graph_elapsed_sec","fit_elapsed_sec","output_sha256"
+"MNIST70k","cpu","synchronized_cpu_fixed_point",1,1,1588812,200,0.476,21.187,"4c432f79ed2bf7a503e891a087eeda83a7f0d067ac39647e4e301306ed4f953a"
+"MNIST70k","cpu","synchronized_cpu_fixed_point",2,2,1588812,200,0.476,11.778,"4c432f79ed2bf7a503e891a087eeda83a7f0d067ac39647e4e301306ed4f953a"
+"MNIST70k","cpu","synchronized_cpu_fixed_point",4,4,1588812,200,0.476,7.07,"4c432f79ed2bf7a503e891a087eeda83a7f0d067ac39647e4e301306ed4f953a"
+"MNIST70k","cpu","synchronized_cpu_fixed_point",8,8,1588812,200,0.476,4.732,"4c432f79ed2bf7a503e891a087eeda83a7f0d067ac39647e4e301306ed4f953a"

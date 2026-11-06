@@ -8,6 +8,8 @@
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_pca_phases_%j.err
 
 set -euo pipefail
+echo "policy_rejected: archived file-backed HPC worker is disabled." >&2
+exit 78
 root=${1:?Provide a new result directory}
 suite=/scratch/firenze/NN/benchmark_scripts_cpu32_20261024
 library=/scratch/firenze/NN/fastEmbedR-results/massive-data/\

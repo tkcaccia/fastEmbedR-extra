@@ -1,0 +1,13 @@
+--- fastEmbedR-candidate-20261104b/source/src/embedding_metal_impl.mm	2026-11-03 17:29:37
++++ fastEmbedR-metal-umap-fix-20261104/head-only-source/src/embedding_metal_impl.mm	2026-11-04 16:59:12
+@@ -1587,8 +1587,8 @@
+ 
+     atomic_fetch_add_explicit(&layout[head_base], fixed_delta(attractive.x), memory_order_relaxed);
+     atomic_fetch_add_explicit(&layout[head_base + 1u], fixed_delta(attractive.y), memory_order_relaxed);
+-    atomic_fetch_add_explicit(&layout[tail_base], fixed_delta(-attractive.x), memory_order_relaxed);
+-    atomic_fetch_add_explicit(&layout[tail_base + 1u], fixed_delta(-attractive.y), memory_order_relaxed);
++    
++    
+ 
+     for (uint s = 0; s < p.negative_sample_rate; ++s) {
+       uint neg = clean_metal_hash(p.seed, epoch, gid, nb, e, s, 17u) % p.n;

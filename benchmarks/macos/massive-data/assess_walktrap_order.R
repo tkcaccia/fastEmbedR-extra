@@ -41,7 +41,7 @@ run_case <- function(x, truth, order_name, width) {
         order = order_name, width = width, status = "failed",
         message = conditionMessage(fit), exact_seconds = exact_seconds,
         part_seconds = part_seconds))
-    labels <- massive_read_walktrap_rows(fit, 1L, n)
+    labels <- massive_read_rows(fit, 1L, n)
     exact_path <- file.path(directory, "exact.u32")
     writeBin(as.integer(exact$membership), exact_path,
         size = 4L, endian = "little")

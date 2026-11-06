@@ -12,6 +12,9 @@
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_JSS_3d_ctl_%j.err
 set -euo pipefail
 
+echo 'policy_rejected: archived HPC 3D controller is disabled.' >&2
+exit 78
+
 : "${SUITE:?suite path required}"
 : "${OUTPUT_ROOT:?result path required}"
 : "${CPU_R_JOB:?CPU R job ID required}"

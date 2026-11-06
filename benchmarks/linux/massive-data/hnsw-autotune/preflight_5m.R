@@ -25,6 +25,23 @@ worker_found <- faissR:::nn_faiss_hnsw_index_search_float32_cpp(
 if (!isTRUE(worker_found$index_reused) ||
     !identical(worker_found$ef_search, 80L)) stop(
         "Calibration worker HNSW preflight failed")
+set.seed(17017)
+order_rows <- sample.int(nrow(x))
+permuted <- x[order_rows, , drop = FALSE]
+if (!inherits(permuted, "float32")) stop(
+    "Insertion-order test lost float32 input")
+permuted_index <- faissR:::nn_faiss_hnsw_index_build_float32_cpp(
+    permuted, 16L, 80L, 120L, "euclidean", "euclidean", 1L)
+permuted_found <- faissR:::nn_faiss_hnsw_index_search_float32_cpp(
+    permuted_index, x[1:4, , drop = FALSE], 6L, FALSE,
+    80L, 1L, "double")
+mapped <- matrix(0L, nrow(permuted_found$indices),
+    ncol(permuted_found$indices))
+valid <- permuted_found$indices > 0L &
+    permuted_found$indices <= length(order_rows)
+mapped[valid] <- order_rows[permuted_found$indices[valid]]
+if (!all(mapped[, 1L] == 1:4)) stop(
+    "Insertion-order ID mapping failed")
 pilot <- faissR::hnsw_tune(x, k = 5L, target_recall = 0.9,
     reference_size = 100L, tune_queries = 20L,
     holdout_queries = 20L, seed = 19L,

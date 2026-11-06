@@ -4,6 +4,8 @@
 #SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_cluster_scale_%j.out
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_cluster_scale_%j.err
 set -euo pipefail
+echo "policy_rejected: archived file-backed HPC worker is disabled." >&2
+exit 78
 cores=${1:?}
 output=${2:?}
 image=${3:?}

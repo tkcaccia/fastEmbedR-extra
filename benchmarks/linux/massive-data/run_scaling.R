@@ -244,7 +244,7 @@ result <- withCallingHandlers(tryCatch({
              chunk_rows = chunk_rows,
              memory_limit = option("memory-limit", "256MB"))
     } else {
-        massive_cluster(source, method = option("cluster-method", "leiden"),
+        graph_cluster(source, method = option("cluster-method", "leiden"),
              landmarks = if (is.null(previous) ||
                  !is.null(options$landmarks)) {
                  integer_option("landmarks", 100L)
@@ -315,7 +315,7 @@ if (!is.null(layout) && !nzchar(error)) {
     first <- unique(c(1, floor(rows / 2), rows))
     finite_sample <- all(vapply(first, function(i) {
         if (mode == "cluster") {
-            value <- massive_read_cluster_rows(layout, first = i, n = 1L)
+            value <- massive_read_rows(layout, first = i, n = 1L)
             return(all(value$membership >= 1L) &&
                 all(is.finite(value$confidence)) &&
                 all(value$confidence >= 0 & value$confidence <= 1))

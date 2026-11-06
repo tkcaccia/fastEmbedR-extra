@@ -456,4 +456,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    print("policy_rejected: archived HPC controller is disabled.",
+          file=sys.stderr)
+    raise SystemExit(78)

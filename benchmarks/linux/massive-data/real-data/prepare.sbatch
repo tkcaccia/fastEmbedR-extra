@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+echo "policy_rejected: archived file-backed HPC worker is disabled." >&2
+exit 78
 suite=${REAL_SUITE:?}
 root=${REAL_ROOT:?}
 dataset=${REAL_DATASET:?}

@@ -34,7 +34,7 @@ directory.
 | MetRef | No | Load from the KODAMA R package and apply the documented zero-column removal, normalization, scaling, and donor-label procedure. |
 | flow18 and mass41 | No | Obtain from the source accompanying the opt-SNE study/release and retain its labels and preprocessing metadata. |
 | FlowRepository FR-FCM-ZYRM | No | Obtain from FlowRepository accession FR-FCM-ZYRM under its access terms; record channel selection and transformation. |
-| Tabula Muris | No | Obtain from the Tabula Muris project/Figshare or Bioconductor `TabulaMurisData`; record QC, normalization, feature selection, PCA, and tissue labels. |
+| Tabula Muris | No | The bundled benchmark object uses the legacy Seurat droplet/FACS Figshare release (DOI 10.6084/m9.figshare.5821263.v1): 100,102 retained cells, PCA50, and 32 tissue labels. The 70,118-cell Bioconductor `TabulaMurisData` droplet resource is a different preparation. Record QC, normalization, feature selection, PCA, and labels. |
 | Macosko2015 retina | No | Obtain from the Macosko et al. retinal single-cell release/GEO source; record filtering, normalization, feature selection, and labels. |
 | ImageNet features | **Restricted** | The user must obtain ImageNet under ImageNet's terms and generate or lawfully obtain the documented feature representation. Do not upload images, labels tied to restricted files, or derived feature matrices unless redistribution is expressly permitted. |
 

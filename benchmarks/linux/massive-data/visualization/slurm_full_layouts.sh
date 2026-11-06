@@ -5,6 +5,9 @@
 #SBATCH --time=24:00:00
 set -euo pipefail
 
+echo 'policy_rejected: file-backed layout rendering is disabled on HPC.' >&2
+exit 78
+
 base=${VIS_BASE:?Set VIS_BASE}
 out=${VIS_OUT:?Set VIS_OUT}
 rows=${VIS_ROWS:?Set VIS_ROWS}

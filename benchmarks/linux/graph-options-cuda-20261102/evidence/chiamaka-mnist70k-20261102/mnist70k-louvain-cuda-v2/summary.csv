@@ -1,0 +1,2 @@
+"dataset","method","backend","n","graph_edges","weighted_edges","graph_elapsed_sec","fit_elapsed_sec","modularity","communities","unassigned","ari_labels","implementation","consensus_implementation","projection_execution","small_groups_execution","package_path"
+"MNIST70k","louvain","cuda",70000,249804,171676,0.166,0.601,NA,66,4,0.35944002618478,"native_parallel_multilevel_louvain","cuda_partitions_host_sparse_edge_consensus","host_native_cpp","host_native_cpp","/mnt/sata_ssd/fastEmbedR/in-progress/cuda-graph-options-20261102/validation-lib/fastEmbedR"

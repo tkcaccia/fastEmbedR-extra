@@ -1,0 +1,2 @@
+"dataset","method","backend","n","graph_edges","weighted_edges","graph_elapsed_sec","fit_elapsed_sec","modularity","communities","unassigned","ari_labels","implementation","consensus_implementation","projection_execution","small_groups_execution","package_path"
+"MNIST70k","leiden","cpu",70000,249804,171489,0.164,2.739,NA,80,6,0.367004710401477,"native_leiden_local_move_refine_aggregate","native_sparse_edge_consensus","cpu","cpu","/mnt/sata_ssd/fastEmbedR/in-progress/cuda-graph-options-20261102/validation-lib/fastEmbedR"

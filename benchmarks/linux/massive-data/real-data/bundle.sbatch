@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Run a small method bundle inside one GPU allocation.
 set -euo pipefail
+echo "policy_rejected: one L40S allocation may execute one scientific test, not a case bundle." >&2
+exit 78
 count=$(( $(wc -l < "$REAL_CASE_FILE") - 1 ))
 failures=0
 for ((index=0; index<count; index++)); do

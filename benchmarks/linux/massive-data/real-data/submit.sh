@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Independent preparation, CPU, one-GPU, and two-GPU lanes per dataset.
 set -euo pipefail
+echo "policy_rejected: archived real-data campaign includes HPC file-backed cases and bundled L40S tests; use the resident one-case campaign instead." >&2
+exit 78
 base=${REAL_BASE:-/scratch/firenze/NN}
 suite=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 image=$base/singularity/fastembedr_cuda.sif

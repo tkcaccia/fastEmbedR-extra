@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # Queue independent CPU and CUDA 100M-to-1B lanes after the 5M campaign.
 set -euo pipefail
+echo "policy_rejected: archived file-backed HPC launcher is disabled." >&2
+exit 78
+[[ "${FASTEMBEDR_HPC_GPU_PAUSED:-1}" == 0 ]] || {
+    echo 'UCT GPU submissions remain paused.' >&2
+    exit 2
+}
 
 [[ $# -eq 1 ]] || {
     echo "Usage: submit_extended.sh FINISHED_AUTOMATIC_CAMPAIGN" >&2

@@ -132,6 +132,47 @@ Do not run `submit_5m.sh` against an earlier faissR image. Each worker
 verifies the source-locked image SHA-256; the preflight tests the explicit
 persistent FAISS HNSW bridge before the data jobs proceed.
 
+### Untouched Deep1B holdout and build-order check
+
+`submit_deep_holdout.sh` is a separate CPU-only campaign. It uses a
+5,000,000-row Deep window starting at row 1,000,001 and 8,192 exact-query
+rows, split before tuning into 4,096 tune and 4,096 holdout rows. Two
+prespecified HNSW settings are each built in natural and seeded-permuted
+insertion order. The sweep runs all four cases on one CPU node after exact
+truth is available, so their timings are more comparable. The fastest
+natural-order candidate that passes the 0.99 bootstrap lower-bound gate on
+tune queries is checked on holdout queries in both build orders. A measured
+recall miss produces `WARN`, not an algorithmic pass. This tests one
+5M-row window and does not establish 1B-row graph recall.
+
+Stage this suite in its own immutable directory rather than overwriting
+scripts used by active jobs. Set `HNSW_IMAGE` to the tested HPC image and
+`HNSW_IMAGE_SHA256` to its verified SHA-256 before submission:
+
+```bash
+HNSW_SUITE=/scratch/firenze/NN/benchmark_scripts_repair_20261017/hnsw-autotune
+HNSW_IMAGE=/scratch/firenze/NN/singularity/fastembedr_cuda.candidate_20261016_matrix.sif
+HNSW_IMAGE_SHA256=91387e35888bdd61fbd75bff7add5cf4fca7b3b4bdc15522ab3eade78ea8ea2e
+export HNSW_SUITE HNSW_IMAGE HNSW_IMAGE_SHA256
+bash "$HNSW_SUITE/submit_deep_holdout.sh"
+```
+
+The new campaign stores only exact-query IDs/neighbors, per-query recall,
+timing, peak process RSS, and source checksums; it saves neither input
+vectors nor a full graph. Read `audit_deep_holdout.json` and
+`holdout_results.csv` together. The audit checks identical queries and
+package binaries across cases. A `PASS` here is one evidence gate, not a
+final benchmark freeze.
+
+If a submitted source-locked audit has a reporting defect, leave its
+worker scripts and original audit untouched. Stage the corrected auditor
+in a different directory, then use `submit_deep_holdout_reaudit.sh` with
+the original campaign directory and audit job ID. It waits for that audit,
+writes `audit_deep_holdout_v2.json` and `holdout_results_v2.csv`, and
+records its own source checksums. The v2 ranking uses projected all-row
+build-plus-query cost; it is an estimate, not a measured five-million-query
+runtime. Do not combine metrics from different source revisions silently.
+
 For either campaign, monitor with:
 
 ```bash

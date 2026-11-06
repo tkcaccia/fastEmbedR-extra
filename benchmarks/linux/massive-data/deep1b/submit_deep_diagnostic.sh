@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+echo "policy_rejected: archived file-backed HPC launcher is disabled." >&2
+exit 78
 
 free_gb=${DEEP1B_SCRATCH_FREE_GB:-}
 [[ "$free_gb" =~ ^[0-9]+$ && "$free_gb" -ge 600 ]] || {

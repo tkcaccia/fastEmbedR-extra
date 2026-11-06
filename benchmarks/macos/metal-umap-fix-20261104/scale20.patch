@@ -1,0 +1,128 @@
+--- fastEmbedR-candidate-20261104b/source/src/embedding_metal_impl.mm	2026-11-03 17:29:37
++++ fastEmbedR-metal-umap-fix-20261104/scale20-source/src/embedding_metal_impl.mm	2026-11-04 16:37:04
+@@ -1470,7 +1470,7 @@
+ }
+ 
+ int fixed_delta(float value) {
+-  constexpr float scale = 65536.0f;
++  constexpr float scale = 1048576.0f;
+   return int(clamp(value * scale, -2140000000.0f, 2140000000.0f));
+ }
+ 
+@@ -1485,7 +1485,7 @@
+ ) {
+   if (gid >= p.n) return;
+ 
+-  constexpr float inv_scale = 1.0f / 65536.0f;
++  constexpr float inv_scale = 1.0f / 1048576.0f;
+   float alpha = p.learning_rate * (1.0f - float(epoch) / max(1.0f, float(p.n_epochs)));
+ 
+   for (uint e = 0; e < p.k; ++e) {
+@@ -1560,7 +1560,7 @@
+ ) {
+   if (gid >= p.n) return;
+ 
+-  constexpr float inv_scale = 1.0f / 65536.0f;
++  constexpr float inv_scale = 1.0f / 1048576.0f;
+   float progress = float(epoch) / max(1.0f, float(p.n_epochs - 1u));
+   float alpha = p.learning_rate * (1.0f - progress);
+ 
+@@ -1619,7 +1619,7 @@
+   uint gid [[thread_position_in_grid]]
+ ) {
+   if (gid >= p.n) return;
+-  constexpr float inv_scale = 1.0f / 65536.0f;
++  constexpr float inv_scale = 1.0f / 1048576.0f;
+   float alpha = p.learning_rate *
+     (1.0f - float(epoch) / max(1.0f, float(p.n_epochs - 1u)));
+   uint head_base = gid * n_components;
+@@ -1706,7 +1706,7 @@
+   const uint tail = uint(tails[gid]);
+   const uint hb = 2u * head;
+   const uint tb = 2u * tail;
+-  constexpr float scale = 1.0f / 65536.0f;
++  constexpr float scale = 1.0f / 1048576.0f;
+   const float alpha = p.learning_rate *
+     (1.0f - float(epoch) / float(p.n_epochs));
+   float2 a = float2(
+@@ -1767,7 +1767,7 @@
+ }
+ 
+ float3 load_layout_3d(device atomic_int* layout, uint row) {
+-  constexpr float inv_scale = 1.0f / 65536.0f;
++  constexpr float inv_scale = 1.0f / 1048576.0f;
+   uint base = row * 3u;
+   return float3(
+     float(atomic_load_explicit(&layout[base],
+@@ -2000,7 +2000,7 @@
+ ) {
+   if (gid >= n_rows) return;
+ 
+-  constexpr float inv_scale = 1.0f / 65536.0f;
++  constexpr float inv_scale = 1.0f / 1048576.0f;
+   float alpha = p.learning_rate * (1.0f - float(epoch) / max(1.0f, float(p.n_epochs)));
+   uint row = uint(row_ids[gid]);
+   if (row >= p.n) return;
+@@ -2053,7 +2053,7 @@
+ }
+ 
+ float3 load_refine_position_3d(device atomic_int* layout, uint base) {
+-  constexpr float inv_scale = 1.0f / 65536.0f;
++  constexpr float inv_scale = 1.0f / 1048576.0f;
+   return float3(
+     float(atomic_load_explicit(&layout[base], memory_order_relaxed)) *
+       inv_scale,
+@@ -8428,7 +8428,7 @@
+     };
+ 
+     std::vector<std::int32_t> fixed_layout(current.size());
+-    constexpr float fixed_scale = 65536.0f;
++    constexpr float fixed_scale = 1048576.0f;
+     for (std::size_t i = 0; i < current.size(); ++i) {
+       const float value = std::max(-2140000000.0f, std::min(2140000000.0f, current[i] * fixed_scale));
+       fixed_layout[i] = static_cast<std::int32_t>(value);
+@@ -8529,7 +8529,7 @@
+     }
+ 
+     std::memcpy(fixed_layout.data(), [fixed_layout_buffer contents], fixed_layout.size() * sizeof(std::int32_t));
+-    constexpr float inv_fixed_scale = 1.0f / 65536.0f;
++    constexpr float inv_fixed_scale = 1.0f / 1048576.0f;
+     for (std::size_t i = 0; i < current.size(); ++i) {
+       current[i] = static_cast<float>(fixed_layout[i]) * inv_fixed_scale;
+     }
+@@ -8653,7 +8653,7 @@
+     std::vector<float> current = metal_copy_float_matrix_row_major(
+       init_embedding, "initialization");
+     std::vector<std::int32_t> fixed_layout(current.size());
+-    constexpr float fixed_scale = 65536.0f;
++    constexpr float fixed_scale = 1048576.0f;
+     for (std::size_t i = 0; i < current.size(); ++i) {
+       const float value = std::max(-2140000000.0f, std::min(2140000000.0f, current[i] * fixed_scale));
+       fixed_layout[i] = static_cast<std::int32_t>(value);
+@@ -8771,7 +8771,7 @@
+     }
+ 
+     std::memcpy(fixed_layout.data(), [layout_buffer contents], fixed_layout.size() * sizeof(std::int32_t));
+-    constexpr float inv_fixed_scale = 1.0f / 65536.0f;
++    constexpr float inv_fixed_scale = 1.0f / 1048576.0f;
+     NumericMatrix out(n, n_components);
+     for (int i = 0; i < n; ++i) {
+       const std::size_t base =
+@@ -8984,7 +8984,7 @@
+         delete context;
+         Rcpp::stop("Metal UMAP initialization is nonfinite or too large.");
+       }
+-      fixed[i] = static_cast<std::int32_t>(init[i] * 65536.0f);
++      fixed[i] = static_cast<std::int32_t>(init[i] * 1048576.0f);
+     }
+     context->dimensions = dimensions;
+     context->params = EmbedParams{
+@@ -9062,7 +9062,7 @@
+   const auto* fixed = static_cast<const std::int32_t*>(
+     [context->layout contents]);
+   for (std::size_t i = 0; i < elements; ++i) {
+-    output[i] = static_cast<float>(fixed[i]) / 65536.0f;
++    output[i] = static_cast<float>(fixed[i]) / 1048576.0f;
+   }
+ }
+ 

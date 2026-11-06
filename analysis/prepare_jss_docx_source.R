@@ -65,6 +65,8 @@ for (family in c("pca", "tsne", "umap")) {
   body <- gsub(paste0(stem, ".pdf"), paste0(stem, ".png"),
                body, fixed = TRUE)
 }
+body <- gsub("figures/layout_merge_synthetic.pdf",
+             "figures/layout_merge_synthetic.png", body, fixed = TRUE)
 for (name in c("cpu_scaling_comparison", "landmark_comparison")) {
   stem <- paste0("generated/secondary/", name)
   body <- gsub(paste0(stem, ".pdf"), paste0(stem, ".png"),

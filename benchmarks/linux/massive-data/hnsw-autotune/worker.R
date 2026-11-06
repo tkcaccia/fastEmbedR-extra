@@ -161,11 +161,23 @@ if (case$scope == "pilot") {
     timing_query <- query_float[timing_rows, , drop = FALSE]
 }
 build_seconds <- 0
+insertion_seed <- if ("insertion_seed" %in% names(case)) {
+    as.integer(case$insertion_seed)
+} else 0L
+if (is.na(insertion_seed) || insertion_seed < 0L) {
+    stop("Invalid insertion-order seed")
+}
 for (first in seq.int(1L, case$rows, by = case$shard_rows)) {
     count <- min(case$shard_rows, case$rows - first + 1L)
     shard <- fastEmbedR:::massive_matrix_rows(view, first, count)
     reference <- fastEmbedR:::massive_read_rows_cpp(shard, 1L,
         count, 4 * count * source$ncol, TRUE)
+    order_rows <- seq_len(count)
+    if (insertion_seed > 0L) {
+        set.seed(insertion_seed + first)
+        order_rows <- sample.int(count)
+        reference <- reference[order_rows, , drop = FALSE]
+    }
     started <- clock()
     index <- faissR:::nn_faiss_hnsw_index_build_float32_cpp(
         reference, case$m, case$ef_construction, 120L,
@@ -182,6 +194,13 @@ for (first in seq.int(1L, case$rows, by = case$shard_rows)) {
         found <- faissR:::nn_faiss_hnsw_index_search_float32_cpp(
             index, query_float, k + 1L, FALSE, ef,
             threads, "double")
+        if (insertion_seed > 0L) {
+            valid <- found$indices > 0L & found$indices <= count
+            mapped <- matrix(0L, nrow(found$indices),
+                ncol(found$indices))
+            mapped[valid] <- order_rows[found$indices[valid]]
+            found$indices <- mapped
+        }
         search_seconds[[j]] <- search_seconds[[j]] + clock() - started
         if (!isTRUE(found$index_reused) ||
             found$ef_search != ef ||
@@ -244,7 +263,8 @@ for (j in seq_len(nrow(grid))) {
             dataset = case$dataset, scope = case$scope,
             fit_rows = case$rows, shard_rows = case$shard_rows,
             m = case$m, ef_construction = case$ef_construction,
-            ef_search = ef, row = rows,
+            ef_search = ef, insertion_seed = insertion_seed,
+            row = rows,
             split = truth$split, recall = recall,
             boundary_tie = ties)
     }
@@ -258,7 +278,8 @@ for (j in seq_len(nrow(grid))) {
             fit_rows = case$rows, columns = source$ncol,
             shard_rows = case$shard_rows, k = k, m = case$m,
             ef_construction = case$ef_construction,
-            ef_search = ef, split = split,
+            ef_search = ef, insertion_seed = insertion_seed,
+            split = split,
             mean_recall = mean(selected), min_recall = min(selected),
             lower_95_recall = max(0, mean(selected) -
                 1.96 * sd(selected) / sqrt(length(selected))),

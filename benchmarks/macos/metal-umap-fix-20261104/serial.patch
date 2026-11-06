@@ -1,0 +1,87 @@
+--- fastEmbedR-candidate-20261104b/source/src/embedding_metal_impl.mm	2026-11-03 17:29:37
++++ fastEmbedR-metal-umap-fix-20261104/serial-source/src/embedding_metal_impl.mm	2026-11-04 16:47:34
+@@ -760,9 +760,7 @@
+   for (const auto& edge : directed) {
+     max_weight = std::max(max_weight, edge.weight);
+   }
+-  const float min_sample_weight = n_epochs > 0 ?
+-    max_weight / static_cast<float>(n_epochs) :
+-    0.0f;
++  const float min_sample_weight = 0.0f;
+ 
+   std::vector<int> row_counts(static_cast<std::size_t>(n), 0);
+   for (const auto& edge : directed) {
+@@ -1549,6 +1547,23 @@
+   return float(clean_metal_hash(seed, epoch, head, tail, edge, sample, stream) & 0x00ffffffu) / 16777216.0f;
+ }
+ 
++ulong parity_splitmix64(ulong x) {
++  x += 0x9e3779b97f4a7c15UL;
++  x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9UL;
++  x = (x ^ (x >> 27)) * 0x94d049bb133111ebUL;
++  return x ^ (x >> 31);
++}
++ulong parity_hash(uint seed, uint epoch, uint head, uint tail,
++                  ulong edge, uint sample, ulong stream) {
++  ulong x = ulong(seed);
++  x ^= (ulong(epoch) + 1UL) * 0x9e3779b97f4a7c15UL;
++  x ^= (ulong(head) + 1UL) * 0xbf58476d1ce4e5b9UL;
++  x ^= (ulong(tail) + 1UL) * 0x94d049bb133111ebUL;
++  x ^= (edge + 1UL) * 0x2545f4914f6cdd1dUL;
++  x ^= (ulong(sample) + 1UL) * 0x369dea0f31a53f85UL;
++  x ^= stream * 0xDB4F0B9175AE2165UL;
++  return parity_splitmix64(x);
++}
+ kernel void embed_epoch_clean_atomic_inplace(
+   device atomic_int* layout [[buffer(0)]],
+   device const int* neighbors [[buffer(1)]],
+@@ -1558,22 +1573,25 @@
+   constant uint& epoch [[buffer(5)]],
+   uint gid [[thread_position_in_grid]]
+ ) {
+-  if (gid >= p.n) return;
++  if (gid != 0u) return;
++  ulong edge_id = 0UL;
++  for (uint row = 0u; row < p.n; ++row) {
+ 
+   constexpr float inv_scale = 1.0f / 65536.0f;
+   float progress = float(epoch) / max(1.0f, float(p.n_epochs - 1u));
+   float alpha = p.learning_rate * (1.0f - progress);
+ 
+   for (uint e = 0; e < p.k; ++e) {
+-    uint pos = gid * p.k + e;
++    uint pos = row * p.k + e;
+     int nb_i = neighbors[pos];
+-    if (nb_i < 0 || uint(nb_i) >= p.n || uint(nb_i) == gid) continue;
++    if (nb_i < 0 || uint(nb_i) >= p.n || uint(nb_i) == row) continue;
+     uint nb = uint(nb_i);
++    ulong this_edge = edge_id++;
+     float w = weights[pos];
+     float edge_prob = clamp(w / max(p.max_weight, 1.0e-6f), 0.0f, 1.0f);
+-    if (edge_prob < 1.0f && clean_metal_uniform01(p.seed, epoch, gid, nb, e, 0u, 3u) >= edge_prob) continue;
++    if (edge_prob < 1.0f && float((parity_hash(p.seed, epoch, row, nb, this_edge, 0u, 3UL) >> 40) & 0xFFFFFFUL) / 16777216.0f >= edge_prob) continue;
+ 
+-    uint head_base = gid * 2u;
++    uint head_base = row * 2u;
+     uint tail_base = nb * 2u;
+     float head_x = float(atomic_load_explicit(&layout[head_base], memory_order_relaxed)) * inv_scale;
+     float head_y = float(atomic_load_explicit(&layout[head_base + 1u], memory_order_relaxed)) * inv_scale;
+@@ -1591,8 +1609,8 @@
+     atomic_fetch_add_explicit(&layout[tail_base + 1u], fixed_delta(-attractive.y), memory_order_relaxed);
+ 
+     for (uint s = 0; s < p.negative_sample_rate; ++s) {
+-      uint neg = clean_metal_hash(p.seed, epoch, gid, nb, e, s, 17u) % p.n;
+-      if (neg == gid || neg == nb) continue;
++      uint neg = parity_hash(p.seed, epoch, row, nb, this_edge, s, 17UL) % ulong(p.n);
++      if (neg == row || neg == nb) continue;
+       uint neg_base = neg * 2u;
+       head_x = float(atomic_load_explicit(&layout[head_base], memory_order_relaxed)) * inv_scale;
+       head_y = float(atomic_load_explicit(&layout[head_base + 1u], memory_order_relaxed)) * inv_scale;
+@@ -1606,6 +1624,7 @@
+       atomic_fetch_add_explicit(&layout[head_base + 1u], fixed_delta(repulsive.y), memory_order_relaxed);
+     }
+   }
++  }
+ }
+ 
+ kernel void embed_epoch_clean_snapshot(

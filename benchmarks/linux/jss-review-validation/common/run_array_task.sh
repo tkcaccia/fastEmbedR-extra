@@ -144,6 +144,7 @@ case "$MODE" in
     METHOD="${QUALITY_METHODS[$(((REMAINDER % 6) / 3))]}"
     SEED="${QUALITY_SEEDS[$((REMAINDER % 3))]}"
     DATASET="${DATASETS[$DATASET_INDEX]}"
+    THREAD_COUNT="${QUALITY_THREADS_OVERRIDE:-4}"
     EXTRA+=("--quality-boundary=$BOUNDARY")
     EXTRA+=("--method=$METHOD" "--run-seed=$SEED")
     ;;

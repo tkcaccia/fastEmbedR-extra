@@ -1,0 +1,4 @@
+/tmp/fastembedr_cuda_candidate_20261104/chiamaka-mnist-landmark-3d-20261104.R: OK
+/tmp/fastembedr_cuda_candidate_20261104/common.R: OK
+/mnt/sata_ssd/fastEmbedR_Data/MNIST/MNIST_float32.RData: OK
+/tmp/fastembedr_cuda_candidate_20261104/library/fastEmbedR/libs/fastEmbedR.so: OK

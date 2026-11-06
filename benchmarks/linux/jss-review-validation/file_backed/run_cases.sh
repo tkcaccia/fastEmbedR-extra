@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+echo "policy_rejected: this archived HPC worker performs file-backed scientific calculation." >&2
+exit 78
 
 group="${1:?case group required}"
 task="${2:-0}"
@@ -35,6 +37,17 @@ case "$group" in
       'NR > 1 && $2 == group {print $1}' \
       "$SUITE/file_backed/cases.csv")
     ;;
+  reviewer_landmark)
+    seeds=(4 17 42)
+    methods=(umap tsne)
+    seed="${seeds[$((task / 2))]:?invalid task index}"
+    method="${methods[$((task % 2))]}"
+    mapfile -t ids < <(awk -F, -v seed="$seed" -v method="$method" \
+      'NR > 1 && $2 == "reviewer_landmark" && $6 == method && \
+       $10 == seed {print $1}' \
+      "$SUITE/reviewer_closure/cases.csv")
+    export FASTEMBEDR_CASES="$SUITE/reviewer_closure/cases.csv"
+    ;;
   *) echo "Unknown file-backed group: $group" >&2; exit 2 ;;
 esac
 (( ${#ids[@]} > 0 )) || exit 2
@@ -42,16 +55,17 @@ runtime="$(command -v apptainer || command -v singularity)"
 for id in "${ids[@]}"; do
   seconds=7200
   [[ "$group" != boundary ]] || seconds=43200
+  [[ "$group" != reviewer_landmark ]] || seconds=21600
   args=(exec --cleanenv --bind "$BASE_DIR:$BASE_DIR")
   if [[ "$group" == scaling || "$group" == full_landmark || \
-        "$group" == multi_gpu || \
+        "$group" == multi_gpu || "$group" == reviewer_landmark || \
         ( "$group" == recovery && "$task" == 1 ) ]]; then
     args+=(--nv)
   fi
   echo "Starting file-backed case $id (limit ${seconds}s)"
   backend=cpu
   if [[ "$group" == scaling || "$group" == full_landmark || \
-        "$group" == multi_gpu || \
+        "$group" == multi_gpu || "$group" == reviewer_landmark || \
         ( "$group" == recovery && "$task" == 1 ) ]]; then
     backend=cuda
   fi
@@ -66,6 +80,7 @@ for id in "${ids[@]}"; do
     "$IMAGE" env \
     "FASTEMBEDR_DLL_SHA256=$FASTEMBEDR_DLL_SHA256" \
     "EXPECTED_VERSION=$EXPECTED_VERSION" \
+    "FASTEMBEDR_CASES=${FASTEMBEDR_CASES:-$SUITE/file_backed/cases.csv}" \
     "BIGANN_DATA_ROOT=${BIGANN_DATA_ROOT:-$BASE_DIR/Data/BigANN}" \
     "SLURM_MEM_PER_NODE=${SLURM_MEM_PER_NODE:-}" \
     "$FASTEMBEDR_RSCRIPT" "$SUITE/file_backed/run_case.R" \

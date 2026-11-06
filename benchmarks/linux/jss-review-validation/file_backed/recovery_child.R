@@ -1,4 +1,5 @@
 #!/usr/bin/env Rscript
+stop("policy_rejected: this archived HPC recovery worker is file-backed.")
 
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) != 4L) {

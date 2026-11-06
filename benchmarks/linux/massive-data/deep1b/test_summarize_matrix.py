@@ -18,6 +18,25 @@ def write_csv(path, row, delimiter=","):
 
 
 class SummaryTest(unittest.TestCase):
+    def test_audited_reclaimed_output_remains_complete(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            job = dict(mode="classic", rows="3", lane="cpu4", job="12",
+                       job_memory="64G")
+            (root / "audit.json").write_text('{"status":"PASS"}')
+            for method in ("pca", "tsne", "umap"):
+                name = f"cpu_{method}_3_classic"
+                case = root / "results" / name
+                write_csv(case / "metrics.csv", dict(status="ok"))
+                write_csv(case / "coverage.csv", dict(
+                    rows_scanned="3", bytes="24", all_values_valid="TRUE"))
+                figure = root / "figures" / (name + ".png")
+                figure.parent.mkdir(exist_ok=True)
+                figure.write_bytes(b"png")
+            rows = summarize_case(job, root)
+            self.assertTrue(all(row["status"] == "ok" for row in rows))
+            self.assertTrue(all(row["output_bytes"] == 24 for row in rows))
+
     def test_single_gpu_clustering_is_explicitly_unsupported(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

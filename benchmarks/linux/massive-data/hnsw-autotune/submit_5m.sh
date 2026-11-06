@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Submit a bounded 5M-row CPU HNSW screen; never starts a full graph.
 set -euo pipefail
+echo "policy_rejected: archived file-backed HPC launcher is disabled." >&2
+exit 78
 
 mode=${1:-screen}
 [[ $# -le 1 ]] && [[ "$mode" == screen || "$mode" == refine ]] || {

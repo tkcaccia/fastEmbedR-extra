@@ -1,0 +1,6 @@
+SHAPE 5000 784 
+RESULT exact 0.117 native_metal_exact 
+RESULT ivf 0.116 native_metal_ivf 
+API exact 0.126 native_metal_exact 
+RECALL mean 0.98898 minimum 0.2666667 
+METAL_FASHION_EXACT_KNN_COMPLETE

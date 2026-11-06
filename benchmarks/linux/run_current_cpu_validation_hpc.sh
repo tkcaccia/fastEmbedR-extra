@@ -13,6 +13,9 @@
 
 set -euo pipefail
 
+echo 'policy_rejected: archived HPC CPU worker is disabled; use the resident-only workflow.' >&2
+exit 78
+
 BASE_DIR=/scratch/firenze/NN
 BUNDLE_DIR="${BASE_DIR}/current_fastembedr_validation"
 DATA_ROOT="${BASE_DIR}/Data"

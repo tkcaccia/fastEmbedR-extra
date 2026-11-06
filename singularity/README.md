@@ -36,6 +36,12 @@ checks pass; never benchmark an image whose `source-identity.txt`, R
 package versions, and image checksum disagree. The HPC JSS identity CSV
 must name the final image SHA-256 and embedded fastEmbedR archive SHA-256.
 
-This recipe does not establish 2/4-GPU correctness on Chiamaka's single
-GPU. Test those routes separately on an allocated multi-GPU node with
-the identical SIF or a byte-matched source archive.
+Chiamaka has one GPU. Stage the byte-identical candidate on the HPC under
+a separate name and use `submit_candidate_gpu_smoke.sh 2` and then `3`
+on allocated L40S nodes. Set `FASTEMBEDR_IMAGE_SHA256` to the candidate
+hash. The smoke uses 100,000 synthetic rows for multi-GPU kNN, PCA,
+t-SNE, UMAP, Leiden, and Louvain; it checks full-row outputs and
+per-device work. Failed runs retain diagnostic files under
+`fastEmbedR-results/candidate-smoke`. A pending four-GPU smoke is a
+resource gate, not a successful validation. Never overwrite the stable
+image while jobs still use it.

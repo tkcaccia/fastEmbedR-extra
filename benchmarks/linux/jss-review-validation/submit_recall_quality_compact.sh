@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
+echo "policy_rejected: archived HPC launcher violates the current resident one-case contract." >&2
+exit 78
+[[ "${FASTEMBEDR_HPC_GPU_PAUSED:-1}" == 0 ]] || {
+  echo 'UCT GPU submissions remain paused.' >&2
+  exit 2
+}
 
 BASE_DIR="${BASE_DIR:-/scratch/firenze/NN}"
 SUITE="${SUITE:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"

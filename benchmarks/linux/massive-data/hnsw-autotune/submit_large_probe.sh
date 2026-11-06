@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Selected settings only; sampled-query recall, not an all-row graph.
 set -euo pipefail
+echo "policy_rejected: archived file-backed HPC launcher is disabled." >&2
+exit 78
 
 [[ $# -eq 1 ]] || {
     echo 'Usage: submit_large_probe.sh REPRESENTATIVE_CAMPAIGN' >&2

@@ -1,0 +1,2 @@
+"method","devices","seconds","rows","output_bytes","fit_backend","decomposition_backend","fit_statistics_seconds","fit_rows_per_device","fit_ranges_per_device","fit_seconds_per_device","fit_vram_estimate_per_device"
+"streamed_covariance","0,1",2.257,10000,120000,"distributed_cuda_covariance","cpu_eigen",0.818,"5000;5000","1-5000;5001-10000","0.0790000000000001;0.0790000000000001","135575648;135575648"

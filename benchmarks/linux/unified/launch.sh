@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 # Source-lock and submit JSS and Deep1B as independent HPC campaigns.
 set -euo pipefail
+echo "policy_rejected: archived unified HPC campaign includes file-backed work." >&2
+exit 78
+
+[[ "${FASTEMBEDR_HPC_GPU_PAUSED:-1}" == 0 ]] || {
+    echo 'UCT GPU submissions remain paused, including unified launch.' >&2
+    exit 2
+}
 
 [[ -n "${SLURM_JOB_ID:-}" ]] || {
     echo 'Use submit_from_login.sh; do not run containers on login.' >&2
@@ -39,6 +46,7 @@ mkdir -p "$parent"
 root=$(mktemp -d "$parent/$(date -u +%Y%m%dT%H%M%SZ)_XXXXXX")
 printf '%s  %s\n' "$digest" "$image" > "$root/image.sha256"
 sha256sum "$suite/unified/launch.sh" \
+    "$suite/unified/audit.py" \
     "$suite/unified/submit.sbatch" \
     "$suite/unified/submit_from_login.sh" \
     "$suite/unified/stage_jss.sh" \
@@ -47,6 +55,7 @@ sha256sum "$suite/unified/launch.sh" \
     "$suite/massive-data/deep1b/submit_matrix.sh" \
     > "$root/source.sha256"
 export FASTEMBEDR_IMAGE_SHA256="$digest"
+export FASTEMBEDR_IMAGE="$image"
 export DEEP1B_IMAGE_SHA256="$digest"
 export DEEP1B_IMAGE="$image" DEEP1B_BASE="$base"
 export BASE_DIR="$base" IMAGE="$image"
@@ -65,9 +74,21 @@ printf 'jss_staged\t%s\tjss_stage_launch.log\n' "$jss_status" \
     >> "$root/launch_status.tsv"
 printf 'deep1b\t%s\tdeep1b_launch.log\n' "$deep_status" \
     >> "$root/launch_status.tsv"
+matrix_ledger=$(sed -n 's/^Matrix ledger: //p' \
+    "$root/deep1b_launch.log" | tail -n 1)
+jss_parent=$base/fastEmbedR-results/jss_validation/campaigns
+{
+    printf 'component\tpath\n'
+    printf 'jss_paired\t%s\n' \
+        "$jss_parent/$(basename "$root")_paired"
+    printf 'jss_extended\t%s\n' \
+        "$jss_parent/$(basename "$root")_extended"
+    printf 'deep1b_matrix\t%s\n' "$matrix_ledger"
+} > "$root/components.tsv"
 printf 'Unified launch record: %s\n' "$root"
 cat "$root/launch_status.tsv"
-if ((jss_status != 0 || deep_status != 0)); then
+if ((jss_status != 0 || deep_status != 0)) ||
+   [[ -z "$matrix_ledger" ]]; then
     echo 'Inspect both launch logs; submitted jobs were not canceled.' >&2
     exit 1
 fi

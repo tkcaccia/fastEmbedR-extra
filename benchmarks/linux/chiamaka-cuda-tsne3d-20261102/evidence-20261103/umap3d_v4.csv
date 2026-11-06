@@ -1,0 +1,3 @@
+"mode","n","dimensions","landmarks","third_sd","elapsed_sec","refinement_backend"
+"fuzzy",45,3,23,0.695305711973355,0.573,"cuda"
+"binary",45,3,23,0.807936513899241,0.312,"cuda"

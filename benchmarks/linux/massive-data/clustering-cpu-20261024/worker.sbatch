@@ -4,6 +4,8 @@
 #SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_cluster_%j.out
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_cluster_%j.err
 set -euo pipefail
+echo "policy_rejected: archived clustering worker uses file-backed calculation on HPC." >&2
+exit 78
 mode=${1:?}
 method=${2:?}
 campaign=${3:?}

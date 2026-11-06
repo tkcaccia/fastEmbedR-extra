@@ -11,6 +11,8 @@
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_JSS_ctl_%j.err
 
 set -euo pipefail
+echo "policy_rejected: archived HPC controller schedules file-backed work; use the resident one-case campaign." >&2
+exit 78
 SUITE="${SUITE:-benchmark_scripts/fastembedr_jss_review_validation}"
 bash \
   "$SUITE/common/run_complete_campaign_controller.sh"

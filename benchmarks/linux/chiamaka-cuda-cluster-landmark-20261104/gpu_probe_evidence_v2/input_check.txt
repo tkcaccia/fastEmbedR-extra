@@ -1,0 +1,2 @@
+/tmp/fastembedr_cuda_candidate_20261104/chiamaka_gpu_cluster_probe_20261104.R: OK
+/tmp/fastembedr_cuda_candidate_20261104/fastembedr_gpu_probe_input_20261104.rds: OK

@@ -56,6 +56,12 @@ def make_waves(rows, routes, available, rebuild, cpu_reserve=0,
 
 
 def submit_waves(waves, rows, available, rebuild, suite):
+    raise RuntimeError(
+        "policy_rejected: archived file-backed HPC submission is disabled")
+    if (os.getenv("FASTEMBEDR_HPC_GPU_PAUSED", "1") != "0" and
+            any(item["route"] != "cpu" for wave in waves
+                for item in wave)):
+        raise RuntimeError("UCT GPU submissions remain paused")
     active = subprocess.run(
         ["squeue", "-h", "-u", os.environ["USER"], "-o", "%j"],
         check=True, capture_output=True, text=True).stdout.splitlines()
@@ -104,6 +110,11 @@ def main():
     parser.add_argument("--retain-knn", action="store_true")
     parser.add_argument("--submit", action="store_true")
     args = parser.parse_args()
+    routes = args.routes.split(",")
+    if (args.submit and
+            os.getenv("FASTEMBEDR_HPC_GPU_PAUSED", "1") != "0" and
+            any(route != "cpu" for route in routes)):
+        parser.error("UCT GPU submissions remain paused")
     if args.submit and args.physical_free_bytes is not None:
         parser.error("Physical free space must be measured when submitting")
     if args.submit and "cpu" in args.routes.split(",") and \
@@ -120,7 +131,6 @@ def main():
                 shutil.disk_usage(base).free)
     available = min(args.quota_free_bytes, physical)
     rebuild = not args.retain_knn and args.rows >= 100_000_000
-    routes = args.routes.split(",")
     reserve = args.cpu_clustering_reserve_bytes or 0
     waves = make_waves(args.rows, routes, available, rebuild, reserve,
                        args.admission)

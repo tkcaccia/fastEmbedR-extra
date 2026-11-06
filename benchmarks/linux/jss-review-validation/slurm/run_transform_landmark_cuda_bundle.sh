@@ -13,6 +13,8 @@
 #SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_JSS_xl_g_%A_%a.out
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_JSS_xl_g_%A_%a.err
 set -euo pipefail
+echo "policy_rejected: archived HPC worker is file-backed or bundles scientific tests." >&2
+exit 78
 SUITE="${SUITE:-benchmark_scripts/fastembedr_jss_review_validation}"
 bash \
   "$SUITE/common/run_bundled_cuda.sh" \

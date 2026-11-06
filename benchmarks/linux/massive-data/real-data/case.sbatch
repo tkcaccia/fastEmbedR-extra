@@ -25,6 +25,10 @@ status() {
         "$backend" "$mode" "$code" >> "$out/status.tsv"
 }
 trap status EXIT
+if [[ "$route" != classic ]]; then
+    echo "policy_rejected: file-backed execution is forbidden on HPC." >&2
+    exit 78
+fi
 sha256sum -c "$root/source.sha256" > "$out/source_check.txt"
 test "$(stat -Lc '%d:%i:%s:%Y:%Z' "$image")" = \
     "$(<"$root/image.stat")"

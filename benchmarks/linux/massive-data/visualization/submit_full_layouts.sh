@@ -2,6 +2,9 @@
 # Submit read-only all-row render jobs for one fitted dataset size.
 set -euo pipefail
 
+echo 'policy_rejected: file-backed layout rendering is disabled on HPC.' >&2
+exit 78
+
 [[ $# -eq 1 && "$1" =~ ^(1000000|5000000|10000000|100000000|1000000000)$ ]] || {
     echo "Usage: submit_full_layouts.sh 1000000|5000000|10000000|100000000|1000000000" >&2
     exit 2

@@ -11,5 +11,7 @@
 #SBATCH --output=/scratch/firenze/NN/benchmark_logs/feR_fb_audit_%j.out
 #SBATCH --error=/scratch/firenze/NN/benchmark_logs/feR_fb_audit_%j.err
 set -euo pipefail
+echo "policy_rejected: archived HPC worker is file-backed or bundles scientific tests." >&2
+exit 78
 SUITE="${SUITE:-benchmark_scripts/fastembedr_jss_review_validation}"
 python3 "$SUITE/file_backed/audit.py" "${OUTPUT_ROOT:?}"

@@ -1,0 +1,2 @@
+    PID    PPID    PGID                  STARTED COMMAND
+ 358442  357418  358442 Wed Nov  4 10:32:51 2026 timeout --signal=TERM --kill-after=30s 180s singularity exec --nv /mnt/sata_ssd/fastEmbedR/singularity/rebuild_20261029_a670bcc/fastembedr_a670bcc_20261029.sif /opt/r46/bin/Rscript /tmp/fastembedr_cuda_candidate_20261104/chiamaka-mnist-landmark-3d-20261104.R /tmp/fastembedr_cuda_candidate_20261104/library /tmp/fastembedr_cuda_candidate_20261104/mnist_landmark3d_evidence_v1/result.rds /tmp/fastembedr_cuda_candidate_20261104/common.R
