@@ -123,3 +123,15 @@ repeatability and quality audit before any manuscript speedup or
 quality claim. These runs demonstrate a route beyond the release's
 four-worker cap, but they do not prove linear scaling or a final
 quality gate.
+
+Two additional seeds (17 and 42) completed at 1, 16 and 32 cores in
+jobs `1604123`–`1604128` using the same v4 worker. Across seeds 4, 17
+and 42, mean fit time was 23.863, 4.518 and 3.329 seconds respectively;
+mean trustworthiness was 0.9394, 0.9381 and 0.9384. Mean label accuracy
+was 0.9733, 0.9717 and 0.9728. Peak R-process RSS stayed between
+1,804,012 and 1,805,996 KiB across these nine runs. This gives a
+development-level 7.17-fold mean fit speedup from 1 to 32 requested
+cores on MNIST, with no large mean quality loss in this three-seed
+sample. The optimizer's concurrent atomic updates still make individual
+same-seed results nondeterministic. Repeatability and other datasets
+must be checked before formal claims or package integration.
