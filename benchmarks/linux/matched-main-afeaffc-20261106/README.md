@@ -162,3 +162,15 @@ This is a development result on one real dataset, not a formal JSS
 comparison. Atomic updates permit same-seed variation, and other
 datasets, output quality gates, CPU scaling efficiency and memory
 behavior still require qualification before merging the candidate.
+
+The same 3D candidate then passed full 70,000-row MNIST cases at one
+and 32 cores for seeds 4, 17 and 42 (jobs `1604184`–`1604189`). Mean
+fit time was 28.316 versus 4.065 seconds, a 6.97-fold ratio; mean
+trustworthiness was 0.9459 versus 0.9443, and mean label accuracy
+0.9728 versus 0.9722. All six cases had CPU backend identity, finite
+all-row output, completed provenance and R-process peak RSS around
+1,805,000 KiB. Resident embedding, UMAP initialization and
+supplied-KNN regression files passed in job `1604191`; unavailable
+GPU-specific tests were skipped on this CPU node. These two datasets
+support further integration work, but do not cover the eleven-dataset
+matrix or establish publication-scale variability.
