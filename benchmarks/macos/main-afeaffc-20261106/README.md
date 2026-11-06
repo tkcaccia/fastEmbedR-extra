@@ -21,3 +21,7 @@ staged case JSON and queue plan.
 This is the resident fastEmbedR panel. File-backed, landmark, competitor,
 Deep1B stress, and additional CPU core-count lanes still require separate
 controlled runs. The old stopped panel results remain preserved.
+
+The HPC worker uses different preprocessing and t-SNE settings; these
+source-locked results are not direct cross-platform comparisons. See
+`benchmarks/shared/cohort-policy-20261106.md`.

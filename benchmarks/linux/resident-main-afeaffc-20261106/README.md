@@ -2,7 +2,10 @@
 
 Package commit: `afeaffc39a607c00db5899c284451c6cdbf741bb`.
 Companion scripts from main commit `1b7b924919dce556f0b37286cdd5de52a089b6ed`.
-Every planned case is full-data, resident-memory fastEmbedR CPU. The plan
+Every planned case is full-data, resident-memory fastEmbedR CPU.
+These are within-HPC scaling runs; the active Mac worker uses different
+preprocessing and t-SNE settings. See
+`benchmarks/shared/cohort-policy-20261106.md` before manuscript comparisons. The plan
 contains 11 comparison datasets, PCA, 2D/3D t-SNE, 2D/3D UMAP, Leiden and
 Louvain, seeds 4/17/42, and 1/2/4/8/16/32 CPU cores: 1,386 cases. The
 source-locked case JSON files are in `cases.jsonl`. Each Slurm array element
