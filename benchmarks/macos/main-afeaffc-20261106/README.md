@@ -52,5 +52,16 @@ Its SHA-256 is
 The Mac preflight accepted the 691-case original queue and identified 11
 future deferred cases. It started at 2026-11-06 13:30:46 UTC as PID 58711;
 the first active case is index 459, mass41 four-core 3D t-SNE. Its status
-is recorded in the separate `resume-status.jsonl`; no final result is
-claimed while the continuation is live.
+was recorded in the separate `resume-status.jsonl`; no final result was
+claimed during that continuation.
+
+Continuation v1 stopped safely at index 459: the 965,282-row mass41
+four-core 3D t-SNE also reached its 1,800-second limit. Its `run.json`
+records code 124 and stable 7.69 MiB system swap. The R worker and both
+controller process groups were absent on a later read-only check; 379 GiB
+remained free. The failure result and v1 status log are preserved.
+`resume_panel_v2.py` verifies both prior stop points and source hashes,
+then starts at index 460. It explicitly defers the 22 remaining large
+one- and four-core 3D t-SNE cases for longer, separately budgeted runs,
+while retaining the bounded original runner for the other 210 cases.
+Deferred cases are not counted as benchmark successes.
