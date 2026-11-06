@@ -14,8 +14,7 @@ Dataset audit job 1592295 checked all 11 input digests on a compute node and
 completed. CPU pilot 1592789 on the new image completed. An oversized
 231-task array 1592791 was cancelled while pending, before any calculation,
 because the account would not admit a second array. Quota-friendly waves
-1592816 and 1592817 cover all datasets and five 2D methods at seed 4 on one
-and four cores. They depend on the successful CPU pilot and are throttled to
+1592816, 1592944, 1592817 and 1592945 cover all datasets and five 2D methods at seed 4 on one, two, four and eight cores. They depend on the successful CPU pilot and are throttled to
 one running element per array. The remaining cores, seeds and 3D cases are
 staged but have not been submitted; submit further small waves as quota frees.
 The separate two-L40S qualification pilot 1592858 must pass before any CUDA
