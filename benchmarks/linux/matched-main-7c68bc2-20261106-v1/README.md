@@ -58,3 +58,29 @@ review on 2026-11-06 found 66 audited results, three running, and eight not
 yet written; it found no audit failures. The cohort is not terminal and this
 is not a final acceptance result. Only small manifests, scheduler records,
 and the 7 KB auditor script were read on the head node.
+
+`plan_scaling.py` stages the missing matched CPU counts (1, 2, 8, 16, 32)
+from the 77 reviewed four-core cases. Its three tests require all eleven
+datasets and seven method/dimension combinations, reject any file-backed,
+streaming, spill, or altered fit scope, and verify one scientific fit per
+array element. The generated plan contains 385 cases with unchanged input
+digests and the same `7c68bc2` image; all five Slurm scripts pass `bash -n`.
+The initial plan at
+`/scratch/firenze/NN/benchmarks/matched_scaling_7c68bc2_20261106_v1`
+was not submitted. An audit found that its reused worker did not verify
+effective PCA and t-SNE CPU counts. The corrected v2 plan bundles its own
+unchanged resident runner and route policy, plus
+`matched_worker_scaling.R`, which checks and records effective CPU counts
+for all five methods. Its R source parses, the three planner tests pass,
+and the five Slurm scripts pass `bash -n`.
+
+The corrected plan is staged at
+`/scratch/firenze/NN/benchmarks/matched_scaling_7c68bc2_20261106_v2`.
+Its remote 385-case manifest SHA-256 is
+`d840d1351ff9cb8b221e3f673d20a74c5e2997432bb40e27011d1ad3cab12356`,
+and the staged R worker SHA-256 is
+`9b7c51b3d34359a30b31ce208d3bf9503b755ea10d82aa2791b5249b635d3e31`;
+both match the local plan. No scaling job has been submitted. Submit v2 in
+bounded waves after the running four-core cohort reaches a terminal audited
+state and scheduler capacity permits. Do not submit v1 or mix either plan
+with the earlier `afeaffc` cohort.
