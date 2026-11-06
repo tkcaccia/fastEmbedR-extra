@@ -44,3 +44,13 @@ first such case exceeded the existing limit. They require a separately
 budgeted experiment; they are not successes or omissions from the matrix.
 The continuation retains the original stop conditions for timeout,
 cleanup, disk, swap and three consecutive failures.
+
+The versioned controller was installed under
+`/Users/silvanopiazza/Documents/Stefano/fastEmbedR-main-afeaffc-resume-v1-20261106`.
+Its SHA-256 is
+`f3460d81c2c5c88e90e3566d32da07ecf73dee81c1747f555e734cf41782728f`.
+The Mac preflight accepted the 691-case original queue and identified 11
+future deferred cases. It started at 2026-11-06 13:30:46 UTC as PID 58711;
+the first active case is index 459, mass41 four-core 3D t-SNE. Its status
+is recorded in the separate `resume-status.jsonl`; no final result is
+claimed while the continuation is live.
