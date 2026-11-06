@@ -130,3 +130,19 @@ inconsistent stage metadata, and write those counts into `metrics.json`.
 Both files passed local syntax checks. They must receive a separate Mac
 device case and source hash before their results can enter a cohort; the
 running panel's worker and results remain unchanged.
+
+## First large Metal t-SNE continuation result
+
+Continuation v2 completed index 460,
+`mass41_tsne_metal1_d3_s4_r1_afeaffc`: 965,282 rows, 14 columns,
+three output dimensions, seed 4. The fit took 1,064.108 seconds and the
+bounded case took 1,071.978 seconds overall. `metrics.json` reports
+`observed_backend: metal`, trustworthiness 0.9738 and label accuracy 0.8683.
+`run.json` reports exit 0, peak RSS 4,001,038,336 bytes, unchanged 7.69 MiB
+system swap, no timeout and clear process-group cleanup. The input, source,
+DLL, runner and worker hashes match the original panel manifest. The
+same-size CPU1 and CPU4 3D t-SNE seed-4 cases each exceeded the 1,800-second
+case limit; they remain failed evidence, not CPU timings for a speedup
+ratio. The v2 controller then deferred the remaining corresponding large
+CPU1/CPU4 cases and started the Metal seed-17 case at index 463. This is
+one large-case development result; quality and timing replication remain.
