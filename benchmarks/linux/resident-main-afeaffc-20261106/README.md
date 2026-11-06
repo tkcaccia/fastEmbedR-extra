@@ -36,8 +36,27 @@ zero running on Ada with 16 and 32 CPUs respectively; remaining elements
 were pending under the array task limit. No scientific outcome is claimed
 until each case result and provenance are audited. The other 16/32-core
 non-UMAP cases remain staged for later quota-friendly submissions.
-The separate two-L40S qualification pilot 1592858 must pass before any CUDA
-campaign. Deep1B remains a separate stress study. Comparators, landmarks,
+
+A further quota-friendly chunk was accepted as arrays 1604022 (16 cores)
+and 1604023 (32 cores), each with indices `15-18,20-23,25-28%1`.
+These are 12 more non-UMAP, resident-only cases per core count, with no
+overlap with the first chunk or completed UMAP arrays. Slurm showed each
+array's index 15 running on Ada after admission; results are unaudited.
+
+The raw-input worker records timing, input size and observed backend but
+does not calculate embedding or clustering quality and does not record
+peak process RAM in `metrics.json`. The completed
+`coil20_leiden_cpu16_d0_s4_afeaffc` result illustrates this gap:
+its scheduler exit and worker provenance are successful, while its metrics
+contain no quality or peak-RAM field. These arrays remain development
+evidence for within-HPC scaling. They cannot enter the JSS quality or
+cross-platform figures. Further benchmark submissions should prioritize
+the versioned matched-settings worker, which computes quality, with a
+separate allocation-level peak-memory audit.
+The separate two-L40S qualification pilot 1592858 has a completed Slurm
+exit `0:0`; its device identity, output and cleanup require the separate
+GPU lifecycle audit before any broad CUDA campaign. Deep1B remains a
+separate stress study. Comparators, landmarks,
 file-backed work and final manuscript analysis are outside these arrays.
 
 `audit_inputs.sbatch` performs checksums inside a compute allocation. Large

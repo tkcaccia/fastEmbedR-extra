@@ -32,3 +32,24 @@ All 77 seed-4, four-core matched cases are in `cases.jsonl`. Other seeds,
 core counts and GPU backends still need matched cohorts. The earlier
 HPC raw-input waves remain separate development evidence and must not be
 combined with this cohort in the manuscript.
+
+## Matched CPU scaling expansion
+
+`plan_scaling.py` expands the 77 source-locked four-core, seed-4 cases to
+1, 2, 8, 16 and 32 cores: 385 additional cases with the same input
+digests, methods, dimensions, preprocessing, quality checks and resident
+storage contract. It rejects changed storage mode, spill, multiple fits,
+missing dataset/method coverage, and unqualified routes before writing a
+new plan. The generated array scripts allocate only CPUs on Ada and
+point to the same reviewed matched worker and package image. Every array
+element invokes one case; the default 77-element array can be overridden
+with a quota-friendly subset.
+
+Three focused planner tests and shell syntax checks for all five generated
+array scripts passed locally. A generated planning fixture has 77 cases
+per new core count and `cases.jsonl` SHA-256
+`19db9d72321ab61f208d6fe53cf44435c52f35f1b366e1b59b71cb53afbbe114`.
+This is staged plan evidence, not a completed scientific run. Deploy the
+versioned plan to HPC, run a small per-core pilot, then audit image,
+source, input, quality, allocation-level peak memory and cleanup before
+the remaining cases enter a frozen manuscript cohort.
