@@ -65,3 +65,12 @@ then starts at index 460. It explicitly defers the 22 remaining large
 one- and four-core 3D t-SNE cases for longer, separately budgeted runs,
 while retaining the bounded original runner for the other 210 cases.
 Deferred cases are not counted as benchmark successes.
+
+The v2 controller was installed under
+`/Users/silvanopiazza/Documents/Stefano/fastEmbedR-main-afeaffc-resume-v2-20261106`.
+Its SHA-256 is
+`eef2d27de9bd98d4082d3f4c68c2d50f379d2e72a92bbe65b902d108d31f61d2`.
+Mac preflight accepted both recorded failures, original source identities,
+and 22 future deferrals. PID 59214 began at 2026-11-06 14:04:12 UTC
+with index 460, the mass41 Metal 3D t-SNE case. The run remains active;
+its own `resume-status.jsonl` is authoritative for later results.
