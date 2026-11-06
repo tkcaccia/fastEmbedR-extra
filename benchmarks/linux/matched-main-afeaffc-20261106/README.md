@@ -49,7 +49,27 @@ Three focused planner tests and shell syntax checks for all five generated
 array scripts passed locally. A generated planning fixture has 77 cases
 per new core count and `cases.jsonl` SHA-256
 `19db9d72321ab61f208d6fe53cf44435c52f35f1b366e1b59b71cb53afbbe114`.
-This is staged plan evidence, not a completed scientific run. Deploy the
-versioned plan to HPC, run a small per-core pilot, then audit image,
-source, input, quality, allocation-level peak memory and cleanup before
-the remaining cases enter a frozen manuscript cohort.
+The generated plan was deployed at
+`/scratch/firenze/NN/benchmarks/matched_scaling_afeaffc_20261106`.
+COIL20 Leiden pilots `1604055`, `1604062`–`1604065` completed at 1, 2,
+8, 16 and 32 requested cores. All used the CPU backend, returned 1,440
+labels and the same ARI 0.6675, 16 communities and modularity 0.9036.
+Fit seconds were 0.014, 0.049, 0.201, 0.440 and 1.301 respectively;
+this small graph is dominated by threading overhead. These are single
+development fits, not scaling estimates for the manuscript.
+
+COIL20 2D UMAP pilots `1604066`–`1604070` used the same core counts
+and a 15-minute allocation cap. The 1- and 2-core cases completed with
+CPU backend identity, trustworthiness 0.9789 and 0.9738, label accuracy
+0.8933 and 0.8900, and fit times 0.915 and 0.378 seconds respectively.
+The 8-, 16- and 32-core cases failed closed in the benchmark worker
+because the release package reports fewer effective UMAP workers than
+requested. The release's R and C++ UMAP paths cap worker counts at four.
+Preserve the failures and do not represent the high-core runs as
+qualified scaling results. An isolated package candidate under
+`/media/user/Lion/ChatGPT/fastEmbedR/in-progress/multicpu-umap-20261106`
+raises the configured limit to
+32 and makes native stage worker counts grow with problem size; R parse,
+C++ syntax and diff checks passed, but the candidate has not passed a
+package build, device test, quality test or performance audit. It must
+not be merged into the release or used for a manuscript result yet.
