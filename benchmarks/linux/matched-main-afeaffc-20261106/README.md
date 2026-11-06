@@ -135,3 +135,30 @@ cores on MNIST, with no large mean quality loss in this three-seed
 sample. The optimizer's concurrent atomic updates still make individual
 same-seed results nondeterministic. Repeatability and other datasets
 must be checked before formal claims or package integration.
+
+### Isolated multi-CPU 3D UMAP candidate
+
+The earlier Fashion-MNIST pilot showed that 3D UMAP's optimizer was
+serial even when 32 CPU cores were requested: seed-4 fit time was
+28.073 seconds at one core and 22.855 seconds at 32 cores. An isolated
+candidate extends the native 2D atomic optimizer to the third
+coordinate. Its source archive SHA-256 is
+`3bcb6e364259e3d3781b332e8df98dea342b6a4ae796b49791bfc65dc506029f`.
+Compute-node package build and focused 2D/3D checks passed in job
+`1604162`; the resident embedding regression file passed in `1604166`.
+
+Matched resident Fashion-MNIST 3D fits on all 70,000 rows used seeds
+4, 17 and 42. The new candidate's mean fit time was 29.364 seconds
+at one core and 4.105 seconds at 32 cores (jobs `1604169`, `1604170`,
+`1604173`, `1604174`, `1604176`, `1604177`). The prior serial 32-core
+path averaged 28.217 seconds (jobs `1604148`, `1604175`, `1604178`).
+Mean trustworthiness was 0.9811 at one core, 0.9808 for parallel
+32-core and 0.9811 for serial 32-core; mean label accuracy was 0.7322,
+0.7289 and 0.7289 respectively. Peak R-process RSS stayed near
+1,805,000 KiB. The paired 2D regression cases `1604171` and
+`1604172` also completed with trustworthiness 0.9726 and 0.9731.
+
+This is a development result on one real dataset, not a formal JSS
+comparison. Atomic updates permit same-seed variation, and other
+datasets, output quality gates, CPU scaling efficiency and memory
+behavior still require qualification before merging the candidate.
