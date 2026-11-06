@@ -102,7 +102,14 @@ accuracy is within 0.0150 of CPU1. This supports the **resident full-data
 Fashion-MNIST one-call route** at commit `afeaffc`; it does not close the
 earlier fixed-graph paired Fashion quality gate, nor qualify file-backed or
 landmark Metal UMAP. The markedly different 2D and 3D Metal fit timings
-require stage-level review before a speed claim. Source evidence:
+reflect different execution policies in the published package source:
+resident 2D Metal UMAP runs the first half of its epochs on one CPU thread
+before the native Metal optimizer, whereas resident 3D uses Metal for all
+epochs (`R/fast_knn_umap.R`, `optimize_prepared_umap_metal`). The panel's
+`observed_backend: metal` confirms its selected nearest-neighbor and
+optimizer route but does **not** mean every 2D optimizer epoch ran on the
+GPU. Future benchmark workers must record the pipeline and CPU/GPU epoch
+counts; do not present these timings as an all-GPU comparison. Source evidence:
 `/Users/silvanopiazza/Documents/Stefano/fastEmbedR-main-afeaffc-benchmark-20261106/results/fashion_umap_*/{metrics,run,provenance}.json`
 and the corresponding `manifests/fashion_umap_*.json` on Silvano's Mac.
 
@@ -115,3 +122,11 @@ three Tabula Muris seeds, mean trustworthiness differences were +0.00307
 examined rather than treated as a universal backend regression. The panel
 was still in progress; this is a snapshot, not a final eleven-dataset
 quality conclusion.
+
+`worker_v2.R` and `run_case_v2.py` are a **future, versioned runner**, not
+the worker for the active panel. They require Metal UMAP to report its
+optimizer pipeline and CPU warm/Metal epoch counts, reject missing or
+inconsistent stage metadata, and write those counts into `metrics.json`.
+Both files passed local syntax checks. They must receive a separate Mac
+device case and source hash before their results can enter a cohort; the
+running panel's worker and results remain unchanged.
