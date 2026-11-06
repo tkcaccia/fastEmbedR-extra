@@ -1,0 +1,23 @@
+{
+  "algorithm_state": "resident",
+  "backend": "cpu",
+  "case_id": "tabulamuris_umap_cpu4_d2_s4_matched_7c68bc2",
+  "cores": 4,
+  "dataset": "Tabula Muris",
+  "dimensions": 2,
+  "expected_columns": 50,
+  "expected_rows": 100102,
+  "fit_scope": "all_rows_optimized",
+  "gpus": 0,
+  "implementation": "fastEmbedR",
+  "input_sha256": "f2fd5cc7f577f39f3e993d00bfcd5487861c646bc053bece39fad44382221116",
+  "method": "UMAP",
+  "repetition": 1,
+  "route_id": "fastembedr_cpu_umap",
+  "runtime_input": "resident",
+  "scientific_tests": 1,
+  "seed": 4,
+  "spill": false,
+  "storage_mode": "in_memory",
+  "warmup_fits": 0
+}

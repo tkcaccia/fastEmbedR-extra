@@ -1,0 +1,23 @@
+{
+  "algorithm_state": "resident",
+  "backend": "cpu",
+  "case_id": "flowrepository_pca_cpu4_d2_s4_matched_7c68bc2",
+  "cores": 4,
+  "dataset": "FlowRepository",
+  "dimensions": 2,
+  "expected_columns": 32,
+  "expected_rows": 5220347,
+  "fit_scope": "all_rows_optimized",
+  "gpus": 0,
+  "implementation": "fastEmbedR",
+  "input_sha256": "50e7154b6f34018200cc0f0afedb69a408eaa229dc57252c300feeecfdfbcbb0",
+  "method": "PCA",
+  "repetition": 1,
+  "route_id": "fastembedr_cpu_pca",
+  "runtime_input": "resident",
+  "scientific_tests": 1,
+  "seed": 4,
+  "spill": false,
+  "storage_mode": "in_memory",
+  "warmup_fits": 0
+}

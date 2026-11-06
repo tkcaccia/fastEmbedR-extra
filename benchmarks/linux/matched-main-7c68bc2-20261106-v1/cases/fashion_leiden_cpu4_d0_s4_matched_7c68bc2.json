@@ -1,0 +1,23 @@
+{
+  "algorithm_state": "resident",
+  "backend": "cpu",
+  "case_id": "fashion_leiden_cpu4_d0_s4_matched_7c68bc2",
+  "cores": 4,
+  "dataset": "Fashion-MNIST",
+  "dimensions": 0,
+  "expected_columns": 784,
+  "expected_rows": 70000,
+  "fit_scope": "all_rows_optimized",
+  "gpus": 0,
+  "implementation": "fastEmbedR",
+  "input_sha256": "7be6826c092c19aaaf47b97b602e74f42d2b9ba0a61ecda2de0c91cdbc6b4006",
+  "method": "Leiden",
+  "repetition": 1,
+  "route_id": "fastembedr_cpu_leiden",
+  "runtime_input": "resident",
+  "scientific_tests": 1,
+  "seed": 4,
+  "spill": false,
+  "storage_mode": "in_memory",
+  "warmup_fits": 0
+}

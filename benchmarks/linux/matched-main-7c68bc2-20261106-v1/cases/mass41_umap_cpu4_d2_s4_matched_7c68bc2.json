@@ -1,0 +1,23 @@
+{
+  "algorithm_state": "resident",
+  "backend": "cpu",
+  "case_id": "mass41_umap_cpu4_d2_s4_matched_7c68bc2",
+  "cores": 4,
+  "dataset": "mass41",
+  "dimensions": 2,
+  "expected_columns": 14,
+  "expected_rows": 965282,
+  "fit_scope": "all_rows_optimized",
+  "gpus": 0,
+  "implementation": "fastEmbedR",
+  "input_sha256": "badf0c820f0cf68bc0a4d0b99a2dde6728cff9535c04b71d75355311d82784c8",
+  "method": "UMAP",
+  "repetition": 1,
+  "route_id": "fastembedr_cpu_umap",
+  "runtime_input": "resident",
+  "scientific_tests": 1,
+  "seed": 4,
+  "spill": false,
+  "storage_mode": "in_memory",
+  "warmup_fits": 0
+}

@@ -1,0 +1,23 @@
+{
+  "algorithm_state": "resident",
+  "backend": "cpu",
+  "case_id": "usps_pca_cpu4_d2_s4_matched_7c68bc2",
+  "cores": 4,
+  "dataset": "USPS",
+  "dimensions": 2,
+  "expected_columns": 256,
+  "expected_rows": 11000,
+  "fit_scope": "all_rows_optimized",
+  "gpus": 0,
+  "implementation": "fastEmbedR",
+  "input_sha256": "b4cc55441bde1e61a3588bba172762e11d14463a06b1869d2bb3d16e719d6811",
+  "method": "PCA",
+  "repetition": 1,
+  "route_id": "fastembedr_cpu_pca",
+  "runtime_input": "resident",
+  "scientific_tests": 1,
+  "seed": 4,
+  "spill": false,
+  "storage_mode": "in_memory",
+  "warmup_fits": 0
+}

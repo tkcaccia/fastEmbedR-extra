@@ -1,0 +1,23 @@
+{
+  "algorithm_state": "resident",
+  "backend": "cpu",
+  "case_id": "coil20_louvain_cpu4_d0_s4_matched_7c68bc2",
+  "cores": 4,
+  "dataset": "COIL20",
+  "dimensions": 0,
+  "expected_columns": 16384,
+  "expected_rows": 1440,
+  "fit_scope": "all_rows_optimized",
+  "gpus": 0,
+  "implementation": "fastEmbedR",
+  "input_sha256": "8e53030869bcfbc228edc06ca970e69b78ddae13fb188327e8899194d5841d66",
+  "method": "Louvain",
+  "repetition": 1,
+  "route_id": "fastembedr_cpu_louvain",
+  "runtime_input": "resident",
+  "scientific_tests": 1,
+  "seed": 4,
+  "spill": false,
+  "storage_mode": "in_memory",
+  "warmup_fits": 0
+}

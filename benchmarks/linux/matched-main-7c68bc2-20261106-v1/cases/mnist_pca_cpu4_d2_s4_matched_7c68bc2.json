@@ -1,0 +1,23 @@
+{
+  "algorithm_state": "resident",
+  "backend": "cpu",
+  "case_id": "mnist_pca_cpu4_d2_s4_matched_7c68bc2",
+  "cores": 4,
+  "dataset": "MNIST",
+  "dimensions": 2,
+  "expected_columns": 784,
+  "expected_rows": 70000,
+  "fit_scope": "all_rows_optimized",
+  "gpus": 0,
+  "implementation": "fastEmbedR",
+  "input_sha256": "0e1fefab430cded89c2c36871540aea87deee1a1316e1a7d6ea4d31c07f835b0",
+  "method": "PCA",
+  "repetition": 1,
+  "route_id": "fastembedr_cpu_pca",
+  "runtime_input": "resident",
+  "scientific_tests": 1,
+  "seed": 4,
+  "spill": false,
+  "storage_mode": "in_memory",
+  "warmup_fits": 0
+}
