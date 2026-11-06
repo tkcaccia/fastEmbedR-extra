@@ -80,7 +80,43 @@ Its remote 385-case manifest SHA-256 is
 `d840d1351ff9cb8b221e3f673d20a74c5e2997432bb40e27011d1ad3cab12356`,
 and the staged R worker SHA-256 is
 `9b7c51b3d34359a30b31ce208d3bf9503b755ea10d82aa2791b5249b635d3e31`;
-both match the local plan. No scaling job has been submitted. Submit v2 in
-bounded waves after the running four-core cohort reaches a terminal audited
-state and scheduler capacity permits. Do not submit v1 or mix either plan
-with the earlier `afeaffc` cohort.
+both match the local plan. Submit the remaining v2 cases in bounded waves
+after pilot review and when scheduler capacity permits. Do not submit v1 or
+mix either plan with the earlier `afeaffc` cohort.
+
+At 18:06 UTC on 2026-11-06, bounded v2 qualification began before the
+larger waves. CPU8 COIL20 PCA job `1605210_2` completed `0:0` and passed the
+read-only scaling audit: backend `cpu_rsvd`, eight requested and eight
+reported effective workers, fit time 0.645 s, and Slurm job-cgroup peak RAM
+1,363,234,816 bytes. This one small fit is not a speedup estimate. The six
+other COIL20 CPU8 method/dimension pilots ran as array `1605219` with one
+active task and a 20-minute limit per case. Leiden, Louvain, and 2D/3D UMAP
+completed. Both t-SNE cases failed the worker-count guard before metrics were
+written; their logs and failed provenance remain intact. The read-only audit
+found five accepted pilots (including PCA), two failed cases, and 378
+unsubmitted cases. These are diagnostic results, not a scaling comparison.
+The full 385-case scaling waves remain unsubmitted.
+The separate auditor is
+`/scratch/firenze/NN/benchmarks/audit_scaling_7c68bc2_20261106_v1/audit_scaling.py`
+(SHA-256 `50ed5f1e585156ef0d9b2fd8b022db60d28da9b7ef7eff4c78c314182df37974`).
+It verifies the staged plan files and each result's effective CPU count,
+source, input, quality, memory, and scheduler outcome using small manifests.
+The initial auditor labels the failed t-SNE cases `incomplete_result` because
+their metrics files are absent. A versioned v2 auditor preserves the explicit
+`failed_case` classification from terminal provenance and has a focused test.
+Its source SHA-256 is
+`78df0f012f310396a5ce662e4e6589c2e92139ff5d5980c80a88cb937fee0a81`;
+the separate HPC copy is at
+`/scratch/firenze/NN/benchmarks/audit_scaling_7c68bc2_20261106_v2`.
+The partial v2 review reports five audited, two failed, and 378 missing.
+No failed case is retried in place.
+
+The t-SNE source applies an adaptive cap to every request: at COIL20's 1,440
+rows, `n.cores = 8` is reduced to two native workers. This explains why the
+worker's request-versus-effective check stopped both cases. An isolated
+package candidate applies that size-based cap only to automatic selection and
+honors an explicit worker request. The change passed source-style checks and
+has a focused native-result metadata test. A CPU-only compute-node build and
+baseline-versus-candidate check was submitted as job `1605266`; its terminal
+result must be reviewed before the change is published or any eight-core
+t-SNE scaling case is submitted under a new source version.
