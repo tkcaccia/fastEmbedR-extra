@@ -167,3 +167,13 @@ The snapshot is preserved under
 `/Users/silvanopiazza/Documents/Stefano/fastEmbedR-main-afeaffc-audit-v2-20261106/snapshot-20261106-1432.json`.
 The audit script SHA-256 is
 `5f9a2c94bc415baab37a00b3b30d14b75296dd08770df082777b20f12550ec7f`.
+
+The paired summary at 2026-11-06 14:35 UTC contains 306 CPU/Metal
+comparisons: 42 Leiden, 42 Louvain, 48 PCA, 84 UMAP and 90 t-SNE.
+It found zero mismatched package/DLL/input identities. The largest
+Metal-minus-CPU1 trustworthiness decline among completed embedding pairs
+was -0.0135 for 2D MetRef t-SNE at seed 4; its label-accuracy decline was
+-0.0350. These are individual seed-level review targets, not a final
+backend failure or manuscript estimate. The complete paired snapshot is
+under Stefano at
+`fastEmbedR-main-afeaffc-audit-v2-20261106/paired-snapshot-20261106-1435.json`.
