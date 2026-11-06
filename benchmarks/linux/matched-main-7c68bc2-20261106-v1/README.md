@@ -31,3 +31,11 @@ The 77 planned full-data CPU cases pass the pure route policy. The wave
 scripts and case lists are staged only; do not submit waves until the pilot
 and its input identity, source identity, backend, memory, quality, and cleanup
 are audited. The active `afeaffc` scripts and jobs are unchanged.
+
+`audit_results.py` is a read-only terminal review. Supply a saved `sacct`
+pipe-delimited table with `JobIDRaw,JobID,State,ExitCode`; it checks the
+77 result manifests, source hashes, actual input checksums, method and backend,
+quality ranges, cgroup memory, output presence, and scheduler outcome. It
+returns nonzero while any case is missing or fails. Its review reads only
+small manifests and file metadata, so it can run on the head node without
+reading dataset contents or the Singularity image.
