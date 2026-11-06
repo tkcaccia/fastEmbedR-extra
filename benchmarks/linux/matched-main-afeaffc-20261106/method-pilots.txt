@@ -1,0 +1,4 @@
+coil20_pca_cpu4_d2_s4_matched_afeaffc
+coil20_tsne_cpu4_d2_s4_matched_afeaffc
+coil20_leiden_cpu4_d0_s4_matched_afeaffc
+coil20_louvain_cpu4_d0_s4_matched_afeaffc
