@@ -9,8 +9,11 @@ fit. The R worker checks observed backend, both devices, output dimensions,
 and finite coordinates. The outer process group has a three-minute deadline,
 bounded shutdown, assigned-device context checks and fail-closed telemetry.
 
-The staged case is **not submitted** until the terminal evidence from new-image
-GPU pilot 1592858 is audited. Local admission and twelve lifecycle/mapping
-tests passed. This case is a real-data route qualification, not a broad GPU
-benchmark or a claim of useful two-GPU speedup. Each later method needs its
-own reviewed route and qualification.
+The source-locked case was submitted as held job **1594628**. Do not release
+it until terminal evidence from new-image GPU pilot 1592858 is audited.
+The job's deployed copy predates the later one-to-three-device admission and
+per-device memory checks in this directory; GitHub edits do not change its
+immutable staged scripts. The expanded checks passed local lifecycle and
+mapping tests, but need device qualification in a new job version. This
+COIL20 run is a real-data route qualification, not a broad GPU benchmark or
+evidence of useful speedup. Each later method needs its own reviewed route.

@@ -37,29 +37,31 @@ def gpu_inventory():
                 if line.strip())
 
 
-def resolve_allocated_uuids(allocated, visible, inventory):
+def resolve_allocated_uuids(allocated, visible, inventory, count):
     slurm_ids = allocated.split(',')
     cuda_ids = visible.split(',')
-    if (len(slurm_ids) != 2 or len(set(slurm_ids)) != 2 or
-            len(cuda_ids) != 2 or len(set(cuda_ids)) != 2 or
+    if (count not in (1, 2, 3) or
+            len(slurm_ids) != count or len(set(slurm_ids)) != count or
+            len(cuda_ids) != count or len(set(cuda_ids)) != count or
             set(cuda_ids) != set(inventory)):
-        raise RuntimeError('Cannot prove the two visible GPUs are allocated')
+        raise RuntimeError('Cannot prove the visible GPUs are allocated')
     if len(inventory) != len(slurm_ids):
         raise RuntimeError('GPU inventory includes unassigned devices')
     uuids = set(inventory.values())
-    if len(uuids) != 2 or not all(item.startswith('GPU-') for item in uuids):
+    if len(uuids) != count or not all(
+            item.startswith('GPU-') for item in uuids):
         raise RuntimeError('Assigned GPU UUIDs are missing or duplicate')
     return uuids
 
 
-def assigned_uuids():
+def assigned_uuids(count):
     job = os.environ.get('SLURM_JOB_ID')
     allocated = os.environ.get('SLURM_JOB_GPUS')
     visible = os.environ.get('CUDA_VISIBLE_DEVICES')
     if not job or not allocated or not visible:
         raise RuntimeError('Missing Slurm GPU allocation identity')
     inventory = gpu_inventory()
-    uuids = resolve_allocated_uuids(allocated, visible, inventory)
+    uuids = resolve_allocated_uuids(allocated, visible, inventory, count)
     log('allocation', job=job, host=os.uname().nodename,
         slurm_job_gpus=allocated, cuda_visible_devices=visible,
         visible_inventory=inventory, assigned_uuids=sorted(uuids))
@@ -80,6 +82,22 @@ def contexts(uuids):
         if parts[1] in uuids:
             found.add((int(parts[0]), parts[1]))
     return found
+
+
+def gpu_memory_mib(uuids):
+    rows = checked_command(['nvidia-smi',
+        '--query-gpu=uuid,memory.used',
+        '--format=csv,noheader,nounits'])
+    memory = {}
+    for row in rows.splitlines():
+        parts = [part.strip() for part in row.split(',')]
+        if len(parts) != 2 or not parts[1].isdigit():
+            raise RuntimeError('Ambiguous GPU memory telemetry: ' + row)
+        if parts[0] in uuids:
+            memory[parts[0]] = int(parts[1])
+    if set(memory) != uuids:
+        raise RuntimeError('Assigned GPU memory telemetry is incomplete')
+    return memory
 
 
 def group_pids(pgid):
@@ -128,6 +146,10 @@ def verify_cleanup(pgid, uuids):
 def main():
     signal.signal(signal.SIGUSR1, on_signal)
     signal.signal(signal.SIGTERM, on_signal)
+    case = json.loads((ROOT / 'case.json').read_text())
+    count = case.get('gpus')
+    if type(count) is not int or count not in (1, 2, 3):
+        raise RuntimeError('CUDA case requests an unsupported GPU count')
     identity = Path('/scratch/firenze/NN/singularity/release_afeaffc_20261106/release_inputs/source-identity.txt').read_text()
     if 'FastEmbedRCommit=afeaffc39a607c00db5899c284451c6cdbf741bb' not in identity.splitlines():
         raise RuntimeError('Package source identity mismatch')
@@ -135,9 +157,11 @@ def main():
         raise RuntimeError('Image must remain read-only')
     expected = Path('/scratch/firenze/NN/singularity/release_afeaffc_20261106/image-final.sha256').read_text().split()[0]
     log('image_approved', sha256=expected, image=str(IMAGE))
-    uuids = assigned_uuids()
+    uuids = assigned_uuids(count)
     if contexts(uuids):
         raise RuntimeError('Assigned GPU already has compute contexts')
+    baseline_mib = gpu_memory_mib(uuids)
+    peak_mib = dict(baseline_mib)
     if ABORT:
         raise RuntimeError('Scheduler warning before launch: ' + ABORT)
     command = ['singularity', 'exec', '--nv',
@@ -162,8 +186,14 @@ def main():
                 break
             if now >= next_sample:
                 active = contexts(uuids)
-                log('gpu_contexts', pids=sorted({pid for pid, _ in active}))
-                next_sample = now + 5
+                current_mib = gpu_memory_mib(uuids)
+                for uuid in uuids:
+                    peak_mib[uuid] = max(peak_mib[uuid],
+                                         current_mib[uuid])
+                log('gpu_telemetry',
+                    pids=sorted({pid for pid, _ in active}),
+                    memory_mib=current_mib)
+                next_sample = now + 1
             time.sleep(0.5)
         if proc.poll() is not None and proc.returncode != 0:
             failed = 'Worker exit: ' + str(proc.returncode)
@@ -178,17 +208,28 @@ def main():
         verify_cleanup(pgid, uuids)
     if failed:
         raise RuntimeError(failed)
-    result = ROOT / 'results/coil20_umap_cuda2_d2_s4_afeaffc'
+    result = ROOT / 'results' / case['case_id']
     provenance = json.loads((result / 'provenance.json').read_text())
     metrics = json.loads((result / 'metrics.json').read_text())
     if (provenance.get('status') != 'completed' or
             metrics.get('observed_backend') != 'cuda' or
-            metrics.get('gpu_devices') != [0, 1] or
-            metrics.get('n_rows') != 1440 or
+            metrics.get('gpu_devices') != list(range(count)) or
+            metrics.get('n_rows') != case['expected_rows'] or
             not (result / 'fit.rds').is_file()):
         raise RuntimeError('CUDA fit output or backend evidence invalid')
+    telemetry = {'baseline_mib': baseline_mib,
+                 'peak_mib': peak_mib,
+                 'peak_above_baseline_mib': {
+                     uuid: peak_mib[uuid] - baseline_mib[uuid]
+                     for uuid in uuids}}
+    if any(value <= 0 for value in
+           telemetry['peak_above_baseline_mib'].values()):
+        raise RuntimeError('Every assigned GPU must use device memory')
+    (result / 'gpu_memory.json').write_text(
+        json.dumps(telemetry, sort_keys=True, indent=2) + '\n')
     log('pilot_pass', exit_code=proc.returncode,
-        case_id=metrics['case_id'], devices=metrics['gpu_devices'])
+        case_id=metrics['case_id'], devices=metrics['gpu_devices'],
+        gpu_peak_mib=peak_mib)
 
 
 if __name__ == '__main__':
