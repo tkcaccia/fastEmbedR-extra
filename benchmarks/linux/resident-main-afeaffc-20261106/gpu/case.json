@@ -1,0 +1,23 @@
+{
+  "case_id": "coil20_umap_cuda2_d2_s4_afeaffc",
+  "dataset": "COIL20",
+  "method": "UMAP",
+  "implementation": "fastEmbedR",
+  "backend": "cuda",
+  "storage_mode": "in_memory",
+  "runtime_input": "resident",
+  "algorithm_state": "resident",
+  "spill": false,
+  "fit_scope": "all_rows_optimized",
+  "dimensions": 2,
+  "cores": 4,
+  "gpus": 2,
+  "seed": 4,
+  "repetition": 1,
+  "scientific_tests": 1,
+  "warmup_fits": 0,
+  "route_id": "fastembedr_cuda_umap_2gpu",
+  "expected_rows": 1440,
+  "expected_columns": 16384,
+  "input_sha256": "8e53030869bcfbc228edc06ca970e69b78ddae13fb188327e8899194d5841d66"
+}
