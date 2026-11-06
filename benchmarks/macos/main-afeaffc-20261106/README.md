@@ -157,6 +157,18 @@ not a final estimate. The corresponding CPU1/CPU4 seed-17 cases were
 explicitly deferred. V2 started the seed-42 Metal case at index 466 at
 2026-11-06 14:40:08 UTC.
 
+The seed-42 Metal case completed at 14:58:25 UTC. Its 3D t-SNE fit took
+1,088.785 seconds, with sampled trustworthiness 0.9741 and sampled label
+accuracy 0.8733, peak RSS 4,001,136,640 bytes, stable 7.69 MiB system
+swap, exit 0, no timeout and clear cleanup. Its manifest and result share
+the original input, source, DLL, runner and worker identities. Across the
+three mass41 Metal seeds, mean fit time was 1,076.460 seconds (range
+1,064.108–1,088.785), mean sampled trustworthiness 0.9728 and mean
+sampled label accuracy 0.8666. The corresponding CPU1 and CPU4 seed-4
+cases timed out at 1,800 seconds; their seed-17 and seed-42 cases were
+deferred, so these data do not provide a completed paired CPU speedup.
+The v2 controller then started mass41 CPU1 2D UMAP at index 467.
+
 ## Continuation-aware audit
 
 `audit_continued_panel.py` independently combines the original queue and
@@ -177,6 +189,16 @@ The snapshot is preserved under
 `/Users/silvanopiazza/Documents/Stefano/fastEmbedR-main-afeaffc-audit-v2-20261106/snapshot-20261106-1432.json`.
 The audit script SHA-256 is
 `5f9a2c94bc415baab37a00b3b30d14b75296dd08770df082777b20f12550ec7f`.
+
+A later read-only audit at 2026-11-06 15:00 UTC after index 466 found
+462 completed, two failed timeouts, four deferred, one running and 224
+pending cases, with zero
+provenance or result problems. The timeout records retain
+`cleanup_clear: false`; a separate process inspection after their stops
+had found no remaining worker or controller. Failed and deferred CPU
+cases are not counted as benchmark successes.
+The snapshot is preserved at
+`/Users/silvanopiazza/Documents/Stefano/fastEmbedR-main-afeaffc-audit-v2-20261106/snapshot-20261106-1500.json`.
 
 The paired summary at 2026-11-06 14:35 UTC contains 306 CPU/Metal
 comparisons: 42 Leiden, 42 Louvain, 48 PCA, 84 UMAP and 90 t-SNE.
