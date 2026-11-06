@@ -15,8 +15,10 @@ completed. CPU pilot 1592789 on the new image completed. An oversized
 231-task array 1592791 was cancelled while pending, before any calculation,
 because the account would not admit a second array. Quota-friendly waves
 1592816, 1592944, 1592817 and 1592945 cover all datasets and five 2D methods at seed 4 on one, two, four and eight cores. They depend on the successful CPU pilot and are throttled to
-one running element per array. The remaining cores, seeds and 3D cases are
-staged but have not been submitted; submit further small waves as quota frees.
+one running element per array. The 16- and 32-core seed-4 waves are staged but have not been accepted by
+the scheduler: an initial 16-core submit hit `AssocMaxSubmitJobLimit`.
+Additional seeds and 3D cases are also staged; submit further small waves
+only as quota frees.
 The separate two-L40S qualification pilot 1592858 must pass before any CUDA
 campaign. Deep1B remains a separate stress study. Comparators, landmarks,
 file-backed work and final manuscript analysis are outside these arrays.
