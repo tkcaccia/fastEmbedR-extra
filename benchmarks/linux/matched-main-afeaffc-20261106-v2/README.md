@@ -50,7 +50,20 @@ call is unchanged. This quality difference needs a controlled graph-versus-fit
 repeatability audit before either result supports a reproducibility claim.
 `audit_cluster_repeatability.R` is a bounded, resident-only diagnostic for
 that audit. It uses its own versioned HPC path,
-`matched_afeaffc_20261106_repeatability_v1`, and has not yet run.
+`matched_afeaffc_20261106_repeatability_v1`.
+
+Diagnostic job `1601713` completed on Ada with exit `0:0` using the
+checksum-verified resident USPS input. Two four-core graph builds differed;
+two one-core graph builds were identical. Repeating Leiden twice on the
+same four-core graph gave identical memberships. Leiden on the two different
+four-core graphs differed; Leiden on the two one-core graphs matched.
+Thus the observed variation entered during four-core graph construction in
+this case. The current CPU KNN policy selects HNSW above 5,000 rows,
+which is a plausible mechanism, but the diagnostic did not isolate FAISS
+internals. For paired clustering quality and fit-scaling comparisons, use
+a versioned benchmark with a deterministic graph construction step and
+record the graph identity. Keep the current four-core graph-build cases as
+end-to-end variability evidence.
 
 The worker and planner reject file-backed input, nonresident algorithm
 state, spill and GPU exposure. The package image remains release commit

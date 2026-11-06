@@ -25,3 +25,22 @@ controlled runs. The old stopped panel results remain preserved.
 The HPC worker uses different preprocessing and t-SNE settings; these
 source-locked results are not direct cross-platform comparisons. See
 `benchmarks/shared/cohort-policy-20261106.md`.
+
+## Queue stop and versioned continuation
+
+The original queue stopped at one-based index 458, the 965,282-row mass41
+single-core 3D t-SNE case. It reached the 1,800-second limit; its failed
+result and original queue log remain intact. The other 457 queue cases
+before it completed. A read-only process check found no remaining R worker
+or original process group, 379 GiB free disk, and 7.69 MiB system swap.
+
+`resume_panel_v1.py` is a separate controller for indices 459–691. It
+verifies the original queue and worker hashes, original stop point, failed
+case, no later outputs, old PID absence, disk and swap before running. It
+uses the original case manifests and runner. It records a separate status
+log and leaves the old results untouched. One-core 3D t-SNE cases with at
+least 965,282 rows are explicitly recorded as **deferred** because the
+first such case exceeded the existing limit. They require a separately
+budgeted experiment; they are not successes or omissions from the matrix.
+The continuation retains the original stop conditions for timeout,
+cleanup, disk, swap and three consecutive failures.
