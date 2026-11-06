@@ -24,6 +24,18 @@ by the scheduler: an initial 16-core submit hit
 were accepted for 16 and 32 cores.
 Additional seeds and 3D cases are also staged; submit further small waves
 only as quota frees.
+
+On 2026-11-06, Slurm confirmed all 11 UMAP cases in each of the 16-core
+and 32-core arrays 1593970 and 1593971 completed with exit `0:0`.
+After the queue freed capacity, arrays 1604000 (16 cores) and 1604001
+(32 cores) were accepted with `--array=0-3,5-8,10-13%1`. Each contains
+12 source-locked, resident-only seed-4 cases: Leiden, Louvain, PCA and
+2D t-SNE for COIL20, Fashion-MNIST and flow18. The UMAP positions were
+excluded to avoid repeating the completed arrays. Slurm showed element
+zero running on Ada with 16 and 32 CPUs respectively; remaining elements
+were pending under the array task limit. No scientific outcome is claimed
+until each case result and provenance are audited. The other 16/32-core
+non-UMAP cases remain staged for later quota-friendly submissions.
 The separate two-L40S qualification pilot 1592858 must pass before any CUDA
 campaign. Deep1B remains a separate stress study. Comparators, landmarks,
 file-backed work and final manuscript analysis are outside these arrays.
