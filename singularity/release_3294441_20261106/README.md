@@ -23,3 +23,12 @@ bounded resident L40S device pilot with source, device, quality, memory
 and cleanup checks. It must not be used for a manuscript result until
 that pilot passes. UCT HPC never runs file-backed or SSD-streaming
 scientific work.
+
+The staged two-L40S pilot uses a 120-vertex resident four-clique graph,
+compares one coordinated CUDA Leiden fit against CPU labels and modularity,
+and checks both device identities and nonempty per-device work. Its
+launcher verifies the image digest on its GPU compute node and enforces
+bounded monitoring, shutdown and owned-context cleanup. Twelve local
+synthetic lifecycle and GPU-index-mapping checks passed. Submit this
+pilot only after job `1602864` finishes and its image/source identity is
+audited; preserve any failure before a versioned retry.
