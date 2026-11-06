@@ -40,6 +40,17 @@ The pilot supports the cgroup counter's plausibility for this four-core
 case. Qualify larger multi-CPU cases and audit their memory records before
 using a v2 wave in the manuscript.
 
+The four-core USPS Leiden case `1601674` also completed with job-scoped
+peak RAM 686,223,360 bytes and child-process peak 529,379,328 bytes.
+Its 11,000-row result had 19 communities, modularity 0.8663 and ARI
+0.4565. The earlier v1 case with the same input and seed reported 19
+communities, modularity 0.8650 and ARI 0.4771. The v2 worker changed only
+by explicitly passing `massive = "off"` to embedding calls; the clustering
+call is unchanged. This quality difference needs a controlled graph-versus-fit
+repeatability audit before either result supports a reproducibility claim.
+`audit_cluster_repeatability.R` is a bounded, resident-only diagnostic for
+that audit; it has not yet run.
+
 The worker and planner reject file-backed input, nonresident algorithm
 state, spill and GPU exposure. The package image remains release commit
 `afeaffc39a607c00db5899c284451c6cdbf741bb`. Never hash its 9 GB
