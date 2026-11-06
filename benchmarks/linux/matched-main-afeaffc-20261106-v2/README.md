@@ -1,8 +1,8 @@
 # Matched resident CPU cohort with job-scoped peak RAM
 
 This is a **new benchmark-script version**, separate from the active
-`matched_afeaffc_20261106` source-locked runs. No scientific v2 case has
-been submitted. Its Mac-matched scientific settings and package image are
+`matched_afeaffc_20261106` source-locked runs. Its Mac-matched scientific
+settings and package image are
 the same as v1; its result root is
 `/scratch/firenze/NN/benchmarks/matched_afeaffc_20261106_v2`.
 
@@ -26,9 +26,19 @@ Two allocation-only compute-node checks supported this design: job
 found the same counter inside the release Singularity image. Both reported
 `memory.max=max` at the task level, so the runner validates ownership by
 job ID and step path instead of requiring a numeric task-level limit.
-These checks establish counter visibility, not yet whether its peak captures
-the full multi-CPU R workload. A small v2 scientific pilot and memory
-plausibility audit are required before any v2 wave is submitted.
+The v2 COIL20 four-core UMAP pilot `1601661` completed on Ada with exit
+`0:0` in four seconds. Its job-scoped `memory.peak` was 1,199,276,032
+bytes (1.20 GB), versus 1,045,585,920 bytes (1.05 GB) for the R child.
+The baseline before R was 57,180,160 bytes. Slurm's batch `MaxRSS`
+was only 23,752 KB for the same job, confirming that `sacct MaxRSS` is
+not a suitable substitute here. The pilot recorded CPU backend,
+rank-30 preprocessing, trustworthiness 0.9735, label accuracy 0.8917,
+completed provenance and a nonempty output RDS. These values are a
+single development case, not manuscript performance estimates.
+
+The pilot supports the cgroup counter's plausibility for this four-core
+case. Qualify larger multi-CPU cases and audit their memory records before
+using a v2 wave in the manuscript.
 
 The worker and planner reject file-backed input, nonresident algorithm
 state, spill and GPU exposure. The package image remains release commit
