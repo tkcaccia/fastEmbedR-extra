@@ -49,7 +49,8 @@ by explicitly passing `massive = "off"` to embedding calls; the clustering
 call is unchanged. This quality difference needs a controlled graph-versus-fit
 repeatability audit before either result supports a reproducibility claim.
 `audit_cluster_repeatability.R` is a bounded, resident-only diagnostic for
-that audit; it has not yet run.
+that audit. It uses its own versioned HPC path,
+`matched_afeaffc_20261106_repeatability_v1`, and has not yet run.
 
 The worker and planner reject file-backed input, nonresident algorithm
 state, spill and GPU exposure. The package image remains release commit
