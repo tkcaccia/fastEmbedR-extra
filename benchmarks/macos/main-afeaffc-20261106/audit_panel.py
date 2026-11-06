@@ -117,6 +117,7 @@ def audit(root):
                            ("runner", "run_case.py"))}
     terminal = [event for event in events if event.get("event") in
                 ("completed", "stopped", "failed")]
+    queue_done = bool(terminal and terminal[-1]["event"] == "completed")
     problems = []
     counts = Counter()
     seen = set()
@@ -140,8 +141,9 @@ def audit(root):
             issues = ["unreadable_result:" + type(error).__name__]
         if case_id in queued_ids:
             event = finished.get(case_id)
-            if not event or event.get("exit_code") != 0 or (
-                    event.get("cleanup_clear") is not True):
+            if ((not event and queue_done) or
+                    (event and (event.get("exit_code") != 0 or
+                                event.get("cleanup_clear") is not True))):
                 issues.append("queue_failure")
         counts["failed" if issues else "completed"] += 1
         problems.extend({"case_id": case_id, "issue": issue}
@@ -152,8 +154,7 @@ def audit(root):
                              "completed"):
         problems.append({"case_id": None, "issue": "queue_terminal_failure"})
     complete = (counts["completed"] == plan["cases"] and
-                terminal and terminal[-1]["event"] == "completed" and
-                not problems)
+                queue_done and not problems)
     return {"status": "passed" if complete else
             "failed" if problems else "incomplete",
             "planned": plan["cases"], "counts": dict(counts),
