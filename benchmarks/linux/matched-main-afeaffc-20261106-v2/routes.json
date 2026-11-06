@@ -1,0 +1,112 @@
+{
+  "fastembedr_cpu_pca": {
+    "verified_resident": true,
+    "worker": "fastembedr_resident_r",
+    "implementation": "fastEmbedR",
+    "backend": "cpu",
+    "method": "PCA",
+    "datasets": ["COIL20", "USPS", "MNIST", "Fashion-MNIST", "MetRef", "mass41", "flow18", "ImageNet features", "FlowRepository", "Tabula Muris", "Macosko retina"],
+    "gpu_counts": [0],
+    "fit_scopes": ["all_rows_optimized"],
+    "dimensions": [2, 3, 50]
+  },
+  "fastembedr_cpu_pca_landmark": {
+    "verified_resident": true,
+    "worker": "fastembedr_resident_r",
+    "implementation": "fastEmbedR",
+    "backend": "cpu",
+    "method": "PCA",
+    "datasets": ["COIL20", "USPS", "MNIST", "Fashion-MNIST", "MetRef", "mass41", "flow18", "ImageNet features", "FlowRepository", "Tabula Muris", "Macosko retina"],
+    "gpu_counts": [0],
+    "fit_scopes": ["landmark_fit_plus_projection"],
+    "dimensions": [2, 3, 50]
+  },
+  "fastembedr_cpu_tsne": {
+    "verified_resident": true,
+    "worker": "fastembedr_resident_r",
+    "implementation": "fastEmbedR",
+    "backend": "cpu",
+    "method": "t-SNE",
+    "datasets": ["COIL20", "USPS", "MNIST", "Fashion-MNIST", "MetRef", "mass41", "flow18", "ImageNet features", "FlowRepository", "Tabula Muris", "Macosko retina"],
+    "gpu_counts": [0],
+    "fit_scopes": ["all_rows_optimized"],
+    "dimensions": [2, 3]
+  },
+  "fastembedr_cpu_tsne_landmark": {
+    "verified_resident": true,
+    "worker": "fastembedr_resident_r",
+    "implementation": "fastEmbedR",
+    "backend": "cpu",
+    "method": "t-SNE",
+    "datasets": ["COIL20", "USPS", "MNIST", "Fashion-MNIST", "MetRef", "mass41", "flow18", "ImageNet features", "FlowRepository", "Tabula Muris", "Macosko retina"],
+    "gpu_counts": [0],
+    "fit_scopes": ["landmark_fit_plus_projection"],
+    "dimensions": [2, 3]
+  },
+  "fastembedr_cpu_umap": {
+    "verified_resident": true,
+    "worker": "fastembedr_resident_r",
+    "implementation": "fastEmbedR",
+    "backend": "cpu",
+    "method": "UMAP",
+    "datasets": ["COIL20", "USPS", "MNIST", "Fashion-MNIST", "MetRef", "mass41", "flow18", "ImageNet features", "FlowRepository", "Tabula Muris", "Macosko retina"],
+    "gpu_counts": [0],
+    "fit_scopes": ["all_rows_optimized"],
+    "dimensions": [2, 3]
+  },
+  "fastembedr_cpu_umap_landmark": {
+    "verified_resident": true,
+    "worker": "fastembedr_resident_r",
+    "implementation": "fastEmbedR",
+    "backend": "cpu",
+    "method": "UMAP",
+    "datasets": ["COIL20", "USPS", "MNIST", "Fashion-MNIST", "MetRef", "mass41", "flow18", "ImageNet features", "FlowRepository", "Tabula Muris", "Macosko retina"],
+    "gpu_counts": [0],
+    "fit_scopes": ["landmark_fit_plus_projection"],
+    "dimensions": [2, 3]
+  },
+  "fastembedr_cpu_leiden": {
+    "verified_resident": true,
+    "worker": "fastembedr_resident_r",
+    "implementation": "fastEmbedR",
+    "backend": "cpu",
+    "method": "Leiden",
+    "datasets": ["COIL20", "USPS", "MNIST", "Fashion-MNIST", "MetRef", "mass41", "flow18", "ImageNet features", "FlowRepository", "Tabula Muris", "Macosko retina"],
+    "gpu_counts": [0],
+    "fit_scopes": ["all_rows_optimized"],
+    "dimensions": [0]
+  },
+  "fastembedr_cpu_louvain": {
+    "verified_resident": true,
+    "worker": "fastembedr_resident_r",
+    "implementation": "fastEmbedR",
+    "backend": "cpu",
+    "method": "Louvain",
+    "datasets": ["COIL20", "USPS", "MNIST", "Fashion-MNIST", "MetRef", "mass41", "flow18", "ImageNet features", "FlowRepository", "Tabula Muris", "Macosko retina"],
+    "gpu_counts": [0],
+    "fit_scopes": ["all_rows_optimized"],
+    "dimensions": [0]
+  },
+  "fastembedr_cpu_leiden_landmark": {
+    "verified_resident": true,
+    "worker": "fastembedr_resident_r",
+    "implementation": "fastEmbedR",
+    "backend": "cpu",
+    "method": "Leiden",
+    "datasets": ["COIL20", "USPS", "MNIST", "Fashion-MNIST", "MetRef", "mass41", "flow18", "ImageNet features", "FlowRepository", "Tabula Muris", "Macosko retina"],
+    "gpu_counts": [0],
+    "fit_scopes": ["landmark_fit_plus_projection"],
+    "dimensions": [0]
+  },
+  "fastembedr_cpu_louvain_landmark": {
+    "verified_resident": true,
+    "worker": "fastembedr_resident_r",
+    "implementation": "fastEmbedR",
+    "backend": "cpu",
+    "method": "Louvain",
+    "datasets": ["COIL20", "USPS", "MNIST", "Fashion-MNIST", "MetRef", "mass41", "flow18", "ImageNet features", "FlowRepository", "Tabula Muris", "Macosko retina"],
+    "gpu_counts": [0],
+    "fit_scopes": ["landmark_fit_plus_projection"],
+    "dimensions": [0]
+  }
+}
