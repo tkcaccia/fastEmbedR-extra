@@ -28,7 +28,17 @@ peak was 1,045,786,624 bytes. The job-cgroup figure includes container file
 cache from hashing the 9 GB image and should not be presented as fit-only
 RAM. This is route qualification, not a scaling estimate.
 
-A separate 2D case and `pilot_2d.sbatch` are staged to check the second
-previously failed dimension under the new source version. It must receive its
-own result folder and terminal audit; the failed `7c68bc2` results remain
-untouched.
+A separate 2D case and `pilot_2d.sbatch` checked the second previously
+failed dimension under the new source version. It has its own result folder;
+the failed `7c68bc2` results remain untouched.
+
+The 2D pilot ran as job `1605318` and completed `0:0`. Its saved case,
+route and worker hashes match the reviewed files, and its compute-node input
+digest matches the manifest. It reports CPU, eight requested and eight
+effective workers, all 1,440 rows, trustworthiness 0.9876, label accuracy
+0.8733 and fit time 2.289 seconds. Job-cgroup peak was 1,181,868,032 bytes
+and child-process peak was 1,045,811,200 bytes. The large difference between
+the 2D and 3D job-cgroup peaks, despite similar child peaks, shows why the
+container checksum's file cache must be separated from scientific fit RAM
+in publication memory comparisons. Both dimensions now pass real-data route
+qualification on the new image; repeated cross-dataset benchmarks remain.
