@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Start the entire queued CPU/GPU study after a finished HNSW refinement.
 set -euo pipefail
+[[ "${FASTEMBEDR_HPC_GPU_PAUSED:-1}" == 0 ]] || {
+    echo 'UCT GPU submissions remain paused.' >&2
+    exit 2
+}
 
 [[ $# -eq 1 ]] || {
     echo "Usage: submit_automatic.sh REFINEMENT_CAMPAIGN" >&2

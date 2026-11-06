@@ -38,6 +38,17 @@ def job_rss(path):
     return ""
 
 
+def verified_coverage(path, rows, expected):
+    record = first_row(path)
+    try:
+        valid = (int(float(record["rows_scanned"])) == int(rows) and
+                 int(float(record["bytes"])) == expected and
+                 record["all_values_valid"].upper() == "TRUE")
+    except (KeyError, ValueError):
+        return False
+    return valid
+
+
 def status_for(method, case, root, unsupported):
     if method in unsupported:
         return "unsupported", unsupported[method]
@@ -77,12 +88,15 @@ def summarize_case(job, root):
         output = case / "output.f32"
         if method in ("leiden", "louvain"):
             output = root / "work" / (method + "_labels.u32")
+        expected = int(job["rows"]) * (4 if method in
+            ("leiden", "louvain") else 8)
+        coverage = verified_coverage(case / "coverage.csv",
+                                     job["rows"], expected)
         if status == "ok" and method != "knn":
-            expected = int(job["rows"]) * (4 if method in
-                ("leiden", "louvain") else 8)
-            if (not output.is_file() or output.stat().st_size != expected
-                    or not plot.is_file()):
-                status, reason = "incomplete", "output or all-row PNG missing"
+            present = output.is_file() and output.stat().st_size == expected
+            reclaimed = audit.get("status") == "PASS" and coverage
+            if not plot.is_file() or not (present or reclaimed):
+                status, reason = "incomplete", "coverage or all-row PNG missing"
         stage = stages.get(method, {})
         records.append(dict(mode=mode, rows=job["rows"],
                             lane=job["lane"], job=job["job"],
@@ -97,7 +111,8 @@ def summarize_case(job, root):
                             ssd_peak_allocated_bytes=disk.get(
                                 "peak_allocated_bytes", ""),
                             output_bytes=output.stat().st_size
-                            if output.is_file() else "",
+                            if output.is_file() else expected if coverage
+                            else "",
                             plot=str(plot) if plot.is_file() else "",
                             knn_recall_mean=knn.get("observed_recall", "")
                             if method == "knn" else "",
@@ -123,6 +138,8 @@ def main():
                         help="Deep1B matrix jobs.tsv")
     parser.add_argument("--output", type=Path,
                         help="CSV output (default: beside jobs.tsv)")
+    parser.add_argument("--backend", choices=("cpu", "cuda"),
+                        help="Select one hardware lane group")
     args = parser.parse_args()
     jobs = csv_rows(args.ledger, "\t")
     if not jobs:
@@ -130,6 +147,9 @@ def main():
     output = args.output or args.ledger.with_name("methods.csv")
     records = []
     for job in jobs:
+        backend = "cuda" if job["lane"].startswith("cuda") else "cpu"
+        if args.backend and backend != args.backend:
+            continue
         records.extend(summarize_case(job, Path(job["campaign"])))
     with output.open("w", newline="") as stream:
         writer = csv.DictWriter(stream, FIELDS)

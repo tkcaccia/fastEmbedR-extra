@@ -38,6 +38,11 @@
   reporting. The package also provides randomized principal component
   analysis (PCA), reusable weighted graphs, community detection, optional
   landmark fitting, and fixed-reference projection.
+  Experimental file-backed interfaces support streamed PCA and explicitly
+  prepared full-row graph optimization without requiring an R matrix to hold
+  the input. These routes are evaluated separately from established
+  in-memory workflows; full-row output is not by itself evidence of a
+  memory-boundary or multi-GPU speedup.
   Component tests compare graph weights, affinities, forces, gradients, and
   trajectories with independent references. The benchmark design evaluates
   complete public calls separately from direct-Python fits and records
@@ -174,7 +179,8 @@ RAPIDS cuML 26.06 & UMAP, t-SNE & No & Yes & No & UMAP only &
   3D output and reference projection are UMAP-only. fastEmbedR supports
   three-dimensional t-SNE and UMAP on CPU, CUDA, and Metal
   for ordinary matrix or precomputed-neighbor fits. Three-dimensional GPU
-  landmark refinement and full-graph CUDA t-SNE are not available.}
+  landmark refinement and three-dimensional full-graph CUDA t-SNE
+  are not available.}
 \end{table}
 
 This article combines the software description, implementation details,
@@ -195,22 +201,37 @@ probabilities. A backend-specific optimizer then produces the final layout.
 Precomputed neighbors can enter after the search stage, and landmark models
 separate reference fitting from projection of omitted or genuinely new rows.
 
-The required R layer is limited to \pkg{Rcpp}, \pkg{withr}, and the
-\pkg{methods} package distributed with R; only \pkg{Rcpp} is a compiled-code
-linking dependency. The CPU native core otherwise requires a C++17 toolchain
-and the Basic Linear Algebra Subprograms (BLAS), Linear Algebra Package
-(LAPACK), and Fortran runtime already configured for R. Matrix workflows use
-the package's native neighbor layer, whereas the precomputed-neighbor
+The required R layer imports \pkg{faissR}, \pkg{Rcpp}, \pkg{withr}, and
+the \pkg{methods}, \pkg{parallel}, and \pkg{utils} packages distributed with
+R. The native build uses \pkg{Rcpp} and \pkg{faissR} headers. CPU exact
+search is package-native; CPU HNSW calls the versioned \pkg{faissR} C API,
+which uses FAISS internally, without calling a \pkg{faissR} R function.
+Other CPU numerical routines use R's configured BLAS, LAPACK, and Fortran
+runtime. Matrix workflows construct neighbors, whereas the precomputed-neighbor
 interfaces define an explicit boundary at which a caller can supply indices
 and distances. The selected metric, neighborhood size, search engine,
 observed recall, and backend are retained for reproducibility. Search time
 remains part of complete public-workflow timing.
+For CPU HNSW, the reported campaign used a predeclared policy based on
+matrix shape and neighborhood size. Its nominal 0.99 recall target is a
+policy objective, not a guarantee for a new data set; benchmark observations
+did not select the settings. Recall is checked on fixed exact-reference
+queries after fitting.
 A comparative study of nearest-neighbor algorithms is outside the scope of
 this article, but the accuracy of the search used by each reported workflow is
 measured because it can affect both runtime and embedding quality. Metal and
 CUDA builds link optional accelerator libraries; they do
 not redistribute them. Copyright and third-party notices are retained in the
 package source.
+
+\subsection{Accelerator library boundaries}
+
+CUDA uses cuVS (built on RAFT) for matrix-derived neighbors, cuFFT for t-SNE
+repulsion, and cuBLAS/cuSOLVER/cuRAND for PCA \citep{nvidiaCUVS2026}.
+UMAP and t-SNE optimization remains package-owned. Experimental
+coordinated multi-GPU layouts use NCCL \citep{nvidiaNCCL2026}; partitioned
+KNN and PCA are distinct operations and do not prove multi-GPU optimizer
+acceleration. The supplement maps each library to its stage.
 
 Explicit backend requests are strict. If \code{backend = "metal"} or
 \code{backend = "cuda"} is unavailable, the function raises an error instead
@@ -239,31 +260,18 @@ estimates when available.
 
 \subsection{Experimental file-backed workflows}
 
-The ordinary matrix interfaces remain the default. For an explicit
-file-backed analysis, \code{massive_matrix()} describes a row-major float32
-\code{.f32} or \code{.fbin} file without reading all observations into R.
-The same \code{pca()}, \code{umap()}, and \code{tsne()} entry points accept
-this descriptor with a selected \code{massive} mode and persistent output
-path. Streamed PCA reads bounded row blocks and writes scores to disk.
-The \code{landmark} embedding mode fits selected reference rows and
-projects the others; this is an approximation to fitting every row, even
-though the output contains coordinates for every observation. Neither
-UMAP nor t-SNE automatically selects this approximation in response to
-memory pressure.
-
-A separate \code{out\_of\_core\_graph} mode consumes a prepared file-backed
-fuzzy graph for UMAP or affinity graph for t-SNE, together with initial
-coordinates. Graph construction can use the package's existing CPU
-exact/HNSW or CUDA cuVS exact/IVF search routes. Thus, file-backed
-optimization of all rows is distinct from landmark projection, but it
-does not imply exact nearest-neighbor search. The full path currently
-requires explicit preparation of its graph and initialization; a single
-file-to-layout call is not claimed. CPU and CUDA stages have been exercised
-experimentally, while Metal file-backed processing is unavailable and
-raises an error. Selected CUDA PCA, search, and projection stages can
-partition rows across devices; the complete embedding optimizer is not
-distributed across GPUs. Memory budgets constrain algorithm buffers,
-not total process resident memory or disk-cache use.
+The default matrix interface is distinct from experimental file-backed
+input. \code{massive_matrix()} describes a row-major float32 file;
+\code{pca()} streams it in bounded blocks. \code{umap()} and \code{tsne()}
+either fit landmarks and project omitted rows or optimize all rows on a
+prepared file-backed graph. Landmark projection is an approximation and is
+never selected silently. Full-graph optimization needs an explicitly
+prepared graph and initialization; it need not use exact neighbors.
+Current Deep1B restart support covers KNN construction, not interrupted
+UMAP, t-SNE, or clustering optimization. Memory budgets limit algorithm
+buffers, not whole-process RSS or disk cache. Metal full-graph t-SNE and
+clustering remain unsupported. The file-backed modes and their evidence
+gates are detailed in the supplement.
 
 \subsection{Public interface}
 
@@ -325,21 +333,11 @@ sets unit weight on the symmetric neighbor union; it can make adjacency-defined
 boundaries visually sharper, but it changes the objective and its quality
 varies by data set.
 
-The CPU optimizer uses contiguous arrays, thread-local random-number streams,
-and atomic updates. The Metal implementation retains graph, coordinates, and
-optimizer state in unified memory. CUDA consumes a resident nearest-neighbor
-object, constructs the graph on-device, uses pooled memory for temporary
-storage, and groups rows for coalesced access. Its production row optimizer
-assigns one warp to a head row, fuses attraction, negative sampling,
-repulsion, and coordinate updates, and aggregates the head update before
-issuing tail atomics. Negative samples are generated on-device from the
-per-edge epoch state. Repeated epoch work is captured as a CUDA Graph while
-the graph, layout, and optimizer buffers are reused. The package owns the
-optimizer policy and records the resolved values. The public controls are
-neighborhood size, metric, fuzzy or binary graph mode, preprocessing, backend,
-seed, output dimension, and CPU cores. The number of epochs, learning rate,
-minimum distance, spread, repulsion strength, and negative-sample rate are
-fixed internally by the recorded release policy.
+CPU, Metal, and CUDA implementations retain graph and optimizer buffers
+across epochs; CUDA fuses row updates and captures repeated work in a CUDA
+Graph. Public controls include neighborhood size, metric, graph mode,
+preprocessing, backend, seed, output dimension, and CPU cores. Remaining
+optimizer values follow the recorded release policy.
 
 \subsection{Compact-support interpolation-based t-SNE}
 
@@ -369,39 +367,12 @@ The production API does not expose a wider affinity-support mode; therefore,
 all cross-backend t-SNE validation in this article evaluates this same compact
 policy, including the CUDA backend.
 
-The FFT grid is selected by observation count $n$, with each reported size
-denoting cells per coordinate axis. For two-dimensional layouts, CPU uses
-128 cells for $n<40{,}000$ and 256 otherwise; Metal uses 128 for
-$n<10{,}000$ and 256 otherwise; CUDA uses 256 for $n<20{,}000$,
-512 for $20{,}000\leq n<100{,}000$, and 1024 otherwise. The
-\code{FASTEMBEDR_TSNE_FFT_GRID} environment variable can override the
-two-dimensional choice: CPU and Metal round a positive request up to a
-power of two within 32--512, whereas CUDA accepts only powers of two
-from 32 through 1024. FFT convolution pads each axis to twice the
-selected grid size. UMAP does not use this repulsion grid. The evaluated
-container does not provide native three-dimensional accelerator fits;
-three-dimensional claims require a new image and separate validation.
-
-Grid resolution is not a common tunable parameter across implementations.
-The tested cuML 26.6.0 t-SNE fixes three interpolation points and 50
-intervals per axis in its FFT source; its Python API offers no grid control.
-FIt-SNE exposes the interpolation order and minimum interval count, but its
-effective grid can increase with coordinate span. The updated benchmark
-requests a FIt-SNE lower bound close to the CPU grid and records both
-policies. Neither setting makes the grids identical, and these changes were
-not applied to the diagnostic campaign reported below.
-
-CPU execution retains FFT plans, grids, and thread scratch across iterations.
-Metal uses native grid deposition, FFT, interpolation, and update kernels.
-CUDA retains cuFFT plans, workspaces, coordinates, gains, updates, and force
-buffers and uses CUDA Graph execution for repeated iteration groups. Device
-synchronization occurs before a public function returns, so elapsed time does
-not omit queued accelerator work. On CUDA, the layout-statistics, grid
-deposition, batched spectral products, interpolation, attractive-force, and
-optimizer-update stages are encoded in the captured iteration sequence. The
-global mean reduction and final centering remain separate kernels because they
-require completed cross-block reductions; keeping this dependency explicit
-preserves the objective and update order while avoiding host-side launches.
+The two-dimensional FFT grid follows a recorded size- and backend-dependent
+policy. cuML and FIt-SNE expose different grid controls, so their FFT
+configurations are not assumed identical. CPU, Metal, and CUDA reuse plans
+and optimizer state; CUDA captures repeated iteration work. Public calls
+synchronize before timing stops. The evaluated image does not validate
+native three-dimensional accelerator fits.
 
 \subsection{PCA and initialization}
 
@@ -473,45 +444,26 @@ with \pkg{igraph} is assessed on the identical stored weighted graph, with
 adjusted Rand index (ARI) for membership; stochastic algorithms need not
 return identical partitions. These utilities support interpretation after
 embedding but are not evidence for UMAP or t-SNE correctness.
+Optional graph-supported layout merging combines communities only when
+original-graph connectivity and local UMAP or t-SNE edge continuity agree.
+It is a PAGA-inspired exploratory rule \citep{wolf2019paga}, not PAGA or
+evidence from plot proximity alone; the controlled example is in the
+supplement.
 
 \section{Using fastEmbedR}
 
 \subsection{Installation and backend inspection}
 
-A portable CPU installation requires \proglang{R}, \pkg{Rcpp}, \pkg{withr},
-a C++17 compiler, and R's configured linear-algebra libraries. Metal
-acceleration requires Apple Silicon, macOS 14 or later, Xcode 15 or later,
-and the Foundation, Accelerate, Metal, Metal Performance Shaders, and Metal
-Performance Shaders Graph frameworks supplied by the Apple software
-development kit (SDK); these are not separate R-package dependencies.
+A CPU build needs \proglang{R}, \pkg{faissR}, \pkg{Rcpp}, \pkg{withr}, and
+a C++17 toolchain. Metal requires the Apple SDK; CUDA requires a compatible
+driver and toolkit, with cuVS for matrix-derived neighbors and NCCL for
+coordinated multi-GPU layouts. Explicitly requested missing components
+cause build or runtime errors. Release-tested commands and optional library
+roles are in the installation guide and supplement.
 
-CUDA acceleration requires an existing compatible NVIDIA driver and a
-separately installed CUDA toolkit providing the CUDA runtime, cuFFT, cuBLAS,
-cuSOLVER, and cuRAND. RAPIDS cuVS is required only when a CUDA workflow must
-construct nearest neighbors directly from a matrix. CUDA embedding from a
-precomputed-neighbor object does not require cuVS. RAPIDS RAFT and the RAPIDS
-Memory Manager (RMM) are optional and are used only by the RAFT truncated
-singular value decomposition branch of automatic CUDA PCA. The package no
-longer links or loads FAISS; its retained FAISS notices document provenance
-of adapted native algorithms rather than a runtime dependency.
-
-The installation guide gives release-tested commands for a portable CPU
-source build, an Apple Silicon Metal build with an explicit SDK, and a strict
-CUDA build that fails when any requested CUDA, cuVS, or RAFT component is
-missing. The suggested R packages are confined to optional float32 input,
-validation, diagnostics, thread control, tests, and vignette construction;
-they do not enlarge the minimum CPU runtime. A source install from an
-immutable release tag is recommended for a publication analysis. The
-accompanying replication script requests only the CPU backend and runs with
-one core, so it also exercises the minimum installation.
-
-Session defaults are set with \code{options(backend = "cuda")} and
-\code{options(n.cores = 4L)}. An explicit function argument takes precedence;
-the environment variable \code{FASTEMBEDR_BACKEND} is consulted only when no
-explicit argument or session option is present. CPU remains the final default.
-The requested and observed backends are recorded in each successful result,
-and an unavailable explicit accelerator request raises an error. Tested
-examples are maintained in the package vignette and online tutorial.
+Session defaults use \code{options(backend = "cuda")} and
+\code{options(n.cores = 4L)}; explicit arguments take precedence. CPU is
+the final default, and successful results record the observed backend.
 
 The benchmark preflight executes this CPU example:
 \begin{verbatim}
@@ -766,11 +718,15 @@ The publication-data builder also requires a passing campaign audit. That
 audit checks expected method--data-set combinations, successful statuses,
 nonempty layout and timing artifacts, finite elapsed times, and agreement
 between each method's declared family and its recorded result.
+NOMAD, when enabled in the frozen CUDA comparator run, is a separate
+projection objective. It is shown descriptively, not counted as a UMAP
+or t-SNE method or included in their speedup denominators.
 
 \subsection{Timing boundaries and metrics}
 
 The primary benchmark measures the complete public function: input
-preparation, transfer, neighbor search and index tuning, initialization, graph
+preparation, transfer, neighbor search and any tuning actually performed,
+initialization, graph
 or affinity construction, optimization, and returned-layout materialization.
 These are workflow-level comparisons under each package's reported
 configuration, not isolated optimizer comparisons. R-mediated Python total
@@ -798,10 +754,25 @@ used for a matched-boundary speed ratio. In each \fastEmbedR quality-diagnostic
 workflow, the neighbor object is retained after timing has stopped. Fixed
 stratified query rows are
 compared with exact neighbors computed against the complete benchmark matrix.
+These queries evaluate recall; they do not select the fixed-policy HNSW
+settings. A data-aware policy requires disjoint tuning and holdout queries:
+settings must be frozen before holdout evaluation, while calibration,
+exact-reference work, and final fitting all count toward end-to-end time.
+Among settings meeting the prespecified recall bound, selection minimizes
+measured build-plus-query time for a declared query count; small timing
+differences require repeated same-host confirmation. Selecting the smallest
+HNSW parameters is not equivalent to selecting the fastest workflow.
+Search-only and amortized timings are separate scopes. Fixed and calibrated
+policies must be reported as different arms, with a recall miss visible
+rather than silently replaced by a faster result. Query-level holdout tests
+within-data-set calibration; it does not validate a policy designed using
+that same data set. Cross-data-set claims require freezing the policy before
+evaluation on previously unused data sets.
 Mean, median, fifth-percentile, and minimum recall at the fitted neighborhood
 size are reported with the search engine, exact or approximate status, target
-recall, and resolved HNSW or IVF parameters. Exact-reference computation and
-device-to-host materialization are excluded from workflow runtime. The
+recall, and resolved HNSW or IVF parameters. Exact-reference computation for
+fixed-policy diagnostics and device-to-host materialization are excluded from
+the recorded workflow runtime. The
 separate cuVS search diagnostic is not divided by a fit time. Stage
 times in a workflow comparison must come from that same timed call.
 
@@ -827,6 +798,50 @@ the two-hour method budget are identified separately; the final audit failed.
 The matched t-SNE embedding-only study used five CPU
 and Python repetitions and ten CUDA repetitions after warm-up. Timing
 variation and embedding-seed variation are reported separately.
+For paired workflow summaries the data set is the independent comparison
+unit; timing repetitions, query rows, and rasterized pixels are not
+additional data sets. A single Deep1B window supports a case-specific
+measurement, not a cross-data-set confidence interval.
+
+\subsection{File-backed evaluation design}
+
+The experimental study uses a fixed Deep1B row window beginning at source
+row 1,000,001, with 96 float32 variables and fitted prefixes of 1 and
+10 million rows. The 1-million-row arm pairs ordinary matrix
+input and file-backed calls on identical observations. File-backed PCA,
+full-row nearest-neighbor search, t-SNE, and UMAP are requested at each
+size. CPU and multi-GPU arms also request graph clustering. CPU
+allocations request four, eight, or 16 cores.
+CUDA allocations request one or two L40S devices for file-backed
+work; the ordinary-matrix comparison requests one device. These are
+requested arms. The one- and 10-million-row two-device full-row arms
+completed execution, but did not pass the strict sampled per-query
+neighbor-recall gate and are not qualified comparisons.
+The supplement lists the requested arms and their capability boundaries.
+A 100-million-row two-GPU fit and a final billion-row two-GPU fit are
+deferred until end-to-end restart and quota audits pass; they are not
+submitted as part of the current matrix.
+
+The full-row arm uses the same existing CPU HNSW or CUDA cuVS search route
+as the selected backend. It is not a landmark reconstruction: every fitted
+row receives optimized coordinates. Approximate-neighbor recall is measured
+on fixed exact-reference queries, with effective search settings and
+build, query, and audit time reported separately. A sampled mean above
+0.99 does not establish a per-query 0.99 guarantee or independent tuning
+holdout. The campaign also records successful output-row count, stage
+times, peak host RSS, sampled per-device GPU memory, and output-file size.
+The classic and file-backed arms are compared only at one million rows and
+only when both finish with the same output scope and quality assessment.
+Deep1B has no supplied class labels for this study; full-row density plots
+therefore use no inferred class or community colors.
+
+The largest current-matrix input window is 3.84~GB. Its size alone does not
+establish that the input exceeded device or host memory; graph and
+working-set requirements must be measured separately. An allocation
+of multiple GPUs does not demonstrate distributed work:
+the device-specific activity and memory trace must confirm it. An
+execution audit, recall criterion, memory evidence, and whole-campaign
+source identity are separate gates before comparative claims.
 
 \subsection{Principal parameters}
 
@@ -843,56 +858,10 @@ below 10,000 rows and 200 otherwise, with a documented 300-epoch
 high-variability profile; \pkg{uwot} used its default or
 \code{fast_sgd = TRUE} schedule.
 
-Table~\ref{tab:workflow-parameters} separates layout initialization from
-feature preprocessing and records other settings that materially affect
-runtime and quality. ``Policy matched'' means that methods use the same class
-of initialization, such as PCA or spectral initialization, but compute their
-starting coordinates independently. Exact initial coordinates are shared only
-in the controlled numerical comparisons described above. They are not shared
-in complete-workflow timings because doing so would remove each package's
-initialization cost from the public call. The complete machine-readable table
-also records momentum, optimizer, precision, thread control, and the resolved
-data-set-specific UMAP policy.
-
-\begin{table}[H]
-\centering
-\caption{Principal settings in the revised complete-workflow protocol. PCA in the
-  preprocessing column reduces input features; PCA in the initialization
-  column supplies starting layout coordinates. Independent PCA or spectral
-  coordinates are policy matched, not numerically identical.}
-\label{tab:workflow-parameters}
-\scriptsize
-\setlength{\tabcolsep}{2.5pt}
-\begin{tabular}{L{0.16\textwidth}L{0.13\textwidth}
-                    L{0.13\textwidth}L{0.18\textwidth}
-                    L{0.17\textwidth}L{0.15\textwidth}}
-\toprule
-Method & Layout initialization & PCA preprocessing & Optimization budget &
-Neighborhood or support & Learning-rate policy \\
-\midrule
-\fastEmbedR t-SNE & PCA & None & 250 exaggerated + 750 normal &
-$k=P=30$ & $\max(n/12,200)$ \\
-\pkg{Rtsne} & PCA & None & 1,000 total & Internal $3P$ &
-Fixed 200 \\
-FIt-SNE & PCA & None & 1,000 total; 250 exaggerated & Internal $3P$ &
-Automatic $\max(n/12,200)$ \\
-Python openTSNE & PCA & None & 250 exaggerated + 750 normal &
-Internal $3P$ & Automatic $\max(n/12,200)$ \\
-scikit-learn t-SNE & PCA & None & 1,000 total; 250 exaggerated &
-Internal $3P$ & Automatic, implementation-scaled \\
-RAPIDS cuML t-SNE & PCA & None & 1,000 total; 250 exaggerated &
-90 (cuML default; $3P$ here) & Capped $n/48$ (50--200) \\
-\midrule
-\fastEmbedR fuzzy UMAP & Spectral & None & 500, 300, or 200 epochs &
-$k=30$ & Package policy, 1 or 1.25 \\
-\pkg{uwot} & Spectral & None & Size-dependent default & $k=30$ &
-Fixed 1 \\
-\pkg{umap} & Spectral & None & 200 epochs & $k=30$ & Fixed 1 \\
-umap-learn & Spectral & None & 500 or 200 epochs & $k=30$ & Fixed 1 \\
-RAPIDS cuML UMAP & Spectral & None & 500 or 200 epochs & $k=30$ & Fixed 1 \\
-\bottomrule
-\end{tabular}
-\end{table}
+The complete method-by-method initialization and optimization settings are
+in the supplement and machine-readable campaign manifest. ``Policy matched''
+means the same class of initialization, not identical starting coordinates;
+complete-call timings include each method's own initialization.
 
 \section{Benchmark results}
 
@@ -906,22 +875,24 @@ measurements have different boundaries and do not define a speed ratio.
 Likewise, t-SNE support and independently computed initial coordinates
 differ between implementations. Figures~\ref{fig:diagnostic-runtime-pca},
 \ref{fig:diagnostic-runtime-tsne}, and
-\ref{fig:diagnostic-runtime-umap} combine the R and Python observations
-within each method family. Marker shape distinguishes public R calls from
-direct Python fits and repeated timings from completed single fits. The
-merged data-set-level times and explicit failure codes are in Supplementary
-Table~S1. Missing points are never filled from another campaign.
-These displays remain diagnostic because the campaign audit failed.
+\ref{fig:diagnostic-runtime-umap} show the observed R and Python times
+within each method family. Circles mark CPU and triangles mark CUDA;
+fastEmbedR retains one color across panels. Shape does not encode the
+timing boundary, and mixed R-call and Python-fit boundaries do not define
+cross-scope speed ratios.
+Missing points are never filled from another campaign. The figures remain
+diagnostic because the campaign audit failed; frozen-source replacements
+are still required for final publication claims.
 
 \begin{figure}[!t]
 \centering
 \includegraphics[width=0.98\textwidth]{figures/diagnostic_runtime_pca.pdf}
 \caption{Observed PCA elapsed times in diagnostic campaign
-  20260930T203319Z. Circles denote complete R public calls and triangles
-  direct Python fits; filled markers have five same-seed repetitions and
-  hollow markers show a completed single fit. Both scopes share an axis
-  for inventory, not for a cross-scope speed ratio. Missing results and
-  failures are identified in Supplementary Table~S1.}
+  20260930T203319Z. Circles denote CPU and triangles CUDA; fastEmbedR
+  has the same color in all three figures. Points show archived medians
+  without quartile intervals. The supplementary workflow table identifies
+  R-call versus Python-fit boundaries, single fits, and failures; shared
+  axes do not imply a cross-scope speed ratio.}
 \label{fig:diagnostic-runtime-pca}
 \end{figure}
 
@@ -929,10 +900,10 @@ These displays remain diagnostic because the campaign audit failed.
 \centering
 \includegraphics[width=0.98\textwidth]{figures/diagnostic_runtime_tsne.pdf}
 \caption{Observed two-dimensional t-SNE elapsed times in the same
-  full-data diagnostic campaign. R public-call and direct-Python fit
-  measurements appear together but have distinct marker shapes and are
-  not directly comparable. Hollow markers indicate completed single fits;
-  missing results are coded in Supplementary Table~S1.}
+  full-data diagnostic campaign. Circles denote CPU and triangles CUDA;
+  points show archived medians. R public-call and direct-Python fit
+  measurements remain non-comparable timing boundaries. Single fits and
+  missing results are identified in the supplementary workflow table.}
 \label{fig:diagnostic-runtime-tsne}
 \end{figure}
 
@@ -940,22 +911,25 @@ These displays remain diagnostic because the campaign audit failed.
 \centering
 \includegraphics[width=0.98\textwidth]{figures/diagnostic_runtime_umap.pdf}
 \caption{Observed two-dimensional UMAP elapsed times in the same
-  full-data diagnostic campaign. Fuzzy and secondary binary UMAP routes,
-  R and Python methods, and completed single fits are included. Timing
-  boundaries and missing-result codes follow
-  Figure~\ref{fig:diagnostic-runtime-pca} and Supplementary Table~S1.}
+  full-data diagnostic campaign. Only fuzzy fastEmbedR UMAP is plotted;
+  binary UMAP remains a separate sensitivity analysis in the supplementary
+  table. Circles denote CPU, triangles CUDA, and points show archived
+  medians. Timing boundaries and missing-result codes follow
+  Figure~\ref{fig:diagnostic-runtime-pca} and the supplementary workflow
+  elapsed-time table.}
 \label{fig:diagnostic-runtime-umap}
 \end{figure}
 \clearpage
 
 Peak host resident memory and sampled CUDA device-memory increases are
-reported in Supplementary Table~S9. They cover the
+reported in the supplementary peak-memory table. They cover the
 complete worker, including preparation and quality assessment, rather than
 the direct-Python fit-only boundary. Short GPU peaks may escape sampling.
 
 The campaign used a 7,200-second per-method limit. Its final audit is
 \texttt{FAIL}, with 34 failed or timed-out tasks across the campaign and
-four output-audit failures. Supplementary Table~S1 distinguishes timeout,
+four output-audit failures. The supplementary workflow elapsed-time table
+distinguishes timeout,
 memory limit, other failure, and completed single fit. Some CUDA memory
 peaks were not sampled adequately; missing values remain missing rather
 than zero. Publication-level timing claims remain unresolved.
@@ -982,7 +956,15 @@ median CUDA-minus-CPU trustworthiness differences were +0.0037 for t-SNE
 and -0.0027 for fuzzy UMAP; Preserve@30 differences were +0.0020 and
 -0.0058. These are paired quality observations, not proof of identical
 objectives or trajectories. Dataset-level values and the CUDA/cuML
-comparison are in Supplementary Tables~S3 and~S2, respectively.
+comparison are in the supplementary backend-quality and CUDA-quality
+tables, respectively.
+In the later source-locked CUDA candidate run, the median within-data-set
+fastEmbedR-minus-cuML differences across 11 shared quality samples were
+$+0.01546$ trustworthiness and $+0.01223$ Preserve@30 for t-SNE, and
+$-0.00346$ and $-0.00055$ for fuzzy UMAP. One cuML t-SNE fitted KL was
+invalid despite finite sampled quality scores; its timing was excluded.
+These are descriptive quality differences under different objectives and
+fit boundaries, not speedup or equivalence claims.
 
 \subsection{Compact-support sensitivity}
 
@@ -996,16 +978,17 @@ approximately 1.000 for $k=P$ and 0.761 for $k=3P$.
 At $P=10$, 20, and 30, fixed-neighbor sensitivity experiments generally
 favored compact support for runtime and neighborhood preservation, whereas
 wider support produced lower sampled KL for its different affinity objective.
-The paired data-set counts and iteration budget are given in Supplementary
-Table~S4; these calls are not complete workflows.
+The paired data-set counts and iteration budget are given in the
+supplementary support-width table; these calls are not complete
+workflows.
 
 \subsection{Multicore scaling}
 
 On COIL20, MNIST, flow18, and ImageNet, four CPU threads gave median
 full-workflow speedups of 2.24 for t-SNE and 2.26 for fuzzy UMAP over one
 thread. Scaling was not monotonic across 1, 2, 4, 8, and 12 threads; stage
-times and per-data-set efficiency appear in Supplementary
-Table~S5.
+times and per-data-set efficiency appear in the supplementary
+CPU-scaling table.
 
 \subsection{Apple Metal}
 
@@ -1030,7 +1013,16 @@ In the separate 20-percent landmark experiment, median landmark/full
 runtime ratios were 0.41 and 0.77 for CPU/CUDA t-SNE, and 0.34 and 1.29 for
 CPU/CUDA UMAP. Median host-RSS ratios were near or above one, so
 landmarking was not a universal memory saving. Detailed quality and memory
-results are in Supplementary Tables~S6 and~S7.
+results are in the supplementary transformation and landmark tables. These
+failed-audit observations are diagnostic. A separate source-locked
+50,000-row flow18 comparison paired full fitting with 5,000 landmarks.
+Both cases passed their pair-level audit on identical source and quality
+rows. On the fixed 256-row within-sample check, Preserve@30 was 0.571
+versus 0.552 for UMAP and 0.534 versus 0.541 for t-SNE (full versus
+landmark). Their observed times were 4.703 versus 2.442 seconds and
+10.411 versus 2.982 seconds, respectively. These single-case results
+are not a multi-seed or full-reference quality comparison; the extended
+campaign as a whole did not pass audit.
 
 \subsection{Supporting PCA and graph utilities}
 
@@ -1040,8 +1032,103 @@ dense centered singular value decomposition. CPU ImageNet was an outlier
 (0.783 score correlation). The latest campaign completed the
 stored-graph clustering comparison on only two data sets, so it does not
 support a broad clustering-performance claim. PCA accuracy, clustering
-denominators, and graph-construction scope are documented in Supplementary
-Tables~S10 and~S11.
+denominators, and graph-construction scope are documented in the
+supplementary PCA-accuracy and clustering tables.
+Separately, streamed CPU PCA completed a one-billion-row Deep1B score file
+in 6,924 seconds with 48 GiB of requested job memory and 431 MiB measured
+peak process RSS. The two-column float32 file has exactly one billion row
+slots; seven dispersed rows checked after the run were finite. This is a
+completed PCA stage, not a billion-row UMAP or t-SNE fit, and is not a
+whole-file finite-coordinate audit.
+
+\subsection{Status of the file-backed study}
+
+The Deep1B study is a separate experimental campaign, not a replacement
+for the 11-data-set comparator study. Its one-million-row classic and
+file-backed arms, larger file-backed arms, and two-device PCA measurement
+must be reported together only after their individual outputs and the
+source-locked campaign have passed audit. Execution success alone is not
+a nearest-neighbor quality pass: sampled recall below the specified gate
+remains visible even when an embedding and its plot are produced. A
+two-device PCA calculation that finishes without adequate observations
+from both GPUs is not evidence of multi-GPU acceleration.
+Two UCT jobs did complete all requested full-row methods on two L40S
+devices at one and 10 million rows, with complete output-row scans and
+positive work recorded on both devices. Both retained recall warnings:
+four of 128 sampled queries fell below the per-query target. Their
+execution passes therefore do not establish a qualified speedup or an
+independent recall holdout.
+
+Consequently, this draft does not report Deep1B runtime ratios, scaling
+factors, or full-row embedding figures as final results. The completed
+one-billion-row PCA stage is reported separately because the same campaign
+had five failed and 21 blocked file-backed cases. The protocol and currently
+unsupported routes are documented in the supplement so that completed,
+audited measurements can be inserted without changing the comparison
+boundary. The newly requested 100-million-row maximum cannot by itself
+establish an input-larger-than-GPU-memory claim, and remains outside the
+current source-locked matrix until restart and storage gates pass.
+
+Figure~\ref{fig:deep-provisional-10m} reserves a place in the main paper
+for the eventual billion-row visualization. Its current panels are
+\emph{provisional 10-million-row results}, not billion-row fits: they
+show PCA, t-SNE, and UMAP for the same Deep1B source window, beginning
+at row 1,000,001, on four CPU cores and two L40S GPUs. Both runs produced
+all requested output rows, but their nearest-neighbor audits warned that
+some sampled queries fell below the per-query 0.99 recall target.
+The figure must be replaced and re-audited before any billion-row claim.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.96\textwidth]{figures/deep1b_10m_provisional/cpu_10m.png}
+\par\smallskip
+\includegraphics[width=0.96\textwidth]{figures/deep1b_10m_provisional/cuda2_10m.png}
+\caption{\textbf{Provisional Deep1B visualization: 10 million of one
+  billion source rows, not a billion-row fit.} File-backed full-row PCA,
+  t-SNE, and UMAP on four CPU cores (top) and two L40S GPUs (bottom).
+  Grayscale shows output-point density; Deep1B class labels were not
+  available. Both runs completed with a per-query nearest-neighbor
+  recall warning. These panels are layout placeholders for the deferred
+  billion-row experiment and do not establish its quality, runtime, or
+  memory behavior.}
+\label{fig:deep-provisional-10m}
+\end{figure}
+
+Table~\ref{tab:pending-deep-main} reserves the matched-input comparison.
+Here \textbf{XXX} means not yet verified for this manuscript, not zero or
+an observed value. Each cell must be filled from one frozen source and a
+passing campaign audit, or replaced by an explicit failure or unsupported
+code. The supplementary result slots separate stage time, search quality,
+memory, output coverage, and hardware use.
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Reserved matched one-million-row Deep1B results. Time covers the
+  complete fit boundary; scratch excludes the shared input and container.
+  GPU peak is the observed peak on the allocated device. XXX cells are
+  unverified placeholders, not measurements.}
+\label{tab:pending-deep-main}
+\begin{tabular}{lllrrrrr}
+\toprule
+Method & Route & Backend & Time (s) & RSS (GiB) & GPU (GiB) &
+  Scratch (GiB) & Recall@30 \\
+\midrule
+PCA & Classic & CPU 4 & XXX & XXX & -- & XXX & -- \\
+PCA & File-backed & CPU 4 & XXX & XXX & -- & XXX & -- \\
+PCA & Classic & CUDA 1 & XXX & XXX & XXX & XXX & -- \\
+PCA & File-backed & CUDA 1 & XXX & XXX & XXX & XXX & -- \\
+t-SNE & Classic & CPU 4 & XXX & XXX & -- & XXX & XXX \\
+t-SNE & File-backed & CPU 4 & XXX & XXX & -- & XXX & XXX \\
+t-SNE & Classic & CUDA 1 & XXX & XXX & XXX & XXX & XXX \\
+t-SNE & File-backed & CUDA 1 & XXX & XXX & XXX & XXX & XXX \\
+UMAP & Classic & CPU 4 & XXX & XXX & -- & XXX & XXX \\
+UMAP & File-backed & CPU 4 & XXX & XXX & -- & XXX & XXX \\
+UMAP & Classic & CUDA 1 & XXX & XXX & XXX & XXX & XXX \\
+UMAP & File-backed & CUDA 1 & XXX & XXX & XXX & XXX & XXX \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \section{Discussion}
 
@@ -1063,6 +1150,18 @@ despite useful stage and quality observations. A workflow ratio
 combines implementation, search policy, precision, initialization, and
 hardware; it does not isolate optimizer speed. Complete R calls and
 direct-Python fit times answer different questions and are not pooled.
+The subsequent source-locked paired CUDA run produced 66 full-row layouts
+across 11 data sets and six methods, but its final audit was \texttt{WARN}:
+cuML t-SNE reported zero native fitted KL on FlowRepository, although
+its independently sampled KL was positive; its timing was excluded.
+Descriptive paired quality differences are reported
+in the supplement. The extended campaign has ended without a passing
+final audit: one CUDA worker failed, another CUDA quality task and a
+long CPU quality task were cancelled, and its controller did not complete.
+The Deep1B ledgers likewise contain audited passes alongside failures
+and missing case audits. Neither campaign supports a release-level
+cross-backend speed claim. Further UCT GPU submissions are suspended
+pending explicit user and cluster-administrator approval.
 
 Compact support reduces affinity storage and attractive-force work while
 making conditional probabilities nearly uniform within each selected row.
@@ -1085,18 +1184,33 @@ and reporting.
 
 The file-backed routes are experimental rather than part of the headline
 workflow comparison. Bounded-memory component tests have processed inputs
-larger than host RAM, but a converged full-data t-SNE and UMAP comparison
-on a real beyond-RAM data set is not established here. Multi-GPU row
-partitioning of PCA, search, or landmark projection does not demonstrate
-a multi-GPU full embedding. Disk capacity and graph-construction time
-remain important limits even when the input itself can be streamed.
+larger than host RAM, and one streamed PCA stage wrote a billion-row result
+with a 48 GiB job-memory request. The Deep1B source file was smaller than
+physical RAM on that node, so this is not a physical-host-RAM boundary test.
+A converged full-data t-SNE and UMAP comparison on a real beyond-RAM data
+set is not established here. The current Deep1B
+design tests identical 1-million-row inputs through classic and file-backed
+routes and requests a 10-million-row file-backed fit. It
+does not include a Deep1B full-versus-landmark matched analysis. Multi-GPU row
+partitioning of PCA or search is distinct from a coordinated multi-GPU
+embedding; the latter requires its own quality and per-device work audit.
+Disk capacity and graph-construction time remain important limits even
+when the input itself can be streamed.
 
 Observed approximate-neighbor recall is another limitation. The lowest
 CPU recall@30 was 0.9672 on full-source ImageNet, below the target 0.99.
-Search recall is consequently reported beside embedding quality,
+The shape-based HNSW policy cannot ensure 0.99 recall across data sets with
+different neighbor-distance geometry, even at similar matrix shapes.
+Search recall is consequently reported beside embedding quality; a workflow
+missing the target is not evidence for a speed advantage at 0.99 recall,
 and no claim treats ImageNet CPU results as optimizer-only evidence. Strong
 CPU scaling was also nonmonotonic: eight threads had higher median
 total-workflow speedup than twelve across the measured data sets.
+In a separate Deep1B five-million-row pilot, selected HNSW settings passed
+the disjoint-query \emph{mean} recall gate (0.99750 on holdout), but 200 of
+8,192 holdout queries fell below 0.99 and the minimum was 0.667. This is
+not a per-query guarantee or evidence that the same settings succeed on
+the billion-row graph; the Turing holdout remains unavailable.
 
 Backend-native PCA removes a separate preprocessing boundary and can return a
 t-SNE-ready initialization. Optional graph clustering reuses a graph already
@@ -1116,6 +1230,10 @@ Questions and bug reports are handled through the public
 Benchmark code, preprocessing instructions, environment recipes, parameter
 manifests, and aggregation scripts are maintained in a separate
 \href{https://github.com/tkcaccia/fastEmbedR-extra}{benchmark repository}.
+The companion
+\href{https://github.com/tkcaccia/fastEmbedR-extra/blob/main/manual/TECHNICAL_MANUAL.md}{technical manual}
+maps the public functions to their implementation, backend contracts,
+file formats, recovery behavior, and known experimental limitations.
 Raw benchmark data, credentials, container images, and restricted inputs are
 not redistributed.
 
@@ -1133,8 +1251,8 @@ explicit unavailable status rather than substitution.
 The diagnostic campaign was \texttt{20260930T203319Z}, built from source
 commit \texttt{7f22c52b} with a recorded container-build patch. Its
 complete source, archive, library, container, and
-benchmark-suite SHA-256 identifiers are in Supplementary
-Table~S12; comparator identities and
+benchmark-suite SHA-256 identifiers are in the supplementary
+release-identity table; comparator identities and
 quality-sample row identifiers are in the machine-readable campaign.
 
 Each campaign status inventory records its requested rows. Unsuccessful
@@ -1171,7 +1289,9 @@ affinities, forces, and backend-specific optimization; a separate M3 study
 supports the Metal route on that system. The diagnostic campaign does not
 establish release-level runtime reductions. The CPU
 ImageNet PCA and HNSW-recall outliers show why data-set-level diagnostics must
-accompany aggregate summaries.
+accompany aggregate summaries. The file-backed study remains a separate
+experimental evaluation until its output, memory, recall, and source audits
+support full-row performance claims.
 
 \section*{Acknowledgments}
 

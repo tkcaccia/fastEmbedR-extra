@@ -30,8 +30,6 @@ mkdir -p "$STATUS_DIR"
 STATUS_FILE="$STATUS_DIR/${SLURM_JOB_ID:-local}_${TASK_ID}.csv"
 printf 'bundle,dataset_task_id,mode,subtask_id,status,exit_code,elapsed_sec\n' \
   > "$STATUS_FILE"
-failures=0
-
 run_one() {
   local mode="$1" subtask="$2" started code status
   local -a command=(env "SLURM_ARRAY_TASK_ID=$subtask")
@@ -47,11 +45,14 @@ run_one() {
   else
     code=$?
     status=failed
-    failures=$((failures + 1))
   fi
   printf '%s,%s,%s,%s,%s,%s,%s\n' "$BUNDLE" "$TASK_ID" \
     "$mode" "$subtask" "$status" "$code" \
     "$(( $(date +%s) - started ))" >> "$STATUS_FILE"
+  if (( code != 0 )); then
+    echo "Stopping CUDA bundle after $mode failed ($code)." >&2
+    exit "$code"
+  fi
 }
 
 case "$BUNDLE" in
@@ -93,8 +94,4 @@ case "$BUNDLE" in
     ;;
 esac
 
-if (( failures > 0 )); then
-  echo "CUDA bundle $BUNDLE task $TASK_ID: $failures failed subruns" >&2
-  exit 1
-fi
 echo "CUDA bundle $BUNDLE task $TASK_ID: all subruns completed"

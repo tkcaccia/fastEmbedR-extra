@@ -87,13 +87,18 @@ manifest pass preflight:
 
 ```bash
 cd /scratch/firenze/NN
-bash benchmark_scripts/unified/submit_from_login.sh
+FASTEMBEDR_IMAGE_SHA256=VERIFIED_SHA256 \
+  bash benchmark_scripts/unified/submit_from_login.sh
 ```
 
-The unified launcher submits the JSS and Deep1B lanes independently.
-Its [runbook](benchmarks/linux/unified/README.md) also gives a local,
-non-Slurm smoke test. Do not infer that a GPU allocation means every
-requested method completed; inspect the per-method audit.
+This is the entry point for the combined HPC campaign. Its
+[runbook](benchmarks/linux/unified/README.md) explains the single run
+manifest, aggregate audit, and local non-Slurm smoke tests. The paired JSS,
+extended JSS, and Deep1B components have separate worker ledgers under that
+one run. A submission or GPU allocation is not a successful benchmark;
+run `benchmark_scripts/unified/audit.py` on the unified result root.
+macOS Metal and the missing publication gates listed in the runbook remain
+separate until they have their own source-locked evidence.
 
 ## Billion-vector data acquisition
 
@@ -104,10 +109,9 @@ Its downloader streams a requested prefix or complete base file, checks
 storage and source identity, and records a local checksum manifest. Raw
 vectors are not stored in this repository.
 
-## JSS reviewer-validation campaign
+## JSS component reruns
 
-The complete release-validation campaign requested for the Journal of
-Statistical Software submission is maintained under
+The JSS component of the combined campaign is maintained under
 `benchmarks/linux/jss-review-validation/`. This is the canonical source for
 the staged Slurm controller, scientific workers, numerical component tests,
 aggregation, and strict final audit. The controller submits only one bounded
@@ -120,12 +124,15 @@ HPC_ROOT=/path/to/hpc/mirror \
 bash benchmarks/linux/jss-review-validation/sync_to_hpc.sh
 ```
 
-After strict CPU and CUDA preflights pass, start it on the HPC with:
+For a JSS-only diagnostic rerun, start it on the HPC with:
 
 ```bash
 cd /scratch/firenze/NN
 bash benchmark_scripts/jss-review-validation/submit_complete_campaign.sh
 ```
+
+Do not use that component-only command as the manuscript-wide launcher;
+use `benchmark_scripts/unified/submit_from_login.sh` for a new combined run.
 
 Each launch has an isolated campaign manifest, input cache, result tree,
 submission ledger, and final audit. The repository does not contain datasets,

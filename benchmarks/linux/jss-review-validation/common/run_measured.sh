@@ -174,7 +174,7 @@ if [[ "$BACKEND" == "cuda" ]]; then
           >> "$GPU_FILE"
       done
       touch "$GPU_READY"
-      sleep 0.05
+      sleep 1
     done
   ) &
   MONITOR_PID=$!

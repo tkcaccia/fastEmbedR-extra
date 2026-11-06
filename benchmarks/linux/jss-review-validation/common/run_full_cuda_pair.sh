@@ -31,8 +31,6 @@ mkdir -p "$STATUS_DIR"
 STATUS_FILE="$STATUS_DIR/${SLURM_JOB_ID:-local}_${ARRAY_ID}.csv"
 printf 'dataset,mode,method,task_id,status,exit_code,elapsed_sec\n' \
   > "$STATUS_FILE"
-failures=0
-
 for method_index in "${method_indices[@]}"; do
   case "$method_index" in
     0) task_id="$((DATASET_INDEX * 3))"; mode=r_cuda; method=tsne ;;
@@ -52,10 +50,12 @@ for method_index in "${method_indices[@]}"; do
   else
     code=$?
     status=failed
-    failures=$((failures + 1))
   fi
   printf '%s,%s,%s,%s,%s,%s,%s\n' "$DATASET" "$mode" \
     "$method" "$task_id" "$status" "$code" \
     "$(( $(date +%s) - started ))" >> "$STATUS_FILE"
+  if (( code != 0 )); then
+    echo "Stopping CUDA allocation after $method failed ($code)." >&2
+    exit "$code"
+  fi
 done
-(( failures == 0 )) || exit 1

@@ -26,6 +26,11 @@ lane=${DEEP1B_ONLY_BACKEND:-all}
     echo "DEEP1B_ONLY_BACKEND must be all, cpu, or cuda." >&2
     exit 2
 }
+if [[ "$lane" != cpu &&
+      "${FASTEMBEDR_HPC_GPU_PAUSED:-1}" != 0 ]]; then
+    echo 'UCT GPU submissions remain paused; select cpu only.' >&2
+    exit 2
+fi
 serial=${DEEP1B_SERIALIZE:-0}
 [[ "$serial" == 0 || "$serial" == 1 ]] || {
     echo "DEEP1B_SERIALIZE must be 0 or 1." >&2

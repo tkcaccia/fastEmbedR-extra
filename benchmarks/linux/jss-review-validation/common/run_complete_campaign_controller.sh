@@ -22,8 +22,13 @@ campaign_require_environment
 campaign_verify_suite_revision
 campaign_init_ledger
 trap 'campaign_record_controller_failure "$?"' ERR
-if [[ "$JSS_STAGE" != comparators_cuda ]]; then
-  campaign_record_previous_stage
+if [[ "$JSS_STAGE" != comparators_cuda &&
+      "$JSS_STAGE" != shared_inputs ]]; then
+  if ! campaign_record_previous_stage; then
+    campaign_record_stage "$JSS_STAGE" blocked \
+      'previous worker stage failed; no descendants submitted'
+    exit 1
+  fi
 fi
 campaign_record_stage "$JSS_STAGE" started \
   "controller=${SLURM_JOB_ID:-local}"
@@ -69,7 +74,13 @@ case "$JSS_STAGE" in
     ;;
   full_final_audit)
     if bash "$SUITE/common/run_full_final_audit.sh"; then
-      campaign_record_stage full_final_audit completed 'status=PASS'
+      verdict=$(head -n 1 "$JSS_CAMPAIGN_DIR/final_audit.txt")
+      if [[ "$verdict" != PASS && "$verdict" != WARN ]]; then
+        campaign_record_stage full_final_audit completed 'status=FAIL'
+        campaign_record_controller_failure 1
+        exit 1
+      fi
+      campaign_record_stage full_final_audit completed "status=$verdict"
       exit 0
     fi
     campaign_record_stage full_final_audit completed 'status=FAIL'
@@ -151,8 +162,13 @@ case "$JSS_STAGE" in
     ;;
   recall_quality_cpu)
     NEXT_STAGE=transform_cpu
+    add_worker recall_knn_cpu \
+      "$SUITE/slurm/run_knn_observed_cpu4.sh" '0-10%11'
     add_worker recall_quality_cpu \
-      "$SUITE/slurm/run_recall_quality_cpu4_compact.sh" '0-10%11'
+      "$SUITE/slurm/run_backend_quality_cpu4.sh" \
+      '0-35,48-131%24'
+    add_worker recall_quality_flow_cpu \
+      "$SUITE/slurm/run_backend_quality_flow_cpu16.sh" '0-11%2'
     ;;
   recall_quality_cuda)
     NEXT_STAGE=transform_cuda
@@ -336,7 +352,7 @@ for index in "${!WORKER_LABELS[@]}"; do
 done
 
 if [[ "$JSS_STAGE" == comparator_preflight ]]; then
-  DEPENDENCY="afterok:$(IFS=:; echo "${WORKER_IDS[*]}")"
+  DEPENDENCY="afterok:${WORKER_IDS[0]}"
 else
   DEPENDENCY="$(campaign_afterany_dependency "${WORKER_IDS[@]}")"
 fi
@@ -344,18 +360,40 @@ NEXT_JOB="$(campaign_submit_job \
   controller "controller_$NEXT_STAGE" "$DEPENDENCY" \
   "$CONTROLLER" '' "$NEXT_STAGE")"
 if [[ -n "$PARALLEL_STAGE" ]]; then
+  GPU_PREFLIGHT="$(campaign_existing_job worker \
+    comparator_preflight_cuda)"
+  [[ -n "$GPU_PREFLIGHT" ]] || {
+    echo 'CUDA comparator preflight is missing.' >&2
+    exit 1
+  }
+  GPU_STATE="$(sacct -X -n -P -j "$GPU_PREFLIGHT" \
+    -o JobID,State,ExitCode | awk -F '|' -v id="$GPU_PREFLIGHT" \
+    '$1 == id { print $2 "|" $3; exit }')"
+  if [[ "$GPU_STATE" == 'COMPLETED|0:0' ]]; then
+    test -s "$OUTPUT_ROOT/comparator_preflight/cuda/status.csv"
+  elif [[ "$GPU_STATE" =~ ^(PENDING|RUNNING|CONFIGURING|COMPLETING)\| ]]; then
+    DEPENDENCY_GPU="$DEPENDENCY,afterok:$GPU_PREFLIGHT"
+  else
+    echo "CUDA comparator preflight $GPU_PREFLIGHT: $GPU_STATE" >&2
+    exit 1
+  fi
+  DEPENDENCY_GPU="${DEPENDENCY_GPU:-$DEPENDENCY}"
   PARALLEL_JOB="$(campaign_submit_job \
-    controller "controller_$PARALLEL_STAGE" "$DEPENDENCY" \
+    controller "controller_$PARALLEL_STAGE" "$DEPENDENCY_GPU" \
     "$CONTROLLER" '' "$PARALLEL_STAGE")"
   campaign_record_stage "$JSS_STAGE" forked \
-    "cpu=$NEXT_JOB cuda=$PARALLEL_JOB dependency=$DEPENDENCY"
+    "cpu=$NEXT_JOB cuda=$PARALLEL_JOB dependency=$DEPENDENCY_GPU"
 fi
 if [[ -n "$SECOND_PARALLEL_STAGE" ]]; then
+  [[ -n "${DEPENDENCY_GPU:-}" ]] || {
+    echo 'File-backed stage needs CUDA preflight.' >&2
+    exit 1
+  }
   SECOND_JOB="$(campaign_submit_job \
-    controller "controller_$SECOND_PARALLEL_STAGE" "$DEPENDENCY" \
+    controller "controller_$SECOND_PARALLEL_STAGE" "$DEPENDENCY_GPU" \
     "$CONTROLLER" '' "$SECOND_PARALLEL_STAGE")"
   campaign_record_stage "$JSS_STAGE" forked \
-    "file_backed=$SECOND_JOB dependency=$DEPENDENCY"
+    "file_backed=$SECOND_JOB dependency=$DEPENDENCY_GPU"
 fi
 
 echo "Stage $JSS_STAGE submitted workers: ${WORKER_IDS[*]}"

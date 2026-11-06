@@ -27,6 +27,7 @@ def first_row(path):
 
 def audit(campaign, inputs, outputs):
     failures = []
+    warnings = []
     methods = METHODS
     if os.environ.get("INCLUDE_NOMAD") == "TRUE":
         methods += (("python_cuda", "nomad"),)
@@ -47,8 +48,23 @@ def audit(campaign, inputs, outputs):
             try:
                 status = first_row(directory / "status.csv")
                 result = first_row(directory / "result_with_quality.csv")
-                if status["status"] != "success":
+                method_failed = (method == "cuml_tsne" and
+                                 status["status"] == "invalid_fitted_kl")
+                if status["status"] != "success" and not method_failed:
                     raise ValueError("fit status is not success")
+                if method_failed:
+                    if result.get("fitted_kl_status") != "invalid":
+                        raise ValueError("invalid KL status is inconsistent")
+                    if float(result.get("fitted_kl_divergence", "nan")) != 0:
+                        raise ValueError("native KL is not the observed zero")
+                    sampled_kl = float(result.get("sampled_kl", "nan"))
+                    if not math.isfinite(sampled_kl) or sampled_kl <= 0:
+                        raise ValueError("independent sampled KL is invalid")
+                    warnings.append(
+                        f"{dataset}/{method}: native fitted KL is zero "
+                        f"despite sampled KL {sampled_kl:.4g}; "
+                        "timing excluded from comparison"
+                    )
                 if int(result["n"]) != n:
                     raise ValueError("fit did not use every source row")
                 if result["quality_analysis"] != "posthoc_R":
@@ -88,7 +104,8 @@ def audit(campaign, inputs, outputs):
                             if trust + preserve else 0)
                 if not (0 <= score <= 1) or abs(score - expected) > 1e-6:
                     raise ValueError("inconsistent neighborhood quality score")
-                if result["timing_eligible"].lower() != "true":
+                if (result["timing_eligible"].lower() != "true" and
+                        not method_failed):
                     failures.append(
                         f"{dataset}/{method}: fit succeeded but "
                         "timing was not fully replicated"
@@ -127,8 +144,14 @@ def audit(campaign, inputs, outputs):
         scheduler_failures = handle.read().splitlines()[1:]
     if scheduler_failures:
         failures.append(f"{len(scheduler_failures)} Slurm task failures")
-    report = "PASS" if not failures else "FAIL\n" + "\n".join(failures)
+    if failures:
+        report = "FAIL\n" + "\n".join(failures)
+    elif warnings:
+        report = "WARN\n" + "\n".join(warnings)
+    else:
+        report = "PASS"
     (campaign / "final_audit.txt").write_text(report + "\n")
+    (campaign / "warnings.txt").write_text("\n".join(warnings) + "\n")
     print(report)
     return not failures
 

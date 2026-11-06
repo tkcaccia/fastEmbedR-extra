@@ -8,6 +8,11 @@ suite=$base/benchmark_scripts/massive-data
 root=${DEEP1B_FULLGRAPH_ROOT:?Set DEEP1B_FULLGRAPH_ROOT}
 dataset=${BIGANN_DATASET:?Set BIGANN_DATASET}
 backend=${DEEP1B_BACKEND:?Set DEEP1B_BACKEND}
+if [[ "$backend" == cuda &&
+      "${FASTEMBEDR_HPC_GPU_PAUSED:-1}" != 0 ]]; then
+    echo 'UCT GPU execution remains paused.' >&2
+    exit 2
+fi
 rows=${DEEP1B_FULLGRAPH_ROWS:-5000000}
 mode=${DEEP1B_FIT_MODE:-full}
 default_rebuild=0
@@ -87,8 +92,31 @@ prune_work() {
         printf '%s\t%s\n' "${path#"$root"/}" \
             "$(stat -c %s "$path")" >> "$root/pruned_payloads.tsv"
         rm -- "$path"
-    done < <(find "$root/work" -type f \
-        ! -name '*_labels.u32' -print0)
+    done < <(find "$root/work" -type f -print0)
+}
+prune_outputs() {
+    printf 'path\tbytes\tsha256\n' > "$root/pruned_outputs.tsv"
+    local method name out path bytes digest
+    for method in pca tsne umap; do
+        name=$(case_name "$method")
+        out=$root/results/$name
+        path=$out/output.f32
+        [[ -f "$path" ]] || continue
+        [[ -s "$out/coverage.csv" &&
+           -s "$out/quality.csv" &&
+           -s "$root/figures/$name.png" ]] || return 1
+    done
+    for method in pca tsne umap; do
+        name=$(case_name "$method")
+        out=$root/results/$name
+        path=$out/output.f32
+        [[ -f "$path" ]] || continue
+        bytes=$(stat -c %s "$path")
+        digest=$(sha256sum "$path" | cut -d ' ' -f 1)
+        printf '%s\t%s\t%s\n' "${path#"$root"/}" \
+            "$bytes" "$digest" >> "$root/pruned_outputs.tsv"
+        rm -- "$path"
+    done
 }
 on_error() {
     code=$?
@@ -102,6 +130,25 @@ trap on_error ERR
 test -s "$input"
 sha256sum -c "$root/source.sha256" > "$root/source_check.txt"
 sha256sum -c "$root/image.sha256" >> "$root/source_check.txt"
+cgroup_memory=/sys/fs/cgroup/memory.max
+if [[ ! -f "$cgroup_memory" ]]; then
+    cgroup_memory=/sys/fs/cgroup/memory/memory.limit_in_bytes
+fi
+{
+    printf 'slurm_mem_per_node_mib=%s\n' \
+        "${SLURM_MEM_PER_NODE:-unavailable}"
+    printf 'cgroup_limit_bytes=%s\n' \
+        "$(if [[ -f "$cgroup_memory" ]]; then
+            cat "$cgroup_memory"
+        else
+            echo unavailable
+        fi)"
+} > "$root/memory_boundary.txt"
+exec 9>"$root/.run.lock"
+if ! flock -n 9; then
+    echo 'Another worker owns this full-graph campaign.' >&2
+    exit 3
+fi
 
 set +e
 /usr/bin/time -v -o "$root/time.txt" \
@@ -153,6 +200,13 @@ PY
         code=1
     fi
 fi
+if ((code != 0)); then
+    printf '{"status":"FAIL","fit_exit_code":%s,' "$code" \
+        > "$root/audit.json"
+    printf '"failures":["Fit or monitor failed; scoring was skipped"]}\n' \
+        >> "$root/audit.json"
+    exit "$code"
+fi
 missing=()
 for method in "${methods[@]}"; do
     name=$(case_name "$method")
@@ -167,12 +221,18 @@ for method in "${methods[@]}"; do
     fi
     if [[ "$method" == leiden || "$method" == louvain ]]; then
         singularity exec "$image" /opt/r46/bin/Rscript \
+            "$suite/deep1b/audit_output.R" "$output" \
+            "$rows" 1 u32 "$out/coverage.csv"
+        singularity exec "$image" /opt/r46/bin/Rscript \
             "$suite/deep1b/score_fullgraph_leiden.R" "$output" \
             "$rows" "$out" "$root/figures/$name.png" \
             > "$out/score.out" 2> "$out/score.err"
         test -s "$root/figures/$name.png"
         continue
     fi
+    singularity exec "$image" /opt/r46/bin/Rscript \
+        "$suite/deep1b/audit_output.R" "$output" \
+        "$rows" 2 f32 "$out/coverage.csv"
     singularity exec "${nv[@]}" "$image" /opt/r46/bin/Rscript \
         "$suite/deep1b/score.R" "$input" "$output" \
         "$rows" 2 "$out" "$dataset" "${DEEP1B_FIRST_ROW:-1000001}" \
@@ -211,5 +271,6 @@ PY
 fi
 trap - ERR
 if [[ "$code" != 0 || ${#missing[@]} != 0 ]]; then exit 1; fi
+prune_outputs
 prune_work
 echo "$mode results and all-row PNGs: $root"

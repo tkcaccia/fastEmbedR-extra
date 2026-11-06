@@ -132,6 +132,7 @@ campaign_record_previous_stage() {
   campaign_record_stage "$previous_stage" completed "failures=$failed"
   printf '%s\n' "$previous_stage" \
     >> "$JSS_CAMPAIGN_DIR/audited_stages.txt"
+  ((failed == 0))
 }
 
 campaign_existing_job() {
@@ -157,6 +158,10 @@ campaign_record_job() {
 }
 
 campaign_submit_job() {
+  if [[ "${FASTEMBEDR_HPC_GPU_PAUSED:-1}" != 0 ]]; then
+    echo 'UCT GPU submissions remain paused; no controller may launch.' >&2
+    return 2
+  fi
   local role="$1"
   local label="$2"
   local dependency="$3"

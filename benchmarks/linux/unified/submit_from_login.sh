@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Run on the UCT login node; the benchmark launcher runs on a CPU node.
 set -euo pipefail
+[[ "${FASTEMBEDR_HPC_GPU_PAUSED:-1}" == 0 ]] || {
+    echo 'UCT GPU submissions remain paused, including controllers.' >&2
+    exit 2
+}
 
 base=${FASTEMBEDR_BASE:-/scratch/firenze/NN}
 suite=$base/benchmark_scripts/unified

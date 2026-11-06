@@ -874,6 +874,7 @@ run_backend_quality <- function() {
     result <- cbind(data.frame(
         dataset = dataset, method = method, backend = backend,
         boundary = quality_boundary, seed = run_seed,
+        threads = threads,
         n = nrow(x), p = ncol(x), quality_n = length(quality_rows),
         perplexity_or_neighbors = shared$perplexity,
         nn_engine = embedding_knn_parameter(fit, "nn_engine", "supplied"),

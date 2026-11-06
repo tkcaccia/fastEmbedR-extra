@@ -3,11 +3,23 @@
       (length(x) == 1L && is.na(x))) y else x
 }
 
-publication_sample_rows <- function(n, size = 3000L, seed = 4L) {
+publication_sample_rows <- function(n, size = 3000L, seed = 4L,
+                                    labels = NULL) {
   size <- min(as.integer(size), as.integer(n))
   if (size >= n) return(seq_len(n))
   set.seed(as.integer(seed))
-  sort(sample.int(n, size))
+  if (is.null(labels)) return(sort(sample.int(n, size)))
+  if (length(labels) != n) {
+    stop("labels must have one value per row.", call. = FALSE)
+  }
+  groups <- split(seq_len(n), addNA(as.factor(labels)), drop = TRUE)
+  if (length(groups) > size) return(sort(sample.int(n, size)))
+  selected <- vapply(groups, function(rows) {
+    rows[[sample.int(length(rows), 1L)]]
+  }, integer(1L))
+  remaining <- setdiff(seq_len(n), selected)
+  extra <- remaining[sample.int(length(remaining), size - length(selected))]
+  sort(c(selected, extra))
 }
 
 publication_layout_matrix <- function(x) {

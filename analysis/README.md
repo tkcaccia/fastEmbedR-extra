@@ -21,6 +21,11 @@ Rscript analysis/build_table5_and_embedding_gallery.R \
   figures/embedding_all_methods
 ```
 
+The gallery requires successful scikit-learn and cuML PCA fits and full-row
+coordinate files for every dataset. Missing or truncated PCA output is an
+error, not an `Unavailable` panel. Run this on the HPC before a lightweight
+transfer; `--runtime-only` does not require coordinate files.
+
 For a lightweight local copy without coordinate tables, append
 `--runtime-only` to build the table and runtime figures from aggregate data.
 Build the gallery on the HPC before transferring rendered plots. The reader
@@ -45,8 +50,13 @@ python3 analysis/build_campaign_plot_gallery.py \
   /absolute/path/to/plot_gallery.html
 ```
 
-The UMAP table and figures include separate fastEmbedR fuzzy and binary
-routes; binary is an adjacency-only sensitivity analysis, not standard UMAP.
+The UMAP table retains separate fastEmbedR fuzzy and binary routes, but the
+runtime figure shows only fuzzy UMAP. Binary is an adjacency-only sensitivity
+analysis, not standard UMAP. Diagnostic figures use circles for CPU and
+triangles for CUDA, with one fastEmbedR color across families. The archived
+September 2026 campaign retains only compact median times locally; rebuild
+its figures with `analysis/render_runtime_from_compact.R` and do not infer
+quartile intervals from that table.
 
 `stats::prcomp()` is not a timed PCA comparator. Dense SVD is used only
 as an untimed numerical reference in PCA validation.
@@ -56,8 +66,8 @@ figure path relative to the LaTeX document. Omit them to write under the
 campaign's `results/publication` directory. The builder reads only
 `aggregate/workflow_comparators_all.csv` and coordinate CSVs inside the
 specified campaign. The table and figures combine successful R public calls
-and direct-Python fits, with distinct timing-scope markers and table columns.
-Completed single fits are marked separately from repeated timings. Failed
+and direct-Python fits. The table identifies timing scope and single fits;
+figure shape identifies CPU versus CUDA, not timing scope. Failed
 or missing combinations retain explicit status codes and never appear as
 completed plot points, even if a failed worker wrote an elapsed time.
 Cross-scope speedup claims are not supported.

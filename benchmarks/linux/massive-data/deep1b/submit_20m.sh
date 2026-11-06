@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Submit independent Deep1B jobs, capped at 20 million fitted rows.
 set -euo pipefail
+[[ "${FASTEMBEDR_HPC_GPU_PAUSED:-1}" == 0 ]] || {
+    echo 'UCT GPU submissions remain paused.' >&2
+    exit 2
+}
 
 base=${DEEP1B_BASE:-/scratch/firenze/NN}
 suite=$base/benchmark_scripts/massive-data/deep1b

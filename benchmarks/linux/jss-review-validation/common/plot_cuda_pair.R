@@ -191,17 +191,20 @@ main <- function() {
             headings[[index]], sum(sample$quality_sample),
             show_kl = methods[[index]] != "nomad")
     }
-    state <- if (all(summary$status == "success") &&
-            all(vapply(layouts, Negate(is.null), logical(1L)))) {
+    complete <- all(vapply(layouts, Negate(is.null), logical(1L)))
+    state <- if (!complete || !all(summary$status %in%
+            c("success", "invalid_fitted_kl"))) {
+        "incomplete"
+    } else if (all(summary$status == "success")) {
         "success"
     } else {
-        "incomplete"
+        "measured_method_failure"
     }
     write_csv_atomic(data.frame(
         dataset = dataset, family = family, status = state,
         image = image
     ), file.path(pair_dir, "status.csv"))
-    if (state != "success") stop("CUDA comparison is incomplete.")
+    if (state == "incomplete") stop("CUDA comparison is incomplete.")
     message("CUDA comparison ready: ", image)
 }
 
