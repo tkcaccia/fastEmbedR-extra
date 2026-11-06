@@ -69,7 +69,57 @@ Preserve the failures and do not represent the high-core runs as
 qualified scaling results. An isolated package candidate under
 `/media/user/Lion/ChatGPT/fastEmbedR/in-progress/multicpu-umap-20261106`
 raises the configured limit to
-32 and makes native stage worker counts grow with problem size; R parse,
-C++ syntax and diff checks passed, but the candidate has not passed a
-package build, device test, quality test or performance audit. It must
-not be merged into the release or used for a manuscript result yet.
+32 and makes native stage worker counts grow with problem size. R parse,
+C++ syntax, package build and focused embedding tests passed, followed
+by the MNIST cases below. Peak RAM, repeatability and broader quality
+remain unqualified, so it must not be used for a manuscript result yet.
+
+### Isolated CPU UMAP candidate check
+
+The package candidate was built on an Ada compute node in job `1604085`
+from source archive SHA-256
+`244112c726c6ba9ba676721d58943aa1eb56285b769515bd1a568dd0e617cd92`.
+The focused installed-package embedding tests passed in job `1604091`.
+An initial MNIST pilot `1604095` failed before science when the container
+selected its release library; a second attempt `1604102` loaded that
+release library in the worker and failed the expected worker-count gate.
+Both failures and their logs remain in HPC scratch. The versioned v3
+worker checks the candidate library path before loading the package;
+its SHA-256 is
+`76d65c360994f59272500fb8b541e8e554a4ca6f11a7035d9c589b431f93fb11`.
+
+Five resident, full 70,000-row MNIST 2D UMAP cases completed with this
+worker and the same input, rank-30 preprocessing, seed and quality
+sampling. The results are single-run development evidence:
+
+| Requested CPU cores | Job | Fit seconds | Trustworthiness | Label accuracy |
+| ---: | ---: | ---: | ---: | ---: |
+| 1 | 1604107 | 24.005 | 0.9418 | 0.9733 |
+| 4 | 1604108 | 10.176 | 0.9399 | 0.9750 |
+| 8 | 1604105 | 5.740 | 0.9413 | 0.9767 |
+| 16 | 1604109 | 4.613 | 0.9325 | 0.9717 |
+| 32 | 1604110 | 4.409 | 0.9410 | 0.9750 |
+
+Each case recorded CPU backend identity, a finite all-row output, an
+allocation ID and completed provenance. The 16-core trustworthiness
+decrease needs repeated-seed evaluation. The source-locked release
+image is used only as the R/C++ toolchain; the v3 worker checks and
+loads the separately built candidate package.
+
+The versioned v4 runner (SHA-256
+`d1cf3f582ee12916a9369a8fb0c0966665b14b04547453a3c3978d2c2ed27900`)
+records the R child process's peak resident memory and CPU time from
+Linux `getrusage`. Its 1-, 16- and 32-core MNIST repeats completed as
+jobs `1604115`–`1604117`. Peak R-process RSS was 1,804,012,
+1,804,984 and 1,805,536 KiB; fit seconds were 25.186, 5.330 and
+2.913. All three retained CPU backend identity, completed provenance
+and nonempty all-row outputs. Trustworthiness was 0.9418, 0.9381 and
+0.9380; label accuracy was 0.9733, 0.9750 and 0.9717. These peak
+values cover the R child process, not the whole Slurm allocation.
+
+The same seed produced different 16- and 32-core quality values across
+the v3 and v4 runs. The threaded optimizer therefore needs a paired
+repeatability and quality audit before any manuscript speedup or
+quality claim. These runs demonstrate a route beyond the release's
+four-worker cap, but they do not prove linear scaling or a final
+quality gate.
