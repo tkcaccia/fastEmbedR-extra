@@ -1,7 +1,7 @@
 # Resident CUDA clustering beyond four devices: source qualification
 
 The isolated package candidate is
-`in-progress/fastembedr-8gpu-resident-cluster-20261106` at local commit
+`in-progress/fastembedr-8gpu-resident-cluster-20261106` at commit
 `3294441`, based on published fastEmbedR `afeaffc39a607c00db5899c284451c6cdbf741bb`.
 It removes the four-device checks from the public resident graph clustering
 route, its C++ bridge, and its CUDA worker. The worker already uses dynamic
@@ -25,8 +25,10 @@ the new device-control text in the loaded function, and ran the entire
 All six focused test blocks passed and Slurm reported `COMPLETED 0:0`.
 No GPU was allocated for either job. This verifies CPU compilation and
 R routing, **not** CUDA compilation, eight physical GPUs, device memory,
-quality, speedup, or cleanup. The candidate remains unpublished until
-actual device checks pass. The separate Hugging Face eight-A100 job
+quality, speedup, or cleanup. Commit `3294441` was pushed to fastEmbedR
+main to create a source-locked CUDA image; its eight-device behavior
+remains unqualified until actual device checks pass. The separate Hugging
+Face eight-A100 job
 `6aed848c0e0338d1bb80eb48` tests a different file-backed clustering
 worker and cannot qualify this resident package route.
 
