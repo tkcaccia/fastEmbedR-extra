@@ -90,6 +90,11 @@ class InputIdentityTests(unittest.TestCase):
             (result / "provenance.json").write_text("not json")
             self.assertEqual(inspect_case(self.case, root, {}, "x", "y")
                              ["status"], "incomplete_result")
+            (result / "provenance.json").write_text(json.dumps({
+                "slurm_job_id": "123", "status": "started"}))
+            self.assertEqual(inspect_case(
+                self.case, root, {"123": ("RUNNING", "0:0")},
+                "x", "y")["status"], "running")
 
 
 if __name__ == "__main__":

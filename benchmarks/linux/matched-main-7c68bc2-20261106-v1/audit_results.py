@@ -45,6 +45,13 @@ def inspect_case(case: dict, results: Path, jobs: dict,
         memory = json.loads((folder / "memory.json").read_text())
         metrics = json.loads((folder / "metrics.json").read_text())
     except (OSError, ValueError, TypeError) as error:
+        try:
+            partial = json.loads((folder / "provenance.json").read_text())
+            if jobs.get(partial.get("slurm_job_id"), (None,))[0] == "RUNNING":
+                return {"case_id": case_id, "status": "running",
+                        "job_id": partial.get("slurm_job_id")}
+        except (OSError, ValueError, TypeError, AttributeError):
+            pass
         return {"case_id": case_id, "status": "incomplete_result",
                 "issues": [str(error)]}
     if not all(isinstance(item, dict) for item in
@@ -52,7 +59,11 @@ def inspect_case(case: dict, results: Path, jobs: dict,
         return {"case_id": case_id, "status": "incomplete_result",
                 "issues": ["Malformed result manifest."]}
     case_file = HERE / "cases" / f"{case_id}.json"
-    if (provenance.get("case_sha256") != sha256(case_file) or
+    case_hashes = {sha256(case_file)}
+    pilot = HERE / "case.json"
+    if case_id == json.loads(pilot.read_text())["case_id"]:
+        case_hashes.add(sha256(pilot))
+    if (provenance.get("case_sha256") not in case_hashes or
             provenance.get("routes_sha256") != routes_sha or
             provenance.get("worker_sha256") != worker_sha or
             provenance.get("package_commit") != PACKAGE_COMMIT):
