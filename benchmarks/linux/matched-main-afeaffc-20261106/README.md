@@ -19,8 +19,15 @@ Array 1593945 contains the remaining 21 two- and three-dimensional UMAP
 cases at four cores across all 11 datasets, throttled to one active case.
 `cases.jsonl` records the exact pilot and array plans. Four COIL20 method pilots in array 1593960 completed for PCA, t-SNE,
 Leiden and Louvain. The matched 21-case 2D/3D t-SNE wave 1594037 was
-accepted. The remaining 30-case PCA/Leiden/Louvain wave is staged, but its
-first submission hit `AssocMaxSubmitJobLimit`; it must wait for quota.
+accepted. The first attempt to submit the 30-case PCA/Leiden/Louvain wave
+hit `AssocMaxSubmitJobLimit`. On 2026-11-06, the first five tasks were
+submitted as array `1601087` (`--array=0-4%1`). All five completed with
+Slurm exit `0:0`, completed provenance, CPU backend identity, finite
+quality summaries and nonempty output RDS files. Slurm gives each array
+task a distinct `SLURM_JOB_ID`, which is recorded in its provenance.
+The remaining tasks 5-29 were then submitted as array `1601111`
+(`--array=5-29%1`). It was active at the last check and is not yet an
+audited result set.
 All 77 seed-4, four-core matched cases are in `cases.jsonl`. Other seeds,
 core counts and GPU backends still need matched cohorts. The earlier
 HPC raw-input waves remain separate development evidence and must not be
