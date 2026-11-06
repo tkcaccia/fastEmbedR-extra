@@ -39,3 +39,22 @@ quality ranges, cgroup memory, output presence, and scheduler outcome. It
 returns nonzero while any case is missing or fails. Its review reads only
 small manifests and file metadata, so it can run on the head node without
 reading dataset contents or the Singularity image.
+
+`audit_results_v2.py` is a versioned, stricter terminal review staged while
+the v1 scientific jobs run. It additionally requires the recorded package
+version, seed, storage mode, fit scope, backend, preprocessing rank, and
+result filename to match each case manifest. The active Slurm scripts and
+workers were not changed. `test_audit_results_v2.py` passes a valid fixture
+and rejects each altered route field. Run v2 on the completed cohort before
+using its results in manuscript comparisons; a passing audit still does not
+replace direct output-quality and graph-identity review.
+
+The v2 script (SHA-256
+`6e0c0a061ee9cdc63313578c76ee8fbc3c7d821f299c052bdc2f8c1774fd51b1`)
+was copied and checksum-verified in a **separate** HPC directory,
+`/scratch/firenze/NN/benchmarks/audit_7c68bc2_v2_20261106`. Its accounting
+table includes the five pilot jobs as well as all three arrays. A partial
+review on 2026-11-06 found 66 audited results, three running, and eight not
+yet written; it found no audit failures. The cohort is not terminal and this
+is not a final acceptance result. Only small manifests, scheduler records,
+and the 7 KB auditor script were read on the head node.
