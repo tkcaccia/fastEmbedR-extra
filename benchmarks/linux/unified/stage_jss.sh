@@ -9,6 +9,11 @@ exit 78
     exit 2
 }
 
+[[ "${FASTEMBEDR_HPC_GPU_PAUSED:-1}" == 0 ]] || {
+    echo 'UCT GPU submissions remain paused, including JSS controllers.' >&2
+    exit 2
+}
+
 base=$(realpath "${FASTEMBEDR_BASE:-/scratch/firenze/NN}")
 suite=$(realpath "${FASTEMBEDR_SUITE_ROOT:-$base/benchmark_scripts}")
 root=$(realpath "${1:?Unified campaign root is required}")

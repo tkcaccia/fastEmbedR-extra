@@ -96,6 +96,5 @@ class StorageBudgetedTest(unittest.TestCase):
                              5_000_000_000, False, Path("/suite"))
         run.assert_not_called()
 
-
 if __name__ == "__main__":
     unittest.main()

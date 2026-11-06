@@ -9,6 +9,11 @@ exit 78
     exit 2
 }
 
+[[ "${FASTEMBEDR_HPC_GPU_PAUSED:-1}" == 0 ]] || {
+    echo 'UCT GPU submissions remain paused, including unified launch.' >&2
+    exit 2
+}
+
 [[ -n "${SLURM_JOB_ID:-}" ]] || {
     echo 'Use submit_from_login.sh; do not run containers on login.' >&2
     exit 2

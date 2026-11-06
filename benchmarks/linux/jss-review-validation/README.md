@@ -5,9 +5,9 @@ file-backed scientific work, which the current HPC policy forbids on both
 CPU and GPU. Its submission and controller entrypoints reject execution.
 The remaining sections describe the historical design and saved evidence.
 Use [`../resident-one-case-20261103/`](../resident-one-case-20261103/)
-for a resident-only candidate; UCT GPU work remains paused under the
-separate administrator and user approval gates. No remote source-locked
-job script has been replaced.
+for a resident-only candidate. The user and administrator have approved
+bounded L40S restart, but that does not authorize this archived file-backed
+suite. No remote source-locked job script has been replaced.
 
 ## File-backed opening phase
 
@@ -513,8 +513,9 @@ input and benchmark waves are submitted.
 - A failed or timed-out method stops its CUDA bundle immediately. No later
   method starts in that allocation. This prevents a second fit from running
   after a failed shutdown; it cannot make an unresponsive native process
-  killable. GPU jobs on the UCT HPC remain paused pending administrator
-  approval and a separate native-CUDA validation.
+  killable. These jobs were paused when the suite was archived. Current L40S
+  authorization applies only to new resident-only runs that satisfy the
+  HPC lifecycle policy.
 - Comparator peak host memory covers the complete isolated worker, including
   input loading, the excluded warm-up, repetitions, and quality calculation.
   It is deliberately not presented as fit-only memory. GPU sampling uses the

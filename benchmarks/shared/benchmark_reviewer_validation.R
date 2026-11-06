@@ -82,6 +82,13 @@ precompute_worker <- as_bool(args$precompute_worker, FALSE)
 kodama_core_worker <- as_bool(args$kodama_core_worker, FALSE)
 force <- as_bool(args$force, FALSE)
 reference_validations <- as_bool(args$reference_validations, TRUE)
+strict_mac_memory <- as_bool(args$strict_mac_memory, FALSE)
+blas_threads <- as_int(args$blas_threads, 0L)
+if (blas_threads < 0L) stop("--blas-threads must be nonnegative.")
+run_order <- match.arg(
+  args$run_order %||% "sequential", c("sequential", "paired")
+)
+order_seed <- as_int(args$order_seed, 31031L)
 threads_grid <- unique(as.integer(as_csv(args$threads_grid, "1,4")))
 threads_grid <- threads_grid[is.finite(threads_grid) & threads_grid > 0L]
 if (!length(threads_grid)) threads_grid <- c(1L, 4L)
@@ -94,6 +101,14 @@ k <- as_int(args$k, 30L)
 perplexity <- as_num(args$perplexity, 30)
 timeout <- as_int(args$timeout, 43200L)
 quality_sample_n <- as_int(args$quality_sample_n, 3000L)
+global_knn_recall_n <- as_int(args$global_knn_recall_n, 0L)
+if (global_knn_recall_n < 0L || global_knn_recall_n > 256L) {
+  stop("--global-knn-recall-n must be between 0 and 256")
+}
+if (global_knn_recall_n > 0L) {
+  source(file.path(script_dir, "..", "macos",
+                   "mac_global_knn_recall_v1.R"), local = TRUE)
+}
 quality_max_distance_ops <- as_num(args$quality_max_distance_ops, 2e8)
 validation_sample_n <- as_int(args$validation_sample_n, 2000L)
 pca_ncomp <- as_int(args$pca_ncomp, 2L)
@@ -136,11 +151,12 @@ invisible(lapply(dirs, dir.create, recursive = TRUE, showWarnings = FALSE))
 
 set_threads <- function(value) {
   value <- as.integer(value)
+  blas <- if (blas_threads > 0L) blas_threads else value
   Sys.setenv(
     OMP_NUM_THREADS = value,
-    OPENBLAS_NUM_THREADS = value,
-    MKL_NUM_THREADS = value,
-    VECLIB_MAXIMUM_THREADS = value,
+    OPENBLAS_NUM_THREADS = blas,
+    MKL_NUM_THREADS = blas,
+    VECLIB_MAXIMUM_THREADS = blas,
     RCPP_PARALLEL_NUM_THREADS = value
   )
   invisible(value)
@@ -193,11 +209,29 @@ assert_release_identity <- function() {
   enforce <- as_bool(Sys.getenv(
     "FASTEMBEDR_ENFORCE_RELEASE_LOCK", unset = "FALSE"
   ))
-  if (!enforce) return(invisible(identity))
-  missing <- names(identity)[!nzchar(unlist(identity, use.names = FALSE))]
+  mac_enforce <- as_bool(Sys.getenv(
+    "FASTEMBEDR_ENFORCE_MAC_LOCK", unset = "FALSE"
+  ))
+  if (!enforce && !mac_enforce) return(invisible(identity))
+  required <- if (enforce) names(identity) else c(
+    "version", "commit", "dll_sha256", "benchmark_commit"
+  )
+  missing <- required[!nzchar(unlist(identity[required],
+                                    use.names = FALSE))]
   if (length(missing)) {
     stop("Incomplete release lock: ", paste(missing, collapse = ", "),
          call. = FALSE)
+  }
+  if (mac_enforce) {
+    expected <- Sys.getenv("FASTEMBEDR_MAC_EXPECTED_LIBRARY")
+    installed_path <- normalizePath(
+      find.package("fastEmbedR"), mustWork = TRUE
+    )
+    if (!nzchar(expected) ||
+        !identical(dirname(installed_path),
+                   normalizePath(expected, mustWork = TRUE))) {
+      stop("Worker did not load the private Mac package library")
+    }
   }
   installed <- as.character(utils::packageVersion("fastEmbedR"))
   if (!identical(installed, identity$version)) {
@@ -227,20 +261,21 @@ normalize_backend_name <- function(x) {
   x
 }
 
-observed_embedding_backend <- function(layout, requested) {
-  config <- attr(layout, "fastEmbedR_config", exact = TRUE)
+observed_embedding_backend <- function(fit, layout) {
+  raw_layout <- if (is.list(fit)) fit$layout %||% layout else layout
+  parameters <- if (is.list(fit)) fit$parameters else NULL
+  config <- attr(raw_layout, "fastEmbedR_config", exact = TRUE)
   candidates <- c(
+    if (is.list(parameters)) parameters$optimizer_backend else NULL,
+    if (is.list(fit)) fit$backend else NULL,
+    if (is.list(parameters)) parameters$backend else NULL,
     if (is.list(config)) config$optimizer_backend else NULL,
     if (is.list(config)) config$backend else NULL,
-    attr(layout, "backend", exact = TRUE)
+    attr(raw_layout, "backend", exact = TRUE)
   )
   candidates <- candidates[!is.na(candidates) & nzchar(candidates)]
-  observed <- if (length(candidates)) {
-    normalize_backend_name(candidates[[1L]])
-  } else {
-    normalize_backend_name(requested)
-  }
-  observed
+  if (!length(candidates)) return(NA_character_)
+  normalize_backend_name(candidates[[1L]])
 }
 
 log_file <- file.path(out_dir, "benchmark.log")
@@ -412,6 +447,13 @@ cache_paths <- function(dataset, backend = NULL) {
   stem <- safe_name(dataset_alias(dataset))
   backend <- cache_backend_for_dataset(dataset, backend)
   dataset_cache_dir <- file.path(cache_dir, stem)
+  quality_name <- sprintf(
+    "%s_quality_sample_cap%d_ops%s_seed%d",
+    stem, quality_sample_n,
+    safe_name(format(quality_max_distance_ops, scientific = FALSE,
+                     trim = TRUE)),
+    seeds[[1L]] + 101L
+  )
   pca_name <- if (identical(backend, "cpu")) {
     sprintf("%s_pca_init_2d_seed4.rds", stem)
   } else {
@@ -435,19 +477,14 @@ cache_paths <- function(dataset, backend = NULL) {
       dataset_cache_dir,
       sprintf("%s_validation_n%d_seed4.rds", stem, validation_sample_n)
     ),
-    quality_sample = file.path(
+    quality_sample = file.path(dataset_cache_dir,
+                               paste0(quality_name, ".rds")),
+    quality_sample_csv = file.path(dataset_cache_dir,
+                                   paste0(quality_name, "_rows.csv")),
+    global_knn_reference = file.path(
       dataset_cache_dir,
-      sprintf(
-        "%s_quality_sample_cap%d_seed%d.rds",
-        stem, quality_sample_n, seeds[[1L]] + 101L
-      )
-    ),
-    quality_sample_csv = file.path(
-      dataset_cache_dir,
-      sprintf(
-        "%s_quality_sample_cap%d_seed%d_rows.csv",
-        stem, quality_sample_n, seeds[[1L]] + 101L
-      )
+      sprintf("%s_global_exact_n%d_k%d.rds", stem,
+              global_knn_recall_n, k)
     ),
     manifest = file.path(dataset_cache_dir, manifest_name)
   )
@@ -842,6 +879,8 @@ precompute_dataset <- function(dataset, validation_backends) {
     knn <- publication_knn_host(knn)
     publish_rds_once(knn, paths$knn, compress = FALSE, overwrite = force)
     manifest$knn_elapsed_sec <- unname(elapsed)
+    rm(knn)
+    gc()
   }
 
   rtsne_width <- min(n - 1L, max(k, ceiling(3 * perplexity) + 1L))
@@ -863,6 +902,8 @@ precompute_dataset <- function(dataset, validation_backends) {
       )
       manifest$rtsne_knn_elapsed_sec <- unname(elapsed)
       manifest$rtsne_knn_width <- rtsne_width
+      rm(wide_knn)
+      gc()
     } else {
       manifest$rtsne_knn_skipped <- sprintf(
         "estimated %.2f GB exceeds max_knn_cache_gb %.2f",
@@ -885,6 +926,8 @@ precompute_dataset <- function(dataset, validation_backends) {
       pca_init, paths$pca_init, compress = FALSE, overwrite = force
     )
     manifest$pca_init_elapsed_sec <- unname(elapsed)
+    rm(pca_fit, pca_init)
+    gc()
   }
 
   if (force || !file.exists(paths$validation)) {
@@ -948,6 +991,33 @@ precompute_dataset <- function(dataset, validation_backends) {
         }
       )
     }
+  }
+
+  if (global_knn_recall_n > 0L) {
+    rows <- global_knn_rows(n, global_knn_recall_n)
+    expected_input_hash <- global_knn_expected_input(data$float_path)
+    input_hash <- sha256_file(data$float_path)
+    if (!identical(input_hash, expected_input_hash)) {
+      stop("Precompute input SHA256 differs from Mac preflight")
+    }
+    if (force || !file.exists(paths$global_knn_reference)) {
+      exact <- global_knn_exact_reference(
+        x, rows, k, cache_threads, dataset_alias(dataset), input_hash
+      )
+      publish_rds_once(exact, paths$global_knn_reference,
+                       compress = FALSE, overwrite = force)
+    }
+    exact <- readRDS(paths$global_knn_reference)
+    if (!identical(exact$rows, rows) || exact$n != n ||
+        exact$p != ncol(x) || exact$k != k ||
+        exact$dataset != dataset_alias(dataset) ||
+        !identical(exact$input_sha256, input_hash)) {
+      stop("Cached global exact reference identity changed")
+    }
+    global_knn_validate(exact$indices, rows, n, k)
+    manifest$global_knn_reference_file <- paths$global_knn_reference
+    manifest$global_knn_reference_sha256 <-
+      sha256_file(paths$global_knn_reference)
   }
 
   validation <- readRDS(paths$validation)
@@ -1357,11 +1427,13 @@ run_method <- function(method, dataset_data) {
       },
       fastEmbedR_tsne_cpu_full = fastEmbedR::tsne(
         x_fast, perplexity = perplexity, backend = "cpu", n.cores = threads,
-        seed = seed, record_costs = FALSE
+        seed = seed, record_costs = FALSE,
+        keep_knn = global_knn_recall_n > 0L
       ),
       fastEmbedR_tsne_metal_full = fastEmbedR::tsne(
         x_fast, perplexity = perplexity, backend = "metal", n.cores = threads,
-        seed = seed, record_costs = FALSE
+        seed = seed, record_costs = FALSE,
+        keep_knn = global_knn_recall_n > 0L
       ),
       fastEmbedR_tsne_cuda_full = fastEmbedR::tsne(
         x_fast, perplexity = perplexity, backend = "cuda", n.cores = threads,
@@ -1429,19 +1501,23 @@ run_method <- function(method, dataset_data) {
       KlugerLab_FItSNE = run_fitsne(x_standard),
       fastEmbedR_umap_cpu_fuzzy_full = fastEmbedR::umap(
         x_fast, n_neighbors = k, backend = "cpu", n.cores = threads,
-        graph_mode = "fuzzy", seed = seed
+        graph_mode = "fuzzy", seed = seed,
+        keep_knn = global_knn_recall_n > 0L
       ),
       fastEmbedR_umap_cpu_binary_full = fastEmbedR::umap(
         x_fast, n_neighbors = k, backend = "cpu", n.cores = threads,
-        graph_mode = "binary", seed = seed
+        graph_mode = "binary", seed = seed,
+        keep_knn = global_knn_recall_n > 0L
       ),
       fastEmbedR_umap_metal_fuzzy_full = fastEmbedR::umap(
         x_fast, n_neighbors = k, backend = "metal", n.cores = threads,
-        graph_mode = "fuzzy", seed = seed
+        graph_mode = "fuzzy", seed = seed,
+        keep_knn = global_knn_recall_n > 0L
       ),
       fastEmbedR_umap_metal_binary_full = fastEmbedR::umap(
         x_fast, n_neighbors = k, backend = "metal", n.cores = threads,
-        graph_mode = "binary", seed = seed
+        graph_mode = "binary", seed = seed,
+        keep_knn = global_knn_recall_n > 0L
       ),
       fastEmbedR_umap_cuda_fuzzy_full = fastEmbedR::umap(
         x_fast, n_neighbors = k, backend = "cuda", n.cores = threads,
@@ -1604,6 +1680,46 @@ run_method <- function(method, dataset_data) {
   )
 }
 
+ensure_quality_sample_for_score <- function(dataset, n, p, labels) {
+  paths <- cache_paths(dataset)
+  budget_n <- floor(sqrt(2 * quality_max_distance_ops / max(1, p)))
+  effective_n <- max(
+    min(n, 52L),
+    min(n, quality_sample_n, max(1L, as.integer(budget_n)))
+  )
+  if (!file.exists(paths$quality_sample)) {
+    sample <- list(
+      rows = publication_sample_rows(
+        n, effective_n, seeds[[1L]] + 101L, labels = labels
+      ),
+      seed = seeds[[1L]] + 101L,
+      requested_n = quality_sample_n,
+      effective_n = effective_n,
+      stratified = !is.null(labels),
+      dataset = dataset_alias(dataset)
+    )
+    publish_rds_once(sample, paths$quality_sample, compress = FALSE)
+  }
+  sample <- readRDS(paths$quality_sample)
+  rows <- as.integer(sample$rows)
+  if (length(rows) != effective_n || anyNA(rows) ||
+      any(rows < 1L | rows > n) ||
+      !identical(as.integer(sample$seed), seeds[[1L]] + 101L)) {
+    stop("Quality sample cache does not match this run.", call. = FALSE)
+  }
+  if (!file.exists(paths$quality_sample_csv)) {
+    sample_rows <- data.frame(
+      dataset = dataset_alias(dataset),
+      quality_sample_seed = as.integer(sample$seed), row_id = rows
+    )
+    publish_input_once(paths$quality_sample_csv,
+      writer = function(temporary) {
+        utils::write.csv(sample_rows, temporary, row.names = FALSE)
+      })
+  }
+  list(sample = sample, paths = paths)
+}
+
 score_embedding <- function(dataset_data, layout, family, dataset) {
   empty <- list(
     trustworthiness = NA_real_, knn_preservation_15 = NA_real_,
@@ -1617,24 +1733,11 @@ score_embedding <- function(dataset_data, layout, family, dataset) {
   if (identical(family, "PCA")) return(empty)
   n <- nrow(layout)
   source_data <- dataset_data$standard$data %||% dataset_data$float$data
-  quality_path <- cache_paths(dataset)$quality_sample
-  quality_sample <- if (file.exists(quality_path)) {
-    readRDS(quality_path)
-  } else {
-    p <- ncol(source_data)
-    budget_n <- floor(sqrt(2 * quality_max_distance_ops / max(1, p)))
-    effective_quality_n <- max(
-      min(n, 52L),
-      min(n, quality_sample_n, max(1L, as.integer(budget_n)))
-    )
-    list(
-      rows = publication_sample_rows(
-        n, effective_quality_n, seeds[[1L]] + 101L,
-        labels = dataset_data$labels
-      ),
-      seed = seeds[[1L]] + 101L
-    )
-  }
+  quality_record <- ensure_quality_sample_for_score(
+    dataset, n, ncol(source_data), dataset_data$labels
+  )
+  quality_sample <- quality_record$sample
+  quality_path <- quality_record$paths$quality_sample
   rows <- as.integer(quality_sample$rows)
   x_sample <- as_double_matrix(source_data[rows, , drop = FALSE])
   labels <- dataset_data$labels
@@ -1666,13 +1769,11 @@ score_embedding <- function(dataset_data, layout, family, dataset) {
   empty$quality_sample_file <- normalizePath(
     quality_path, winslash = "/", mustWork = FALSE
   )
-  quality_rows_path <- cache_paths(dataset)$quality_sample_csv
+  quality_rows_path <- quality_record$paths$quality_sample_csv
   empty$quality_sample_rows_file <- normalizePath(
     quality_rows_path, winslash = "/", mustWork = FALSE
   )
-  if (file.exists(quality_rows_path)) {
-    empty$quality_sample_sha256 <- sha256_file(quality_rows_path)
-  }
+  empty$quality_sample_sha256 <- sha256_file(quality_rows_path)
   if (identical(family, "t-SNE")) {
     validation <- readRDS(cache_paths(dataset)$validation)
     affinity <- publication_sparse_affinities(
@@ -1689,6 +1790,12 @@ worker_result_template <- function(dataset, method, status = "failed", error = N
     dataset = dataset_alias(dataset), method = method,
     family = method_family(method), backend = requested_backend,
     requested_backend = requested_backend, actual_backend = NA_character_,
+    nn_backend = NA_character_, nn_engine = NA_character_,
+    umap_init_backend = NA_character_,
+    umap_optimizer_schedule = NA_character_,
+    umap_n_epochs = NA_real_, umap_graph_nnz = NA_real_,
+    umap_metal_csr_width = NA_real_,
+    umap_metal_truncated_edges = NA_real_,
     fastEmbedR_release_tag = locked_release$tag,
     fastEmbedR_version = locked_release$version,
     fastEmbedR_commit = locked_release$commit,
@@ -1710,6 +1817,20 @@ worker_result_template <- function(dataset, method, status = "failed", error = N
     peak_ram_kb = NA_real_, peak_ram_gb = NA_real_,
     gpu_memory_scope = NA_character_, gpu_baseline_mb = NA_real_,
     peak_gpu_mb = NA_real_, peak_gpu_delta_mb = NA_real_,
+    metal_allocated_bytes_observed = NA_real_,
+    metal_allocation_scope = NA_character_,
+    mac_disk_device = NA_character_,
+    mac_disk_before_file = NA_character_,
+    mac_disk_after_file = NA_character_,
+    mac_guard_status = NA_character_,
+    mac_guard_evidence_file = NA_character_,
+    mac_system_free_pct_min = NA_real_,
+    mac_system_swap_mb_peak = NA_real_,
+    mac_system_pageouts_delta = NA_real_,
+    mac_system_swapouts_delta = NA_real_,
+    process_swaps = NA_real_, process_block_input_ops = NA_real_,
+    process_block_output_ops = NA_real_,
+    process_peak_footprint_gb = NA_real_,
     trustworthiness = NA_real_, knn_preservation_15 = NA_real_,
     knn_preservation_30 = NA_real_, knn_preservation_50 = NA_real_,
     silhouette = NA_real_, label_knn_accuracy = NA_real_, tsne_kl = NA_real_,
@@ -1729,7 +1850,49 @@ worker_result_template <- function(dataset, method, status = "failed", error = N
     quality_sample_file = NA_character_,
     quality_sample_rows_file = NA_character_,
     quality_sample_sha256 = NA_character_, layout_file = NA_character_,
+    global_knn_reference_file = NA_character_,
+    global_knn_reference_sha256 = NA_character_,
+    global_knn_sample_file = NA_character_,
+    global_knn_sample_sha256 = NA_character_,
+    global_knn_recall_mean = NA_real_,
+    global_knn_recall_minimum = NA_real_,
+    global_knn_recall_pass = NA,
+    layout_sha256 = NA_character_,
     plot_file = NA_character_, stringsAsFactors = FALSE
+  )
+}
+
+fastembedr_fit_metadata <- function(fit) {
+  params <- if (is.list(fit) && is.list(fit$parameters)) {
+    fit$parameters
+  } else list()
+  pca_alloc <- if (is.list(fit)) {
+    fit$metal_allocated_bytes_observed
+  } else NULL
+  allocated <- suppressWarnings(as.numeric(
+    pca_alloc %||%
+      params$metal_allocated_bytes_observed %||% NA_real_
+  ))
+  if (length(allocated) != 1L || !is.finite(allocated) ||
+      allocated <= 0) allocated <- NA_real_
+  list(
+    metal_allocated_bytes_observed = allocated,
+    metal_allocation_scope = if (is.finite(allocated)) {
+      if (is.null(pca_alloc)) {
+        "optimizer_sampled_currentAllocatedSize"
+      } else "pca_sampled_currentAllocatedSize"
+    } else NA_character_,
+    nn_backend = as.character(params$nn_backend %||% NA_character_),
+    nn_engine = as.character(params$nn_engine %||% NA_character_),
+    umap_init_backend = as.character(params$init_backend %||% NA_character_),
+    umap_optimizer_schedule =
+      as.character(params$gpu_optimizer_schedule %||% NA_character_),
+    umap_n_epochs = as.numeric(params$n_epochs %||% NA_real_),
+    umap_graph_nnz = as.numeric(params$graph_nnz %||% NA_real_),
+    umap_metal_csr_width =
+      as.numeric(params$metal_csr_width %||% NA_real_),
+    umap_metal_truncated_edges =
+      as.numeric(params$metal_truncated_edges %||% NA_real_)
   )
 }
 
@@ -1745,6 +1908,40 @@ worker_main <- function() {
   )
   gc()
   result <- run_method(method, data)
+  global_knn_record <- list()
+  if (global_knn_recall_n > 0L &&
+      startsWith(method, "fastEmbedR") &&
+      method_scope(method) == "full_pipeline" &&
+      method_family(method) != "PCA") {
+    reference_file <- cache_paths(dataset)$global_knn_reference
+    reference <- readRDS(reference_file)
+    expected_input_hash <- global_knn_expected_input(data$float_path)
+    if (!identical(reference$input_sha256, expected_input_hash)) {
+      stop("Worker input identity differs from global exact reference")
+    }
+    candidate <- global_knn_capture(
+      result$fit$knn, reference, method, threads, seed
+    )
+    sample_dir <- file.path(out_dir, "knn_samples")
+    dir.create(sample_dir, recursive = TRUE, showWarnings = FALSE)
+    sample_file <- file.path(sample_dir, sprintf(
+      "%s_%s_threads%d_seed%d.rds", safe_name(dataset_alias(dataset)),
+      safe_name(method), threads, seed
+    ))
+    save_rds_atomic(candidate, sample_file, compress = FALSE)
+    score <- global_knn_score(reference, candidate)
+    global_knn_record <- list(
+      global_knn_reference_file = reference_file,
+      global_knn_reference_sha256 = sha256_file(reference_file),
+      global_knn_sample_file = sample_file,
+      global_knn_sample_sha256 = sha256_file(sample_file),
+      global_knn_recall_mean = score$mean,
+      global_knn_recall_minimum = score$minimum,
+      global_knn_recall_pass = score$pass
+    )
+    result$fit$knn <- NULL
+    result$fit$knn_with_self <- NULL
+  }
   layout <- result$layout
   layout_file <- file.path(
     layout_dir,
@@ -1782,9 +1979,9 @@ worker_main <- function() {
   )
   scores <- score_embedding(data, layout, method_family(method), dataset)
   row <- worker_result_template(dataset, method, status = "success", error = NA_character_)
-  row$actual_backend <- observed_embedding_backend(
-    layout, row$requested_backend[[1L]]
-  )
+  row$actual_backend <- observed_embedding_backend(result$fit, layout)
+  fit_metadata <- fastembedr_fit_metadata(result$fit)
+  for (name in names(fit_metadata)) row[[name]] <- fit_metadata[[name]]
   if (startsWith(method, "fastEmbedR") &&
       !identical(row$actual_backend[[1L]], row$requested_backend[[1L]])) {
     stop(
@@ -1799,7 +1996,10 @@ worker_main <- function() {
   for (name in names(result$component)) row[[name]] <- result$component[[name]]
   for (name in names(result$extra %||% list())) row[[name]] <- result$extra[[name]]
   for (name in names(scores)) row[[name]] <- scores[[name]]
+  for (name in names(global_knn_record)) row[[name]] <-
+    global_knn_record[[name]]
   row$layout_file <- layout_file
+  row$layout_sha256 <- sha256_file(layout_file)
   row$plot_file <- plot_file
   write.csv(row, worker_out, row.names = FALSE)
   invisible(row)
@@ -1817,6 +2017,16 @@ read_key_values <- function(path) {
 
 parse_memory_files <- function(time_file, gpu_file) {
   time_lines <- if (file.exists(time_file)) readLines(time_file, warn = FALSE) else character()
+  time_value <- function(label) {
+    found <- time_lines[startsWith(time_lines, paste0(label, ":"))]
+    if (!length(found)) return(NA_real_)
+    suppressWarnings(as.numeric(trimws(sub("^[^:]*:", "", tail(found, 1L)))))
+  }
+  time_text <- function(label) {
+    found <- time_lines[startsWith(time_lines, paste0(label, ":"))]
+    if (!length(found)) return(NA_character_)
+    trimws(sub("^[^:]*:", "", tail(found, 1L)))
+  }
   rss_line <- grep("Maximum resident set size", time_lines, value = TRUE)
   rss <- if (length(rss_line)) {
     suppressWarnings(as.numeric(sub(".*: *", "", tail(rss_line, 1L))))
@@ -1828,8 +2038,47 @@ parse_memory_files <- function(time_file, gpu_file) {
     gpu_memory_scope = gpu$gpu_memory_scope %||% NA_character_,
     gpu_baseline_mb = suppressWarnings(as.numeric(gpu$gpu_baseline_mb %||% NA_real_)),
     peak_gpu_mb = suppressWarnings(as.numeric(gpu$gpu_peak_mb %||% NA_real_)),
-    peak_gpu_delta_mb = suppressWarnings(as.numeric(gpu$gpu_peak_delta_mb %||% NA_real_))
+    peak_gpu_delta_mb = suppressWarnings(as.numeric(gpu$gpu_peak_delta_mb %||% NA_real_)),
+    mac_disk_device = time_text("Mac disk device"),
+    mac_disk_before_file = if (file.exists(paste0(time_file, ".disk_before"))) {
+      paste0(time_file, ".disk_before")
+    } else NA_character_,
+    mac_disk_after_file = if (file.exists(paste0(time_file, ".disk_after"))) {
+      paste0(time_file, ".disk_after")
+    } else NA_character_,
+    mac_guard_status = time_text("Mac guard status"),
+    mac_guard_evidence_file = time_text("Mac guard evidence file"),
+    mac_system_free_pct_min =
+      time_value("Mac system free memory minimum (percent)"),
+    mac_system_swap_mb_peak = time_value("Mac system swap used peak (MB)"),
+    mac_system_pageouts_delta = time_value("Mac system pageouts delta"),
+    mac_system_swapouts_delta = time_value("Mac system swapouts delta"),
+    process_swaps = time_value("Process swaps"),
+    process_block_input_ops = time_value("Process block input operations"),
+    process_block_output_ops = time_value("Process block output operations"),
+    process_peak_footprint_gb =
+      time_value("Process peak memory footprint (bytes)") / 1024^3
   )
+}
+
+mac_memory_issues <- function(record) {
+  free <- suppressWarnings(as.numeric(
+    record[["mac_system_free_pct_min"]]))
+  issues <- character()
+  if (!identical(as.character(record[["mac_guard_status"]]), "passed")) {
+    issues <- c(issues, "Mac active memory guard did not pass")
+  }
+  if (length(free) != 1L || !is.finite(free) || free < 50) {
+    issues <- c(issues, "free system memory below 50% or unmeasured")
+  }
+  for (field in c("mac_system_pageouts_delta",
+                  "mac_system_swapouts_delta", "process_swaps")) {
+    value <- suppressWarnings(as.numeric(record[[field]]))
+    if (length(value) != 1L || !is.finite(value) || value != 0) {
+      issues <- c(issues, paste(field, "nonzero or unmeasured"))
+    }
+  }
+  issues
 }
 
 kodama_core_result_template <- function(dataset, classifier, backend,
@@ -1913,6 +2162,7 @@ run_kodama_core_isolated <- function(dataset, classifier, backend,
     paste0("--cache-dir=", cache_dir),
     paste0("--dataset=", dataset), paste0("--worker-out=", csv),
     paste0("--threads=", worker_threads), paste0("--seed=", worker_seed),
+    paste0("--blas-threads=", blas_threads),
     paste0("--k=", k), paste0("--perplexity=", perplexity),
     paste0("--kodama-m=", kodama_m),
     paste0("--kodama-tcycle=", kodama_tcycle),
@@ -2011,6 +2261,8 @@ run_isolated_worker <- function(
     )
     if (!is.null(existing) && nrow(existing) &&
         existing$status[[1L]] %in% c("success", "skipped")) {
+      memory <- parse_memory_files(time_file, gpu_file)
+      for (name in names(memory)) existing[[name]] <- memory[[name]]
       return(existing)
     }
   }
@@ -2027,7 +2279,9 @@ run_isolated_worker <- function(
     paste0("--dataset=", dataset), paste0("--method=", method),
     paste0("--worker-out=", csv), paste0("--threads=", worker_threads),
     paste0("--seed=", worker_seed), paste0("--seeds=", worker_seed),
+    paste0("--blas-threads=", blas_threads),
     paste0("--k=", k), paste0("--perplexity=", perplexity),
+    paste0("--global-knn-recall-n=", global_knn_recall_n),
     paste0("--quality-sample-n=", quality_sample_n),
     paste0("--quality-max-distance-ops=", quality_max_distance_ops),
     paste0("--validation-sample-n=", validation_sample_n),
@@ -2107,7 +2361,12 @@ aggregate_runs <- function(runs) {
   metric_columns <- c(
     "total_runtime_sec", "preprocess_sec", "knn_sec", "init_sec",
     "graph_or_affinity_sec", "embedding_sec", "peak_ram_gb",
-    "peak_gpu_mb", "peak_gpu_delta_mb", "trustworthiness",
+    "peak_gpu_mb", "peak_gpu_delta_mb",
+    "metal_allocated_bytes_observed", "trustworthiness",
+    "mac_system_free_pct_min", "mac_system_swap_mb_peak",
+    "mac_system_pageouts_delta", "mac_system_swapouts_delta",
+    "process_swaps", "process_block_input_ops",
+    "process_block_output_ops", "process_peak_footprint_gb",
     "knn_preservation_15", "knn_preservation_30", "knn_preservation_50",
     "silhouette", "label_knn_accuracy", "tsne_kl",
     "n_landmarks", "reference_embedding_sec", "landmark_projection_knn_sec",
@@ -2343,10 +2602,10 @@ backend_validation_table <- function(validation_backends) {
       affinity <- publication_edge_agreement(reference_affinity, candidate_affinity)
       for (graph_mode in c("fuzzy", "binary")) {
         reference_graph <- publication_umap_edges(
-          reference_knn, graph_mode = graph_mode, n_threads = max(threads_grid)
+          reference_knn, graph_mode = graph_mode, n.cores = max(threads_grid)
         )
         candidate_graph <- publication_umap_edges(
-          candidate, graph_mode = graph_mode, n_threads = max(threads_grid)
+          candidate, graph_mode = graph_mode, n.cores = max(threads_grid)
         )
         graph <- publication_edge_agreement(reference_graph, candidate_graph)
         rows[[length(rows) + 1L]] <- data.frame(
@@ -2384,7 +2643,7 @@ reference_graph_validation_table <- function() {
     dst <- cbind(0, knn$distances)
     for (graph_mode in c("fuzzy", "binary")) {
       fast_graph <- publication_umap_edges(
-        knn, graph_mode = graph_mode, n_threads = max(threads_grid)
+        knn, graph_mode = graph_mode, n.cores = max(threads_grid)
       )
       uwot_graph <- tryCatch(
         uwot::similarity_graph(
@@ -2597,10 +2856,13 @@ write_reproducibility <- function() {
     system2("lscpu", stdout = TRUE, stderr = TRUE),
     error = function(e) NA_character_
   )
-  memory_state <- tryCatch(
-    readLines("/proc/meminfo", n = 5L, warn = FALSE),
-    error = function(e) NA_character_
-  )
+  memory_state <- if (file.exists("/proc/meminfo")) {
+    readLines("/proc/meminfo", n = 5L, warn = FALSE)
+  } else if (identical(Sys.info()[["sysname"]], "Darwin")) {
+    paste0("hw.memsize=", system2(
+      "sysctl", c("-n", "hw.memsize"), stdout = TRUE, stderr = FALSE
+    ))
+  } else NA_character_
   fastembedr_dll <- tryCatch(
     system.file("libs", paste0("fastEmbedR", .Platform$dynlib.ext),
                 package = "fastEmbedR"),
@@ -2645,6 +2907,10 @@ write_reproducibility <- function() {
     paste0("methods=", paste(methods, collapse = ",")),
     paste0("seeds=", paste(seeds, collapse = ",")),
     paste0("threads_grid=", paste(threads_grid, collapse = ",")),
+    paste0("blas_threads=", blas_threads),
+    paste0("strict_mac_memory=", strict_mac_memory),
+    paste0("run_order=", run_order),
+    paste0("order_seed=", order_seed),
     paste0("k=", k), paste0("perplexity=", perplexity),
     paste0("quality_sample_n=", quality_sample_n),
     paste0("quality_max_distance_ops=", quality_max_distance_ops),
@@ -2809,6 +3075,13 @@ for (dataset in datasets) {
     existing <- tryCatch(read.csv(precompute_csv, stringsAsFactors = FALSE), error = function(...) NULL)
     if (!is.null(existing) && nrow(existing) &&
         existing$status[[1L]] %in% "success") {
+      if (strict_mac_memory) {
+        problems <- mac_memory_issues(
+          parse_memory_files(precompute_time, precompute_gpu))
+        if (length(problems)) stop(
+          "Strict Mac cached precompute gate: ",
+          paste(problems, collapse = "; "))
+      }
       log_msg("%s precompute: reusing terminal status %s", dataset, existing$status[[1L]])
       precompute_rows[[length(precompute_rows) + 1L]] <- existing
       next
@@ -2825,8 +3098,10 @@ for (dataset in datasets) {
     paste0("--dataset=", dataset), paste0("--worker-out=", precompute_csv),
     paste0("--threads=", max(threads_grid)),
     paste0("--threads-grid=", paste(threads_grid, collapse = ",")),
+    paste0("--blas-threads=", blas_threads),
     paste0("--seeds=", paste(seeds, collapse = ",")),
     paste0("--k=", k), paste0("--perplexity=", perplexity),
+    paste0("--global-knn-recall-n=", global_knn_recall_n),
     paste0("--validation-sample-n=", validation_sample_n),
     paste0("--validation-backends=", paste(validation_backends, collapse = ",")),
     paste0("--methods=", paste(methods, collapse = ",")),
@@ -2868,6 +3143,20 @@ for (dataset in datasets) {
     file.path(out_dir, "precompute_manifest_checkpoint.csv"),
     row.names = FALSE
   )
+  if (strict_mac_memory) {
+    current <- precompute_rows[[length(precompute_rows)]]
+    problems <- mac_memory_issues(
+      parse_memory_files(precompute_time, precompute_gpu))
+    if (as.integer(status) != 0L ||
+        !identical(current$status[[1L]], "success")) {
+      problems <- c(problems, "precompute worker failed")
+    }
+    if (length(problems)) {
+      write.csv(current, file.path(out_dir, "precompute_manifest.csv"),
+                row.names = FALSE)
+      stop("Strict Mac precompute gate: ", paste(problems, collapse = "; "))
+    }
+  }
 }
 precompute_table <- do.call(rbind, precompute_rows)
 write.csv(precompute_table, file.path(out_dir, "precompute_manifest.csv"), row.names = FALSE)
@@ -2932,8 +3221,84 @@ kodama_core_table <- if (length(kodama_core_rows)) {
 } else data.frame()
 write.csv(kodama_core_table, file.path(out_dir, "kodama_core_runs.csv"), row.names = FALSE)
 
+paired_seed_block <- function(block, seed_index, n_seeds) {
+  family <- sub("_cpu", "_backend", block$method, fixed = TRUE)
+  family <- sub("_metal", "_backend", family, fixed = TRUE)
+  groups <- split(block, family)
+  groups <- groups[sample.int(length(groups))]
+  pieces <- lapply(groups, function(group) {
+    cpu <- group[vapply(group$method, method_backend, character(1L)) ==
+                   "cpu", , drop = FALSE]
+    metal <- group[vapply(group$method, method_backend, character(1L)) ==
+                     "metal", , drop = FALSE]
+    if (nrow(metal) != 1L || !nrow(cpu)) {
+      return(group[sample.int(nrow(group)), , drop = FALSE])
+    }
+    cpu <- cpu[sample.int(nrow(cpu)), , drop = FALSE]
+    position <- if (n_seeds == 1L) {
+      ceiling((nrow(cpu) + 1L) / 2L)
+    } else {
+      round(1 + (seed_index - 1L) * nrow(cpu) / (n_seeds - 1L))
+    }
+    ordered <- append(seq_len(nrow(cpu)), nrow(cpu) + 1L,
+                      after = position - 1L)
+    rbind(cpu, metal)[ordered, , drop = FALSE]
+  })
+  do.call(rbind, pieces)
+}
+
+make_run_schedule <- function(allowed_methods, dataset) {
+  if (!length(allowed_methods)) return(data.frame())
+  pieces <- lapply(allowed_methods, function(method) {
+    values <- if (method_backend(method) == "cpu") {
+      threads_grid
+    } else max(threads_grid)
+    grid <- expand.grid(
+      seed = seeds, requested_threads = values,
+      KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE
+    )
+    data.frame(method = method, grid, stringsAsFactors = FALSE)
+  })
+  schedule <- do.call(rbind, pieces)
+  if (identical(run_order, "paired")) {
+    blocks <- lapply(seq_along(seeds), function(index) {
+      value <- seeds[[index]]
+      block <- schedule[schedule$seed == value, , drop = FALSE]
+      set.seed(order_seed + match(dataset, datasets) * 1000L + value)
+      paired_seed_block(block, index, length(seeds))
+    })
+    schedule <- do.call(rbind, blocks)
+  }
+  rownames(schedule) <- NULL
+  schedule$dataset <- dataset_alias(dataset)
+  schedule$backend <- vapply(
+    schedule$method, method_backend, character(1L)
+  )
+  schedule$timing_scope <- vapply(
+    schedule$method, method_scope, character(1L)
+  )
+  schedule$execution_order <- seq_len(nrow(schedule))
+  schedule$status <- "pending"
+  schedule
+}
+
+stop_strict_mac_arm <- function(schedule, index, runs, prior, problems) {
+  if (index < nrow(schedule)) {
+    schedule$status[seq.int(index + 1L, nrow(schedule))] <-
+      "skipped_after_strict_failure"
+  }
+  write.csv(do.call(rbind, c(prior, list(schedule))),
+            file.path(out_dir, "execution_schedule.csv"),
+            row.names = FALSE)
+  write.csv(do.call(rbind, runs),
+            file.path(out_dir, "benchmark_runs.csv"),
+            row.names = FALSE)
+  stop("Strict Mac worker gate: ", paste(problems, collapse = "; "))
+}
+
 runs <- list()
 skipped_rows <- list()
+execution_schedules <- list()
 for (dataset in datasets) {
   pre_status <- precompute_table[precompute_table$dataset == dataset_alias(dataset), , drop = FALSE]
   if (nrow(pre_status) && "status" %in% names(pre_status) && any(pre_status$status == "failed")) {
@@ -2945,20 +3310,8 @@ for (dataset in datasets) {
   shared_cache_backend <- if (
     nrow(pre_status) && "shared_cache_backend" %in% names(pre_status)
   ) pre_status$shared_cache_backend[[1L]] else "cpu"
-  dataset_backend_unhealthy <- FALSE
+  allowed_methods <- character()
   for (method in methods) {
-    if (dataset_backend_unhealthy) {
-      log_msg(
-        "%s/%s: skipped because the CUDA device failed during an earlier method",
-        dataset, method
-      )
-      skipped_rows[[length(skipped_rows) + 1L]] <- data.frame(
-        dataset = dataset_alias(dataset), method = method, n = dataset_n,
-        reason = "CUDA device health failure (uncorrectable ECC or device loss)",
-        stringsAsFactors = FALSE
-      )
-      next
-    }
     if (identical(backend_group, "local") &&
         !local_cpu_allowed_for(dataset, dataset_n) &&
         identical(method_backend(method), "cpu")) {
@@ -2994,44 +3347,80 @@ for (dataset in datasets) {
       )
       next
     }
-    thread_values <- if (method_backend(method) == "cpu") threads_grid else max(threads_grid)
-    for (worker_threads in thread_values) {
-      for (worker_seed in seeds) {
-        log_msg("%s/%s/%dt/seed%d: running", dataset, method, worker_threads, worker_seed)
-        row <- run_isolated_worker(
-          dataset, method, worker_threads, worker_seed, shared_cache_backend
-        )
-        runs[[length(runs) + 1L]] <- row
-        write.csv(
-          do.call(rbind, runs),
-          file.path(out_dir, "benchmark_runs_checkpoint.csv"),
-          row.names = FALSE
-        )
-        log_msg(
-          "%s/%s/%dt/seed%d: %s total=%s RAM=%s GPUdelta=%s",
-          dataset, method, worker_threads, worker_seed, row$status[[1L]],
-          format(row$total_runtime_sec[[1L]], digits = 5),
-          format(row$peak_ram_gb[[1L]], digits = 4),
-          format(row$peak_gpu_delta_mb[[1L]], digits = 4)
-        )
-        if (is_resource_failure(row$status[[1L]], row$error[[1L]])) {
-          log_msg(
-            "%s/%s: deterministic resource failure; remaining seeds skipped",
-            dataset, method
-          )
-          break
-        }
-        if (is_backend_health_failure(row$status[[1L]], row$error[[1L]])) {
-          dataset_backend_unhealthy <- TRUE
-          log_msg(
-            "%s/%s: CUDA device health failure; remaining methods and seeds skipped",
-            dataset, method
-          )
-          break
-        }
+    allowed_methods <- c(allowed_methods, method)
+  }
+  schedule <- make_run_schedule(allowed_methods, dataset)
+  if (!nrow(schedule)) next
+  resource_failed <- character()
+  dataset_backend_unhealthy <- FALSE
+  for (i in seq_len(nrow(schedule))) {
+    method <- schedule$method[[i]]
+    worker_threads <- schedule$requested_threads[[i]]
+    worker_seed <- schedule$seed[[i]]
+    resource_key <- paste(method, worker_threads, sep = "|")
+    if (dataset_backend_unhealthy) {
+      schedule$status[[i]] <- "skipped_gpu_health"
+      next
+    }
+    if (resource_key %in% resource_failed) {
+      schedule$status[[i]] <- "skipped_resource_failure"
+      next
+    }
+    log_msg(
+      "%s/%s/%dt/seed%d: running", dataset, method,
+      worker_threads, worker_seed
+    )
+    row <- run_isolated_worker(
+      dataset, method, worker_threads, worker_seed, shared_cache_backend
+    )
+    runs[[length(runs) + 1L]] <- row
+    schedule$status[[i]] <- row$status[[1L]]
+    write.csv(
+      do.call(rbind, runs),
+      file.path(out_dir, "benchmark_runs_checkpoint.csv"),
+      row.names = FALSE
+    )
+    log_msg(
+      "%s/%s/%dt/seed%d: %s total=%s RAM=%s GPUdelta=%s",
+      dataset, method, worker_threads, worker_seed, row$status[[1L]],
+      format(row$total_runtime_sec[[1L]], digits = 5),
+      format(row$peak_ram_gb[[1L]], digits = 4),
+      format(row$peak_gpu_delta_mb[[1L]], digits = 4)
+    )
+    if (strict_mac_memory) {
+      problems <- mac_memory_issues(row)
+      if (!identical(row$status[[1L]], "success")) {
+        problems <- c(problems, "worker did not succeed")
       }
+      if (length(problems)) stop_strict_mac_arm(
+        schedule, i, runs, execution_schedules, problems)
+    }
+    if (is_resource_failure(row$status[[1L]], row$error[[1L]])) {
+      resource_failed <- c(resource_failed, resource_key)
+      log_msg("%s/%s: deterministic resource failure", dataset, method)
+    }
+    if (is_backend_health_failure(row$status[[1L]], row$error[[1L]])) {
+      dataset_backend_unhealthy <- TRUE
+      log_msg("%s: CUDA device health failure; remaining cases skipped", dataset)
     }
   }
+  execution_schedules[[length(execution_schedules) + 1L]] <- schedule
+  if (dataset_backend_unhealthy) {
+    affected <- unique(schedule$method[
+      schedule$status == "skipped_gpu_health"
+    ])
+    for (method in affected) {
+      skipped_rows[[length(skipped_rows) + 1L]] <- data.frame(
+        dataset = dataset_alias(dataset), method = method, n = dataset_n,
+        reason = "CUDA device health failure (uncorrectable ECC or device loss)",
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  write.csv(
+    do.call(rbind, execution_schedules),
+    file.path(out_dir, "execution_schedule.csv"), row.names = FALSE
+  )
 }
 write.csv(
   if (length(skipped_rows)) do.call(rbind, skipped_rows) else data.frame(),
