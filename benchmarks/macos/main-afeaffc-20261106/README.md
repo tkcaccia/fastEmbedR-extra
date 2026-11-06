@@ -74,3 +74,34 @@ Mac preflight accepted both recorded failures, original source identities,
 and 22 future deferrals. PID 59214 began at 2026-11-06 14:04:12 UTC
 with index 460, the mass41 Metal 3D t-SNE case. The run remains active;
 its own `resume-status.jsonl` is authoritative for later results.
+
+## Fashion-MNIST resident UMAP quality audit
+
+The original source-locked panel completed all 18 Fashion-MNIST UMAP cases
+(70,000 rows, 784 input columns, rank-30 preprocessing, seeds 4/17/42,
+two or three output dimensions, CPU1/CPU4/Metal). The paired manifests have
+the same input SHA-256 (`7be6826c092c19aaaf47b97b602e74f42d2b9ba0a61ecda2de0c91cdbc6b4006`),
+source SHA-256 (`c624492b26aa4da2797d44f0940a19a4fe15d77156b06d193a51b313f1fea759`),
+worker SHA-256 (`e772286c53536e009471f8b8a5ae2f09db67f01e161f8aee892a46d669619da4`),
+and seed and output dimension within each trio. All 18 `run.json` files
+record completed exit 0, clear cleanup, and unchanged 7.69 MiB system swap;
+the six Metal `metrics.json` files record `observed_backend: metal`.
+
+| Dimensions | Seed | CPU1 trust / label accuracy | CPU4 trust / label accuracy | Metal trust / label accuracy | Metal fit seconds |
+|---:|---:|---:|---:|---:|---:|
+| 2 | 4 | .9752 / .7617 | .9754 / .7700 | .9752 / .7617 | 10.438 |
+| 2 | 17 | .9781 / .7150 | .9781 / .7217 | .9787 / .7300 | 10.415 |
+| 2 | 42 | .9770 / .6817 | .9769 / .6817 | .9772 / .6933 | 10.415 |
+| 3 | 4 | .9802 / .7700 | .9797 / .7667 | .9803 / .7667 | 1.681 |
+| 3 | 17 | .9808 / .7433 | .9809 / .7367 | .9809 / .7450 | 1.667 |
+| 3 | 42 | .9818 / .6900 | .9819 / .6850 | .9814 / .6983 | 1.664 |
+
+On this full-data, 70,000-row Fashion-MNIST cohort, Metal trustworthiness is
+within 0.0006 of CPU1 for every paired seed and dimension. Metal label
+accuracy is within 0.0150 of CPU1. This supports the **resident full-data
+Fashion-MNIST one-call route** at commit `afeaffc`; it does not close the
+earlier fixed-graph paired Fashion quality gate, nor qualify file-backed or
+landmark Metal UMAP. The markedly different 2D and 3D Metal fit timings
+require stage-level review before a speed claim. Source evidence:
+`/Users/silvanopiazza/Documents/Stefano/fastEmbedR-main-afeaffc-benchmark-20261106/results/fashion_umap_*/{metrics,run,provenance}.json`
+and the corresponding `manifests/fashion_umap_*.json` on Silvano's Mac.
