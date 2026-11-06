@@ -145,7 +145,17 @@ same-size CPU1 and CPU4 3D t-SNE seed-4 cases each exceeded the 1,800-second
 case limit; they remain failed evidence, not CPU timings for a speedup
 ratio. The v2 controller then deferred the remaining corresponding large
 CPU1/CPU4 cases and started the Metal seed-17 case at index 463. This is
-one large-case development result; quality and timing replication remain.
+one large-case development result; further quality and timing replication
+remain.
+
+The seed-17 Metal case at index 463 then completed under the same package,
+DLL and input hashes. Its 3D t-SNE fit took 1,076.486 seconds, with
+trustworthiness 0.9705, label accuracy 0.8583, peak RSS 4,001,251,328
+bytes, stable 7.69 MiB swap, and clear cleanup. The two Metal fits differ
+by 1.16% in fit time; this is early repeatability evidence on mass41,
+not a final estimate. The corresponding CPU1/CPU4 seed-17 cases were
+explicitly deferred. V2 started the seed-42 Metal case at index 466 at
+2026-11-06 14:40:08 UTC.
 
 ## Continuation-aware audit
 
