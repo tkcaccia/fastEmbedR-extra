@@ -63,7 +63,8 @@ rank <- min(30L, nrow(x) - 1L, ncol(x) - 1L)
 if (rank < 3L) stop("Insufficient preprocessing rank.")
 scores <- if (case$method == "PCA") x else
     fastEmbedR::pca(x, ncomp = rank, backend = "cpu",
-        n.cores = 1L, seed = case$seed)$scores
+        n.cores = 1L, seed = case$seed,
+        massive = "off")$scores
 preprocess_seconds <- unname(proc.time()[[3L]] - pre_started)
 graph_started <- proc.time()[[3L]]
 graph <- if (case$method %in% c("Leiden", "Louvain"))
@@ -74,15 +75,15 @@ fit_started <- proc.time()[[3L]]
 fit <- switch(case$method,
     PCA = fastEmbedR::pca(x, ncomp = case$dimensions,
         backend = "cuda", n.cores = case$cores, seed = case$seed,
-        devices = devices),
+        devices = devices, massive = "off"),
     `t-SNE` = fastEmbedR::tsne(scores,
         n_components = case$dimensions, perplexity = 30L,
         n_iter = 300L, backend = "cuda", n.cores = case$cores,
-        seed = case$seed, devices = devices),
+        seed = case$seed, devices = devices, massive = "off"),
     UMAP = fastEmbedR::umap(scores, n_neighbors = 30L,
         n_components = case$dimensions, backend = "cuda",
         n.cores = case$cores, seed = case$seed,
-        devices = devices),
+        devices = devices, massive = "off"),
     Leiden = fastEmbedR::graph_cluster(graph, method = "leiden",
         backend = "cuda", n.cores = 1L, seed = case$seed,
         devices = devices, parallel.mode = "restarts"),
