@@ -105,3 +105,13 @@ landmark Metal UMAP. The markedly different 2D and 3D Metal fit timings
 require stage-level review before a speed claim. Source evidence:
 `/Users/silvanopiazza/Documents/Stefano/fastEmbedR-main-afeaffc-benchmark-20261106/results/fashion_umap_*/{metrics,run,provenance}.json`
 and the corresponding `manifests/fashion_umap_*.json` on Silvano's Mac.
+
+At the same read-only audit, 42 complete Metal/CPU1 UMAP pairs were present
+across seven datasets and both dimensions. The worst single-seed Metal
+trustworthiness difference was -0.0097 on Tabula Muris 2D, seed 17;
+its Metal-minus-CPU1 label-accuracy difference was -0.0267. Across all
+three Tabula Muris seeds, mean trustworthiness differences were +0.00307
+(2D) and +0.00293 (3D), so the single-seed failure should be retained and
+examined rather than treated as a universal backend regression. The panel
+was still in progress; this is a snapshot, not a final eleven-dataset
+quality conclusion.
