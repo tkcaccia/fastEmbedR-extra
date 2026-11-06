@@ -18,6 +18,14 @@ The modified `src/massive_matrix.cpp` has SHA-256
 `c29e5683e83189d588a517cc7e8a28555deb0b098446352de527f20ab17590bc`.
 Linux C++17 syntax compilation passed, and the patch applies cleanly to the
 base source. This is **not** a real-device performance or package test.
+On 2026-11-06, an extracted-class C++17 lifecycle check also passed 500
+successive generations at each of 1, 2, 4 and 8 workers, with varying active
+worker counts, exception propagation from a worker, and a successful run
+after that exception. The package source-style check passed. A local full
+package install was attempted but could not validate this candidate: this
+PC has R 4.5.2 while the package requires R 4.6, and its local R library
+does not contain the required `faissR` dependency. The Mac R 4.6 build and
+paired real-graph tests remain required before integration.
 
 Checksum-verified source archives and paired-test scripts are staged under
 `/Users/silvanopiazza/Documents/Stefano/fastEmbedR-multicpu-threadpool-c288af6-20261106`.
