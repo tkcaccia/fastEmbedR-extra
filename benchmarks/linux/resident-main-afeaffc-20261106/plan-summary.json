@@ -1,0 +1,43 @@
+{
+  "package_commit": "afeaffc39a607c00db5899c284451c6cdbf741bb",
+  "companion_commit": "1b7b924",
+  "dataset_count": 11,
+  "methods": [
+    "PCA 2",
+    "t-SNE 2",
+    "t-SNE 3",
+    "UMAP 2",
+    "UMAP 3",
+    "Leiden 0",
+    "Louvain 0"
+  ],
+  "cores": [
+    1,
+    2,
+    4,
+    8,
+    16,
+    32
+  ],
+  "seeds": [
+    4,
+    17,
+    42
+  ],
+  "case_count": 1386,
+  "case_arrays": {
+    "1": 231,
+    "2": 231,
+    "4": 230,
+    "8": 231,
+    "16": 231,
+    "32": 231
+  },
+  "storage": "resident only",
+  "excluded": [
+    "file-backed",
+    "Deep1B",
+    "competitors",
+    "CUDA pending new-image GPU pilot"
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "package_commit": "afeaffc39a607c00db5899c284451c6cdbf741bb",
+  "companion_commit": "1b7b924",
+  "datasets": [
+    "MetRef",
+    "COIL20",
+    "USPS",
+    "Macosko retina",
+    "MNIST",
+    "Fashion-MNIST",
+    "Tabula Muris",
+    "mass41",
+    "flow18",
+    "ImageNet features",
+    "FlowRepository"
+  ],
+  "cases": 693,
+  "queued": 691,
+  "precompleted": 2,
+  "scope": "resident full fastEmbedR CPU1 CPU4 Metal1; three seeds; PCA2, t-SNE2/3, UMAP2/3, Leiden/Louvain",
+  "exclusions": [
+    "file-backed",
+    "landmark",
+    "competitors",
+    "Deep1B",
+    "CPU2/8/16"
+  ]
+}

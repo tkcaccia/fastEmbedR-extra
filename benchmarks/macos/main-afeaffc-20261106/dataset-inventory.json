@@ -1,0 +1,68 @@
+{
+  "COIL20": {
+    "input_path": "/Users/silvanopiazza/Documents/Stefano/data/data/COIL20/COIL20_float32.RData",
+    "input_sha256": "8e53030869bcfbc228edc06ca970e69b78ddae13fb188327e8899194d5841d66",
+    "expected_rows": 1440,
+    "expected_columns": 16384
+  },
+  "USPS": {
+    "input_path": "/Users/silvanopiazza/Documents/Stefano/data/data/USPS/USPS_float32.RData",
+    "input_sha256": "b4cc55441bde1e61a3588bba172762e11d14463a06b1869d2bb3d16e719d6811",
+    "expected_rows": 11000,
+    "expected_columns": 256
+  },
+  "MNIST": {
+    "input_path": "/Users/silvanopiazza/Documents/Stefano/data/data/MNIST/MNIST_float32.RData",
+    "input_sha256": "0e1fefab430cded89c2c36871540aea87deee1a1316e1a7d6ea4d31c07f835b0",
+    "expected_rows": 70000,
+    "expected_columns": 784
+  },
+  "Fashion-MNIST": {
+    "input_path": "/Users/silvanopiazza/Documents/Stefano/data/data/FashionMNIST/FashionMNIST_float32.RData",
+    "input_sha256": "7be6826c092c19aaaf47b97b602e74f42d2b9ba0a61ecda2de0c91cdbc6b4006",
+    "expected_rows": 70000,
+    "expected_columns": 784
+  },
+  "MetRef": {
+    "input_path": "/Users/silvanopiazza/Documents/Stefano/data/data/MetRef/MetRef_float32.RData",
+    "input_sha256": "5ccba0b55e6e39b9487d4f082c2dc8933dba894340fa5174ac1f9b6623bd6996",
+    "expected_rows": 873,
+    "expected_columns": 375
+  },
+  "mass41": {
+    "input_path": "/Users/silvanopiazza/Documents/Stefano/data/data/mass41/mass41_float32.RData",
+    "input_sha256": "badf0c820f0cf68bc0a4d0b99a2dde6728cff9535c04b71d75355311d82784c8",
+    "expected_rows": 965282,
+    "expected_columns": 14
+  },
+  "flow18": {
+    "input_path": "/Users/silvanopiazza/Documents/Stefano/data/data/flow18/flow18_float32.RData",
+    "input_sha256": "172658d414010b54811dd706dca2b0e586166429f2e92388c113120223f78c8d",
+    "expected_rows": 1000021,
+    "expected_columns": 11
+  },
+  "ImageNet features": {
+    "input_path": "/Users/silvanopiazza/Documents/Stefano/data/data/imagenet/imagenet_float32.RData",
+    "input_sha256": "b85fa6bdf7414216cf3f8f03c7d6862f881f1d8f61f61c85e2b6074f9bd5e2eb",
+    "expected_rows": 1281167,
+    "expected_columns": 1024
+  },
+  "FlowRepository": {
+    "input_path": "/Users/silvanopiazza/Documents/Stefano/data/data/FlowRepository_FR-FCM-ZYRM_files/van_unen_FR-FCM-ZYRM_float32.RData",
+    "input_sha256": "50e7154b6f34018200cc0f0afedb69a408eaa229dc57252c300feeecfdfbcbb0",
+    "expected_rows": 5220347,
+    "expected_columns": 32
+  },
+  "Tabula Muris": {
+    "input_path": "/Users/silvanopiazza/Documents/Stefano/data/data/TabulaMuris/TabulaMuris_float32.RData",
+    "input_sha256": "f2fd5cc7f577f39f3e993d00bfcd5487861c646bc053bece39fad44382221116",
+    "expected_rows": 100102,
+    "expected_columns": 50
+  },
+  "Macosko retina": {
+    "input_path": "/Users/silvanopiazza/Documents/Stefano/data/data/Macosko2015_retina/Macosko2015_retina_float32.RData",
+    "input_sha256": "c6a245397ad7e9643b9d08c1248db8039ee98a260a972710f1b7fdc45daa55fb",
+    "expected_rows": 44808,
+    "expected_columns": 50
+  }
+}
