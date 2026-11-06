@@ -36,3 +36,14 @@ case. This is an image smoke test, not real-data scale or publication
 quality evidence. L40S work still needs a new-image resident GPU pilot
 with allocation, device-use, and owned-context cleanup checks before
 any broader GPU benchmark can use this image.
+
+A versioned two-L40S resident Leiden pilot is staged in this directory.
+Its launcher checks the image hash **inside the GPU allocation**, maps
+Slurm GPU indices to allocated UUIDs, verifies both GPUs perform work,
+and fails closed unless owned processes and GPU contexts clear. Twelve
+local lifecycle and index-mapping checks passed. It uses only a small
+resident graph; no file-backed or streaming scientific route is called.
+Job `1604648` was submitted with a 10-minute limit and was pending for
+Priority at submission. It is not qualification evidence until its
+terminal scheduler state, metrics, image/source identity, actual device
+use and cleanup record are audited.
