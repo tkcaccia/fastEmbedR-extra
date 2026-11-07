@@ -1,0 +1,31 @@
+name: Benchmark policy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/benchmark-policy.yml
+      - benchmarks/linux/**
+      - benchmarks/shared/**
+  pull_request:
+    paths:
+      - .github/workflows/benchmark-policy.yml
+      - benchmarks/linux/**
+      - benchmarks/shared/**
+
+jobs:
+  source-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: HPC policy and float32 timing contracts
+        run: >-
+          python3 -m unittest
+          benchmarks.linux.unified.test_gpu_pause
+          benchmarks.shared.test_fastembedr_timing_precision
+      - name: Matched resident worker contracts
+        run: >-
+          python3 -m unittest discover
+          -s benchmarks/linux/matched-main-535d071-20261107-v3
+          -p 'test_*.py'

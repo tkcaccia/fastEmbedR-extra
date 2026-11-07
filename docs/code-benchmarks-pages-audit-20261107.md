@@ -51,10 +51,11 @@ verification of every native kernel.
    and show matched end-to-end timing alongside fit time. Conversion to double
    in the shared validation script is used for competitors or quality samples;
    the fastEmbedR fit path requires float32.
-7. **The benchmark repository has no automatic validation workflow for its
-   policy or timing tests.** It currently has only the BigANN downloader
-   workflow. Add a lightweight CI gate for launcher rejection, float32 timing,
-   and matched worker contract tests before relying on future edits.
+7. **The benchmark repository lacked an automatic validation workflow for
+   its policy and timing tests.** A lightweight `benchmark-policy` workflow
+   now runs launcher rejection, float32 timing, and matched worker contract
+   tests on relevant changes. Its first GitHub run must pass before relying
+   on the gate. It does not qualify device behavior or scientific quality.
 
 ## Checks performed
 
