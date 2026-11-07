@@ -23,6 +23,10 @@ versioned diagnostic job `1607192` confirmed identical direct and external
 R-package outputs and zero numerical distance difference from the public
 float32 KNN result. This qualifies only the first exact-CPU-KNN slice; it
 does not qualify the other algorithms, file-backed routes, or GPUs.
+Compute job `1607196` then built the same R-free core source with CMake and
+passed both standalone C++ and Python `ctypes` tests. The source archive
+SHA256 was
+`3d236a00bda7f35e9099490503d4381cde47f18d4e4e40cea2ee27080a2a2c25`.
 
 ## Current state and gap
 
