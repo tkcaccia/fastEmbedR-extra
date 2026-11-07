@@ -29,6 +29,11 @@ jobs:
           python3 -m unittest discover
           -s benchmarks/linux/matched-main-535d071-20261107-v3
           -p 'test_*.py'
+      - name: Capability grid structure and evidence paths
+        run: |
+          python3 -m unittest \
+            benchmarks.shared.test_audit_capability_matrix
+          python3 benchmarks/shared/audit_capability_matrix.py
       - name: Mac continuation admission
         run: >-
           python3 -m unittest discover

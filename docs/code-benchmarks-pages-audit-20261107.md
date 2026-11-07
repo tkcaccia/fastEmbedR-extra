@@ -268,6 +268,18 @@ source-locked; never run file-backed or SSD-streaming science on UCT HPC.
   memory scaling, but they do not provide repeated timing uncertainty or a
   full-dataset quality estimate. Record sample indices and repeat seeds in a
   new source-locked publication cohort before drawing comparative claims.
+- The interim capability matrix has all 140 requested method/backend/storage/
+  scope combinations, but 138 are marked `unqualified` and two multi-CPU
+  file-backed clustering routes are marked `failing`. Its 24 nonempty
+  evidence links resolve locally. It is a gap ledger, **not** proof that the
+  implementations work in every combination. Current device pilots should
+  be reconciled row by row with actual backend, quality, memory, and cleanup
+  evidence; the four required final statuses must replace `unqualified` only
+  when that evidence supports them. A new automated interim audit now checks
+  the exact 140-cell Cartesian grid, unique cells, valid status values, and
+  repository evidence paths on each benchmark-policy run. Its `--final` mode
+  correctly fails on the 138 unqualified cells; it is a release gate, not a
+  reason to relabel untested routes.
 - In [R CMD check run 42376832178](https://github.com/tkcaccia/fastEmbedR/actions/runs/42376832178),
   both hosted macOS standalone runtime probes built the extracted
   `signed_hash_project` pipeline under default, explicit-default, Metal 3.1,
