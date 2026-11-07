@@ -1,0 +1,608 @@
+{
+  "benchmark_source": "matched-main-535d071-20261107-v3",
+  "package_commit": "535d071849945db3fa550d3c50f80633b91748cc",
+  "dataset": "MNIST",
+  "job_ids_by_core": {
+    "1": "1606828",
+    "2": "1606829",
+    "4": "1606830",
+    "8": "1606831",
+    "16": "1606832",
+    "32": "1606833"
+  },
+  "planned": 42,
+  "counts": {
+    "audited": 42
+  },
+  "cases": [
+    {
+      "case_id": "mnist_leiden_cpu1_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606840",
+      "cores": 1,
+      "array_index": 56,
+      "array_job_id": "1606828",
+      "numeric_job_id": "1606840",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_louvain_cpu1_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606846",
+      "cores": 1,
+      "array_index": 57,
+      "array_job_id": "1606828",
+      "numeric_job_id": "1606846",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_pca_cpu1_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606855",
+      "cores": 1,
+      "array_index": 58,
+      "array_job_id": "1606828",
+      "numeric_job_id": "1606855",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_tsne_cpu1_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606858",
+      "cores": 1,
+      "array_index": 59,
+      "array_job_id": "1606828",
+      "numeric_job_id": "1606858",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_tsne_cpu1_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606865",
+      "cores": 1,
+      "array_index": 60,
+      "array_job_id": "1606828",
+      "numeric_job_id": "1606865",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_umap_cpu1_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606915",
+      "cores": 1,
+      "array_index": 61,
+      "array_job_id": "1606828",
+      "numeric_job_id": "1606915",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_umap_cpu1_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606828",
+      "cores": 1,
+      "array_index": 62,
+      "array_job_id": "1606828",
+      "numeric_job_id": "1606828",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_leiden_cpu2_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606839",
+      "cores": 2,
+      "array_index": 56,
+      "array_job_id": "1606829",
+      "numeric_job_id": "1606839",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_louvain_cpu2_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606845",
+      "cores": 2,
+      "array_index": 57,
+      "array_job_id": "1606829",
+      "numeric_job_id": "1606845",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_pca_cpu2_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606854",
+      "cores": 2,
+      "array_index": 58,
+      "array_job_id": "1606829",
+      "numeric_job_id": "1606854",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_tsne_cpu2_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606857",
+      "cores": 2,
+      "array_index": 59,
+      "array_job_id": "1606829",
+      "numeric_job_id": "1606857",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_tsne_cpu2_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606863",
+      "cores": 2,
+      "array_index": 60,
+      "array_job_id": "1606829",
+      "numeric_job_id": "1606863",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_umap_cpu2_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606878",
+      "cores": 2,
+      "array_index": 61,
+      "array_job_id": "1606829",
+      "numeric_job_id": "1606878",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_umap_cpu2_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606829",
+      "cores": 2,
+      "array_index": 62,
+      "array_job_id": "1606829",
+      "numeric_job_id": "1606829",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_leiden_cpu4_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606838",
+      "cores": 4,
+      "array_index": 56,
+      "array_job_id": "1606830",
+      "numeric_job_id": "1606838",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_louvain_cpu4_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606844",
+      "cores": 4,
+      "array_index": 57,
+      "array_job_id": "1606830",
+      "numeric_job_id": "1606844",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_pca_cpu4_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606850",
+      "cores": 4,
+      "array_index": 58,
+      "array_job_id": "1606830",
+      "numeric_job_id": "1606850",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_tsne_cpu4_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606856",
+      "cores": 4,
+      "array_index": 59,
+      "array_job_id": "1606830",
+      "numeric_job_id": "1606856",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_tsne_cpu4_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606862",
+      "cores": 4,
+      "array_index": 60,
+      "array_job_id": "1606830",
+      "numeric_job_id": "1606862",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_umap_cpu4_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606876",
+      "cores": 4,
+      "array_index": 61,
+      "array_job_id": "1606830",
+      "numeric_job_id": "1606876",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_umap_cpu4_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606830",
+      "cores": 4,
+      "array_index": 62,
+      "array_job_id": "1606830",
+      "numeric_job_id": "1606830",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_leiden_cpu8_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606837",
+      "cores": 8,
+      "array_index": 56,
+      "array_job_id": "1606831",
+      "numeric_job_id": "1606837",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_louvain_cpu8_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606842",
+      "cores": 8,
+      "array_index": 57,
+      "array_job_id": "1606831",
+      "numeric_job_id": "1606842",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_pca_cpu8_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606848",
+      "cores": 8,
+      "array_index": 58,
+      "array_job_id": "1606831",
+      "numeric_job_id": "1606848",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_tsne_cpu8_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606852",
+      "cores": 8,
+      "array_index": 59,
+      "array_job_id": "1606831",
+      "numeric_job_id": "1606852",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_tsne_cpu8_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606861",
+      "cores": 8,
+      "array_index": 60,
+      "array_job_id": "1606831",
+      "numeric_job_id": "1606861",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_umap_cpu8_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606867",
+      "cores": 8,
+      "array_index": 61,
+      "array_job_id": "1606831",
+      "numeric_job_id": "1606867",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_umap_cpu8_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606831",
+      "cores": 8,
+      "array_index": 62,
+      "array_job_id": "1606831",
+      "numeric_job_id": "1606831",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_leiden_cpu16_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606836",
+      "cores": 16,
+      "array_index": 56,
+      "array_job_id": "1606832",
+      "numeric_job_id": "1606836",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_louvain_cpu16_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606841",
+      "cores": 16,
+      "array_index": 57,
+      "array_job_id": "1606832",
+      "numeric_job_id": "1606841",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_pca_cpu16_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606847",
+      "cores": 16,
+      "array_index": 58,
+      "array_job_id": "1606832",
+      "numeric_job_id": "1606847",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_tsne_cpu16_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606851",
+      "cores": 16,
+      "array_index": 59,
+      "array_job_id": "1606832",
+      "numeric_job_id": "1606851",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_tsne_cpu16_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606860",
+      "cores": 16,
+      "array_index": 60,
+      "array_job_id": "1606832",
+      "numeric_job_id": "1606860",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_umap_cpu16_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606866",
+      "cores": 16,
+      "array_index": 61,
+      "array_job_id": "1606832",
+      "numeric_job_id": "1606866",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_umap_cpu16_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606832",
+      "cores": 16,
+      "array_index": 62,
+      "array_job_id": "1606832",
+      "numeric_job_id": "1606832",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_leiden_cpu32_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606835",
+      "cores": 32,
+      "array_index": 56,
+      "array_job_id": "1606833",
+      "numeric_job_id": "1606835",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_louvain_cpu32_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606843",
+      "cores": 32,
+      "array_index": 57,
+      "array_job_id": "1606833",
+      "numeric_job_id": "1606843",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_pca_cpu32_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606849",
+      "cores": 32,
+      "array_index": 58,
+      "array_job_id": "1606833",
+      "numeric_job_id": "1606849",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_tsne_cpu32_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606853",
+      "cores": 32,
+      "array_index": 59,
+      "array_job_id": "1606833",
+      "numeric_job_id": "1606853",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_tsne_cpu32_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606859",
+      "cores": 32,
+      "array_index": 60,
+      "array_job_id": "1606833",
+      "numeric_job_id": "1606859",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_umap_cpu32_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606864",
+      "cores": 32,
+      "array_index": 61,
+      "array_job_id": "1606833",
+      "numeric_job_id": "1606864",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mnist_umap_cpu32_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606833",
+      "cores": 32,
+      "array_index": 62,
+      "array_job_id": "1606833",
+      "numeric_job_id": "1606833",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    }
+  ],
+  "status": "passed"
+}
