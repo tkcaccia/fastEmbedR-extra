@@ -11,8 +11,8 @@
 set -Eeuo pipefail
 root=/scratch/firenze/NN/benchmarks/matched_main_535d071_20261107_v3
 test -f "$root/audit_dataset_wave_v3.py"
-[[ ${WAVE_JOB_IDS:?Provide six exact Slurm job IDs in CPU order.} =~ ^[0-9]+(,[0-9]+){5}$ ]]
-IFS=, read -r -a jobs <<< "$WAVE_JOB_IDS"
+[[ ${WAVE_JOB_IDS:?Provide six exact Slurm job IDs in CPU order.} =~ ^[0-9]+(:[0-9]+){5}$ ]]
+IFS=: read -r -a jobs <<< "$WAVE_JOB_IDS"
 python3 "$root/audit_dataset_wave_v3.py" --cohort-root "$root" \
   --dataset COIL20 --jobs "${jobs[@]}" \
   --output "$root/coil20-wave-audit-v3.json"

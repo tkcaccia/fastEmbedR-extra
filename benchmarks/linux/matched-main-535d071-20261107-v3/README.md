@@ -20,6 +20,16 @@ still requires dataset-specific memory and time admission before submission.
 The plan-stage compute job 1606617 verified the 462-case source identity.
 COIL20 CPU4 pilot 1606618 completed all seven cases; independent audit 1606624
 passed seven of seven. Its report is in `evidence/coil20-cpu4-pilot-audit.json`.
-The remaining COIL20 CPU1/2/8/16/32 waves are 1606627–1606631, with dependent
-42-case audit 1606656. These are source-locked to this v3 worker and are not
-yet publication results.
+The remaining COIL20 CPU1/2/8/16/32 waves 1606627–1606631 completed. Their
+first dependent audit 1606656 exited before reading results because Slurm
+parsed the comma-delimited job-ID environment variable as multiple exports.
+Its empty logs and scheduler failure are preserved. The versioned audit script
+uses colon-delimited IDs. Read-only audit 1606665 passed **42/42** without
+repeating any scientific job; see `evidence/coil20-wave-audit-v3.json`.
+These cases are source-locked to this v3 worker and are not yet publication
+results.
+
+The Fashion-MNIST v3 resident wave is queued as CPU1/2/4/8/16/32 arrays
+1606667–1606672 with seven cases per core, a one-hour per-case limit and one
+concurrent task per array. Audit 1606680 is dependent on all six terminal
+states. Do not count it as complete until that audit passes.
