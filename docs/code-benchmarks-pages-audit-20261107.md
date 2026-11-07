@@ -106,3 +106,37 @@ source-locked; never run file-backed or SSD-streaming science on UCT HPC.
   still running. Treat the ImageNet numbers as provisional until the
   cohort's complete per-case audit has run. No file-backed science or
   large-image checksum was performed on the HPC head node.
+
+## Source and benchmark follow-up on 2026-11-07
+
+- Package `eae9c2a` adds an offline Metal shader compilation diagnostic to
+  both hosted macOS checks. At inspection, run 42373063661 had built its
+  canonical source package and completed the diagnostic step on macOS latest;
+  the platform checks were still running. A completed diagnostic step is not
+  evidence that the complete package check or Metal tests passed. Inspect its
+  terminal logs before resolving the macOS failure.
+- The resident Mac v2 worker verifies dataset SHA-256 and shape, but does not
+  assert that loaded data or PCA preprocessing scores retain the `float32`
+  class. Its result auditor also has no precision field to check. File names
+  and hashes alone do not prove the data type. Keep the source-locked v2
+  worker and partial results unchanged; the next versioned Mac worker and
+  independent auditor should reject a precision change before comparing
+  its timings with the HPC v3 cohort.
+- HPC matched worker v3 explicitly rejects file-backed input and non-float32
+  input or preprocessing scores. Its 21 unit tests, including manifest and
+  audit rejection cases, passed locally. The Mac v3 continuation controller
+  test and six launch/timing policy tests also passed. These are code checks,
+  not a complete scientific audit of all running cases.
+- Package `docs/backend-capabilities.md` had three stale statements: it said
+  resident landmark t-SNE and UMAP reject multiple CUDA devices, two-GPU
+  resident t-SNE was untested, and Metal landmark PCA projection lacked a
+  device check. Source and recorded device evidence support narrower current
+  descriptions: small two-A10G 2D/3D t-SNE execution and a 100-row Metal PCA
+  projection check passed; partial-landmark UMAP accepts coordinated devices
+  in source but still lacks device and real-data quality qualification.
+- The live Pages home, reference index, PCA, t-SNE, UMAP, clustering, and
+  massive-data vignette returned HTTP 200 during this review. Its UMAP page
+  still describes a prepared graph and initialization for a full file-backed
+  fit. That matches current main, but does not meet the accepted one-call API.
+  The accepted API candidate remains isolated and requires device/recovery
+  qualification before Pages can truthfully present it.
