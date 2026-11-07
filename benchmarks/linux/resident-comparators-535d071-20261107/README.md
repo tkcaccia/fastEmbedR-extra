@@ -20,3 +20,20 @@ existing image. The next gate is a four-method, 2D COIL20 CPU4 pilot for the
 R comparators. Its source remains a development candidate until all four
 methods and the independent audit pass. It uses rank-30 float32 preprocessing;
 conversion to the competitors' double input is measured separately from fit.
+
+The source-locked COIL20 CPU4 pilot array 1606770 completed all four R
+comparators. Independent compute audit 1606773 passed **4/4**; the exact
+report and raw metrics are under `evidence/`. One seed is development evidence,
+and the methods do not all use identical optimization schedules.
+
+| Method | Fit seconds | Trustworthiness | Label accuracy |
+|---|---:|---:|---:|
+| Rtsne | 0.650 | 0.9822 | 0.8850 |
+| FIt-SNE | 2.218 | 0.9727 | 0.8717 |
+| uwot | 2.119 | 0.9782 | 0.8900 |
+| R umap | 4.707 | 0.9819 | 0.8767 |
+
+The shared rank-30 PCA preprocessing took about 0.48–0.53 seconds per case
+and is recorded separately. Conversion to double happened before the fit
+timer. These values are not publication comparisons with fastEmbedR until
+the parameter and repetition audit is complete.

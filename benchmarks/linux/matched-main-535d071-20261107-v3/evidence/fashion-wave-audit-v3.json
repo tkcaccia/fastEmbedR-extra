@@ -1,0 +1,608 @@
+{
+  "benchmark_source": "matched-main-535d071-20261107-v3",
+  "package_commit": "535d071849945db3fa550d3c50f80633b91748cc",
+  "dataset": "Fashion-MNIST",
+  "job_ids_by_core": {
+    "1": "1606667",
+    "2": "1606668",
+    "4": "1606669",
+    "8": "1606670",
+    "16": "1606671",
+    "32": "1606672"
+  },
+  "planned": 42,
+  "counts": {
+    "audited": 42
+  },
+  "cases": [
+    {
+      "case_id": "fashion_leiden_cpu1_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606678",
+      "cores": 1,
+      "array_index": 7,
+      "array_job_id": "1606667",
+      "numeric_job_id": "1606678",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_louvain_cpu1_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606685",
+      "cores": 1,
+      "array_index": 8,
+      "array_job_id": "1606667",
+      "numeric_job_id": "1606685",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_pca_cpu1_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606692",
+      "cores": 1,
+      "array_index": 9,
+      "array_job_id": "1606667",
+      "numeric_job_id": "1606692",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_tsne_cpu1_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606698",
+      "cores": 1,
+      "array_index": 10,
+      "array_job_id": "1606667",
+      "numeric_job_id": "1606698",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_tsne_cpu1_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606705",
+      "cores": 1,
+      "array_index": 11,
+      "array_job_id": "1606667",
+      "numeric_job_id": "1606705",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_umap_cpu1_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606758",
+      "cores": 1,
+      "array_index": 12,
+      "array_job_id": "1606667",
+      "numeric_job_id": "1606758",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_umap_cpu1_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606667",
+      "cores": 1,
+      "array_index": 13,
+      "array_job_id": "1606667",
+      "numeric_job_id": "1606667",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_leiden_cpu2_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606677",
+      "cores": 2,
+      "array_index": 7,
+      "array_job_id": "1606668",
+      "numeric_job_id": "1606677",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_louvain_cpu2_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606684",
+      "cores": 2,
+      "array_index": 8,
+      "array_job_id": "1606668",
+      "numeric_job_id": "1606684",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_pca_cpu2_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606691",
+      "cores": 2,
+      "array_index": 9,
+      "array_job_id": "1606668",
+      "numeric_job_id": "1606691",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_tsne_cpu2_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606697",
+      "cores": 2,
+      "array_index": 10,
+      "array_job_id": "1606668",
+      "numeric_job_id": "1606697",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_tsne_cpu2_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606703",
+      "cores": 2,
+      "array_index": 11,
+      "array_job_id": "1606668",
+      "numeric_job_id": "1606703",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_umap_cpu2_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606712",
+      "cores": 2,
+      "array_index": 12,
+      "array_job_id": "1606668",
+      "numeric_job_id": "1606712",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_umap_cpu2_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606668",
+      "cores": 2,
+      "array_index": 13,
+      "array_job_id": "1606668",
+      "numeric_job_id": "1606668",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_leiden_cpu4_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606676",
+      "cores": 4,
+      "array_index": 7,
+      "array_job_id": "1606669",
+      "numeric_job_id": "1606676",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_louvain_cpu4_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606683",
+      "cores": 4,
+      "array_index": 8,
+      "array_job_id": "1606669",
+      "numeric_job_id": "1606683",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_pca_cpu4_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606690",
+      "cores": 4,
+      "array_index": 9,
+      "array_job_id": "1606669",
+      "numeric_job_id": "1606690",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_tsne_cpu4_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606696",
+      "cores": 4,
+      "array_index": 10,
+      "array_job_id": "1606669",
+      "numeric_job_id": "1606696",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_tsne_cpu4_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606702",
+      "cores": 4,
+      "array_index": 11,
+      "array_job_id": "1606669",
+      "numeric_job_id": "1606702",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_umap_cpu4_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606710",
+      "cores": 4,
+      "array_index": 12,
+      "array_job_id": "1606669",
+      "numeric_job_id": "1606710",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_umap_cpu4_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606669",
+      "cores": 4,
+      "array_index": 13,
+      "array_job_id": "1606669",
+      "numeric_job_id": "1606669",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_leiden_cpu8_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606675",
+      "cores": 8,
+      "array_index": 7,
+      "array_job_id": "1606670",
+      "numeric_job_id": "1606675",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_louvain_cpu8_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606681",
+      "cores": 8,
+      "array_index": 8,
+      "array_job_id": "1606670",
+      "numeric_job_id": "1606681",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_pca_cpu8_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606688",
+      "cores": 8,
+      "array_index": 9,
+      "array_job_id": "1606670",
+      "numeric_job_id": "1606688",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_tsne_cpu8_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606695",
+      "cores": 8,
+      "array_index": 10,
+      "array_job_id": "1606670",
+      "numeric_job_id": "1606695",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_tsne_cpu8_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606701",
+      "cores": 8,
+      "array_index": 11,
+      "array_job_id": "1606670",
+      "numeric_job_id": "1606701",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_umap_cpu8_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606708",
+      "cores": 8,
+      "array_index": 12,
+      "array_job_id": "1606670",
+      "numeric_job_id": "1606708",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_umap_cpu8_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606670",
+      "cores": 8,
+      "array_index": 13,
+      "array_job_id": "1606670",
+      "numeric_job_id": "1606670",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_leiden_cpu16_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606674",
+      "cores": 16,
+      "array_index": 7,
+      "array_job_id": "1606671",
+      "numeric_job_id": "1606674",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_louvain_cpu16_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606682",
+      "cores": 16,
+      "array_index": 8,
+      "array_job_id": "1606671",
+      "numeric_job_id": "1606682",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_pca_cpu16_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606687",
+      "cores": 16,
+      "array_index": 9,
+      "array_job_id": "1606671",
+      "numeric_job_id": "1606687",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_tsne_cpu16_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606693",
+      "cores": 16,
+      "array_index": 10,
+      "array_job_id": "1606671",
+      "numeric_job_id": "1606693",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_tsne_cpu16_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606700",
+      "cores": 16,
+      "array_index": 11,
+      "array_job_id": "1606671",
+      "numeric_job_id": "1606700",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_umap_cpu16_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606706",
+      "cores": 16,
+      "array_index": 12,
+      "array_job_id": "1606671",
+      "numeric_job_id": "1606706",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_umap_cpu16_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606671",
+      "cores": 16,
+      "array_index": 13,
+      "array_job_id": "1606671",
+      "numeric_job_id": "1606671",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_leiden_cpu32_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606673",
+      "cores": 32,
+      "array_index": 7,
+      "array_job_id": "1606672",
+      "numeric_job_id": "1606673",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_louvain_cpu32_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606686",
+      "cores": 32,
+      "array_index": 8,
+      "array_job_id": "1606672",
+      "numeric_job_id": "1606686",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_pca_cpu32_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606689",
+      "cores": 32,
+      "array_index": 9,
+      "array_job_id": "1606672",
+      "numeric_job_id": "1606689",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_tsne_cpu32_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606694",
+      "cores": 32,
+      "array_index": 10,
+      "array_job_id": "1606672",
+      "numeric_job_id": "1606694",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_tsne_cpu32_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606699",
+      "cores": 32,
+      "array_index": 11,
+      "array_job_id": "1606672",
+      "numeric_job_id": "1606699",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_umap_cpu32_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606704",
+      "cores": 32,
+      "array_index": 12,
+      "array_job_id": "1606672",
+      "numeric_job_id": "1606704",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "fashion_umap_cpu32_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606672",
+      "cores": 32,
+      "array_index": 13,
+      "array_job_id": "1606672",
+      "numeric_job_id": "1606672",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    }
+  ],
+  "status": "passed"
+}

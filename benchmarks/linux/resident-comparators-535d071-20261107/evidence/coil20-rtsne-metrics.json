@@ -1,0 +1,31 @@
+{
+  "dataset": "COIL20",
+  "method": "rtsne",
+  "backend": "cpu",
+  "requested_cores": 4,
+  "seed": 4,
+  "dimensions": 2,
+  "n_rows": 1440,
+  "n_columns": 16384,
+  "preprocessing_rank": 30,
+  "input_sha256": "8e53030869bcfbc228edc06ca970e69b78ddae13fb188327e8899194d5841d66",
+  "source_precision": "float32",
+  "comparator_precision": "double",
+  "package_commit": "535d071849945db3fa550d3c50f80633b91748cc",
+  "worker_sha256": "08618fd1c0d07a16016d9390f65b0a352f411c126ef6ee16e461c0c7764c13ca",
+  "image_sha256": "15b494004966c5e8ae4ada72db28024356cfa8a981333a37484ce75a09d08bf2",
+  "slurm_job_id": "1606771",
+  "slurm_array_task_id": "0",
+  "comparator_version": "0.17",
+  "load_seconds": 0.402,
+  "preprocess_seconds": 0.525,
+  "conversion_seconds": 0,
+  "fit_seconds": 0.65,
+  "quality_seconds": 0.151,
+  "write_seconds": 0.012,
+  "quality": {
+    "trustworthiness": 0.9822,
+    "label_accuracy": 0.885
+  },
+  "output_file": "layout.rds"
+}

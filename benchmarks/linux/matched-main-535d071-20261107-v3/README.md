@@ -32,4 +32,7 @@ results.
 The Fashion-MNIST v3 resident wave is queued as CPU1/2/4/8/16/32 arrays
 1606667–1606672 with seven cases per core, a one-hour per-case limit and one
 concurrent task per array. Audit 1606680 is dependent on all six terminal
-states. Do not count it as complete until that audit passes.
+states. It passed **42/42**; see `evidence/fashion-wave-audit-v3.json`.
+
+The MetRef v3 resident wave used arrays 1606716–1606721. Compute audit
+1606750 passed **42/42**; see `evidence/metref-wave-audit-v3.json`.

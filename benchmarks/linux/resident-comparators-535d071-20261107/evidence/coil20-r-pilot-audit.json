@@ -1,0 +1,56 @@
+{
+  "array_job_id": "1606770",
+  "package_commit": "535d071849945db3fa550d3c50f80633b91748cc",
+  "worker_sha256": "08618fd1c0d07a16016d9390f65b0a352f411c126ef6ee16e461c0c7764c13ca",
+  "planned": 4,
+  "counts": {
+    "audited": 4
+  },
+  "cases": [
+    {
+      "index": 0,
+      "method": "rtsne",
+      "numeric_job_id": "1606771",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ],
+      "status": "audited",
+      "issues": []
+    },
+    {
+      "index": 1,
+      "method": "fitsne",
+      "numeric_job_id": "1606772",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ],
+      "status": "audited",
+      "issues": []
+    },
+    {
+      "index": 2,
+      "method": "uwot",
+      "numeric_job_id": "1606774",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ],
+      "status": "audited",
+      "issues": []
+    },
+    {
+      "index": 3,
+      "method": "rumap",
+      "numeric_job_id": "1606770",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ],
+      "status": "audited",
+      "issues": []
+    }
+  ],
+  "status": "passed"
+}
