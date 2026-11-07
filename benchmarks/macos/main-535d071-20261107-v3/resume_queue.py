@@ -3,6 +3,7 @@
 
 import argparse
 from collections import Counter
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -16,6 +17,8 @@ import time
 STEFANO = Path("/Users/silvanopiazza/Documents/Stefano")
 ROOT_NAME = "fastEmbedR-main-535d071-benchmark-v2-20261107"
 PACKAGE_COMMIT = "535d071849945db3fa550d3c50f80633b91748cc"
+RUNNER_SHA = "a81f4b2187eaf4911619d4cfb930ddd99477ac3a6231da6be187ed9c526f63d6"
+WORKER_SHA = "9ec71d76dde7928891fff8cac95fc728dc2d2c50c806b95cafbacbbb865fb76d"
 LIMITED_CASE = "mass41_tsne_cpu1_d3_s4_r1_535d071_v2"
 
 
@@ -66,6 +69,10 @@ def plan(root):
             summary.get("storage_mode") != "resident" or \
             summary.get("fit_scope") != "full":
         raise ValueError("Source-locked v2 panel has changed")
+    for name, expected in (("run_case.py", RUNNER_SHA),
+                           ("worker.R", WORKER_SHA)):
+        if hashlib.sha256((root / name).read_bytes()).hexdigest() != expected:
+            raise ValueError("Source-locked runner or worker has changed")
     names = (root / "queue.txt").read_text().splitlines()
     if len(names) != 693 or len(set(names)) != 693:
         raise ValueError("Queue is incomplete or duplicated")

@@ -1,6 +1,7 @@
 """Resume admission must preserve success and stop on ambiguous output."""
 
 import importlib.util
+import hashlib
 import json
 from pathlib import Path
 import tempfile
@@ -22,6 +23,12 @@ class ResumeAdmissionTest(unittest.TestCase):
             root = Path(temporary) / "panel"
             (root / "manifests").mkdir(parents=True)
             (root / "results").mkdir()
+            (root / "run_case.py").write_text("source-locked runner")
+            (root / "worker.R").write_text("source-locked worker")
+            resume.RUNNER_SHA = hashlib.sha256(
+                (root / "run_case.py").read_bytes()).hexdigest()
+            resume.WORKER_SHA = hashlib.sha256(
+                (root / "worker.R").read_bytes()).hexdigest()
             (root / "plan-summary.json").write_text(
                 json.dumps({"cases": 693, "queued": 693,
                             "package_commit": resume.PACKAGE_COMMIT,
