@@ -44,3 +44,8 @@ audit 1606785 passed **42/42**; see `evidence/usps-wave-audit-v3.json`.
 The MNIST v3 resident wave uses arrays 1606828–1606833 for CPU1/2/4/8/16/32,
 with exactly seven cases per core and a 20-minute per-case limit. Its dependent
 audit 1606834 must pass before treating any case as an audited result.
+
+A Tabula Muris v3 CPU4 seven-method pilot is array 1606868 with a one-hour
+per-case limit. Dependent compute audit 1606869 uses the versioned
+`audit_single_core_v1.sbatch` entry point. The pilot must pass before a
+six-core-count wave is admitted.
