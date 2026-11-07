@@ -1,0 +1,33 @@
+{
+  "dataset": "COIL20",
+  "method": "umaplearn",
+  "backend": "cpu",
+  "requested_cores": 4,
+  "seed": 4,
+  "dimensions": 2,
+  "n_rows": 1440,
+  "n_columns": 16384,
+  "preprocessing_rank": 30,
+  "input_sha256": "8e53030869bcfbc228edc06ca970e69b78ddae13fb188327e8899194d5841d66",
+  "source_precision": "float32",
+  "comparator_precision": "double",
+  "package_commit": "535d071849945db3fa550d3c50f80633b91748cc",
+  "worker_sha256": "7126e65c12b0c82c4c24e580b3d4dbd2dd19bed9c71ca91850efc6cd662d4fe7",
+  "image_sha256": "15b494004966c5e8ae4ada72db28024356cfa8a981333a37484ce75a09d08bf2",
+  "slurm_job_id": "1606824",
+  "slurm_array_task_id": "1",
+  "comparator_version": "0.5.12",
+  "parallel_note": "random_state_may_force_serial_numba",
+  "load_seconds": 0.354,
+  "preprocess_seconds": 0.378,
+  "conversion_seconds": 0,
+  "python_conversion_seconds": 0.425,
+  "fit_seconds": 7.231,
+  "quality_seconds": 0.153,
+  "write_seconds": 0.012,
+  "quality": {
+    "trustworthiness": 0.9791,
+    "label_accuracy": 0.895
+  },
+  "output_file": "layout.rds"
+}

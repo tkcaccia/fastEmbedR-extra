@@ -36,3 +36,11 @@ states. It passed **42/42**; see `evidence/fashion-wave-audit-v3.json`.
 
 The MetRef v3 resident wave used arrays 1606716–1606721. Compute audit
 1606750 passed **42/42**; see `evidence/metref-wave-audit-v3.json`.
+
+The USPS v3 resident wave used arrays 1606779–1606784 for CPU1/2/4/8/16/32,
+with exactly seven cases per core and a 15-minute per-case limit. Compute
+audit 1606785 passed **42/42**; see `evidence/usps-wave-audit-v3.json`.
+
+The MNIST v3 resident wave uses arrays 1606828–1606833 for CPU1/2/4/8/16/32,
+with exactly seven cases per core and a 20-minute per-case limit. Its dependent
+audit 1606834 must pass before treating any case as an audited result.

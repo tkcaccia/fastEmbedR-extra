@@ -37,3 +37,23 @@ The shared rank-30 PCA preprocessing took about 0.48–0.53 seconds per case
 and is recorded separately. Conversion to double happened before the fit
 timer. These values are not publication comparisons with fastEmbedR until
 the parameter and repetition audit is complete.
+
+Compute-only bridge probe 1606775 confirmed that R 4.6 in the same image can
+use `/opt/conda/bin/python` through `reticulate` and import NumPy, openTSNE,
+and umap-learn. The source-locked two-method COIL20 Python pilot 1606824
+completed and independent audit 1606825 passed **2/2**. The R worker preserves the same
+float32 source and rank-30 preprocessing; its conversion to a double matrix
+and then to a Python array are measured before the fit timer. Each method
+runs resident-only in one CPU allocation. With a fixed seed, umap-learn may
+execute its optimizer serially despite the four-core allocation; the device
+log confirms this. The worker records that limitation rather than claiming
+four-core speedup.
+
+| Python method | Fit seconds | Trustworthiness | Label accuracy |
+|---|---:|---:|---:|
+| openTSNE | 3.887 | 0.9834 | 0.9033 |
+| umap-learn | 7.231 | 0.9791 | 0.8950 |
+
+Raw metrics and the exact audit are under `evidence/`. These one-seed pilot
+results must not enter the manuscript comparison before the parameter and
+repetition review.
