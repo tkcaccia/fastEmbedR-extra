@@ -1,0 +1,50 @@
+{
+  "benchmark_source": "matched-main-535d071-20261107-v3",
+  "package_commit": "535d071849945db3fa550d3c50f80633b91748cc",
+  "dataset": "mass41",
+  "cores": 4,
+  "array_job_id": "1607023",
+  "planned": 3,
+  "counts": {
+    "audited": 3
+  },
+  "cases": [
+    {
+      "case_id": "mass41_leiden_cpu4_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1607024",
+      "array_index": 42,
+      "numeric_job_id": "1607024",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mass41_louvain_cpu4_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1607031",
+      "array_index": 43,
+      "numeric_job_id": "1607031",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "mass41_pca_cpu4_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1607023",
+      "array_index": 44,
+      "numeric_job_id": "1607023",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    }
+  ],
+  "status": "passed"
+}

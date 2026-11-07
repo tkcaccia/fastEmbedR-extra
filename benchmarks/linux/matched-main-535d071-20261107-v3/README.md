@@ -63,3 +63,4 @@ The mass41 v3 CPU4 pilot starts with resident Leiden, Louvain, and PCA
 three terminal states. The three-case subset is deliberately separate from
 the seven-method cohort until the diagnostic v2 3D t-SNE runtime is reviewed;
 it is not a complete mass41 result.
+The audit passed **3/3**; see `evidence/mass41-cpu4-subset-audit-v1.json`.
