@@ -6,6 +6,12 @@ check passed HPC compute job `1607055`, and pure R storage dispatch checks
 passed locally, but its file-backed KNN and clustering preflight still await
 an actual Mac package test. No file-backed scientific test was run on UCT HPC.
 
+The intended four-function R interface must be backed by one reusable native
+engine. The present Rcpp `.Call` registrations are not a supported API for
+other R packages or a future R-free Python wrapper. The required C++ core,
+versioned C ABI, installed R callable header, and cross-language verification
+are specified in [the native-core plan](native-core-api-plan-20261107.md).
+
 ## Findings
 
 | Limitation | Evidence | Proposed public behavior |
