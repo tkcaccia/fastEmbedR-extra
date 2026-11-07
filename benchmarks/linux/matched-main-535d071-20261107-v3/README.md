@@ -7,6 +7,15 @@ The v1 and v2 HPC CPU cohorts converted the input to double before fitting;
 preserve them as diagnostic evidence and do not combine their timings or quality
 values with the Mac panel in a manuscript comparison.
 
+**Cross-machine t-SNE is not yet matched.** This HPC worker fixes
+`early_exaggeration_iter = 250` and `auto_config = FALSE`, whereas the Mac v2
+worker leaves automatic configuration enabled. That can change learning rate
+and scheduling even though both request 300 iterations. Keep the t-SNE rows
+as separate diagnostic cohorts until a new explicit-control Mac or HPC run is
+source-locked and audited. The Mac worker also lacks an explicit float32 class
+assertion and write-stage timing, so its current rows need additional checks
+before publication comparison.
+
 The 462-case plan runs seven methods on eleven datasets at 1, 2, 4, 8, 16,
 and 32 CPU cores. Each Slurm allocation runs one resident scientific case. The
 worker rejects file-backed input and any loss of `float32` precision. The

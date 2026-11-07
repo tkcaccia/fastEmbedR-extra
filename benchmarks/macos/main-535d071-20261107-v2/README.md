@@ -26,3 +26,12 @@ records actual backend, timing, quality, memory, swap and cleanup, and
 keeps failures. Metal UMAP reports CPU warm and Metal optimizer epochs.
 The final `audit_panel.py` must accept every case before publication use.
 Do not pool this cohort with the older package or worker versions.
+
+The v2 worker verifies input hashes and shapes, but does not assert the
+loaded or preprocessed `float32` class. Its output auditor cannot certify
+precision from the recorded metrics. It also leaves t-SNE automatic
+configuration enabled, while the HPC matched v3 worker disables it and
+fixes the early exaggeration schedule. These t-SNE timings are not a
+matched cross-machine comparison. Keep the active source-locked scripts and
+results unchanged; a later versioned worker must enforce the shared
+scientific controls, precision, effective workers, and write-stage timing.

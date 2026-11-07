@@ -166,3 +166,14 @@ source-locked; never run file-backed or SSD-streaming science on UCT HPC.
   without submitting a job, changing the old pilot, or hashing the image on
   the login node. The six local allocation tests passed; actual device and
   cleanup qualification remains pending.
+- The Mac v2 and HPC v3 workers use the same 11 datasets and preprocessing
+  ranks (30 except flow18 at 10 and mass41 at 13), but their t-SNE controls
+  differ. Mac requests `n_iter = 300` and leaves `auto_config` at its `TRUE`
+  default; HPC sets `early_exaggeration_iter = 250`, `n_iter = 300`, and
+  `auto_config = FALSE`. Automatic settings can change the schedule and
+  learning rate. Treat cross-machine t-SNE timing and quality as separate
+  diagnostic cohorts until a newly source-locked, explicitly matched run is
+  completed. The Mac worker also does not record a separate output-write
+  duration or enforce the requested effective CPU count for t-SNE; the HPC
+  worker and auditor record and check both. Do not silently relabel the
+  existing Mac results as matched.
