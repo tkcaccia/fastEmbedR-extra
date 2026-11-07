@@ -1,0 +1,29 @@
+{
+  "benchmark_source": "matched-main-535d071-20261107-v2",
+  "package_commit": "535d071849945db3fa550d3c50f80633b91748cc",
+  "cases": [
+    {
+      "case_id": "flow18_pca_cpu16_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606370",
+      "requested_cores": 16,
+      "native_effective_cores": 11,
+      "blas_observed_cores": 16,
+      "fit_seconds": 0.335,
+      "peak_ram_bytes": 1168105472
+    },
+    {
+      "case_id": "flow18_pca_cpu32_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606371",
+      "requested_cores": 32,
+      "native_effective_cores": 11,
+      "blas_observed_cores": 32,
+      "fit_seconds": 0.344,
+      "peak_ram_bytes": 1211920384
+    }
+  ],
+  "status": "passed"
+}
