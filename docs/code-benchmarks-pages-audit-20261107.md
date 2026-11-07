@@ -154,3 +154,15 @@ source-locked; never run file-backed or SSD-streaming science on UCT HPC.
   hold was rejected by automatic approval review because changing an active
   scheduler job conflicts with the project instruction to leave such jobs
   untouched. No hold, replacement submission, or in-place script edit occurred.
+- [R CMD check run 42373063661](https://github.com/tkcaccia/fastEmbedR/actions/runs/42373063661)
+  is terminal: Windows and both Ubuntu lanes passed, while macOS 15 and
+  macOS latest failed at runtime Metal pipeline creation. Both hosted Macs
+  found a Metal command-line compiler and compiled the extracted native KNN
+  shader offline. The runtime failures affect independent KNN and 3D t-SNE
+  pipelines, so this diagnostic does not support a simple missing-compiler
+  explanation. The underlying runtime error is still only
+  `CompilerError Code=2`; root cause and a release-safe fix remain open.
+- The corrected one-GPU v2 files were staged in a new HPC scratch directory
+  without submitting a job, changing the old pilot, or hashing the image on
+  the login node. The six local allocation tests passed; actual device and
+  cleanup qualification remains pending.
