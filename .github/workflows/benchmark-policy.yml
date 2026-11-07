@@ -29,3 +29,8 @@ jobs:
           python3 -m unittest discover
           -s benchmarks/linux/matched-main-535d071-20261107-v3
           -p 'test_*.py'
+      - name: Mac continuation admission
+        run: >-
+          python3 -m unittest discover
+          -s benchmarks/macos/main-535d071-20261107-v3
+          -p 'test_*.py'
