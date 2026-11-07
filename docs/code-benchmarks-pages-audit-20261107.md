@@ -205,3 +205,20 @@ source-locked; never run file-backed or SSD-streaming science on UCT HPC.
   `fourcase-cpu8-20261107/`. The four RDS contents were not independently
   inspected; these results are not yet a complete publication cohort. No
   dataset or container checksum was computed on the HPC login node.
+- [R CMD check run 42375237693](https://github.com/tkcaccia/fastEmbedR/actions/runs/42375237693)
+  finished with Windows and both Ubuntu lanes passing and macOS 15 and
+  macOS latest failing. A standalone Swift runtime probe on **both** hosted
+  Macs compiled a tiny Metal kernel and the exact extracted
+  `signed_hash_project` source into a working compute pipeline. The package
+  subsequently failed at pipeline creation for KNN and independent 3D t-SNE
+  kernels. Thus the hosted device and shader source alone are not sufficient
+  explanations. The package uses explicit Metal language and, for KNN, fast
+  math options; commit `4819709` adds a bounded CI probe comparing these
+  options to runtime defaults. Do not claim a root cause until its output
+  and a corrected package check confirm it.
+- The isolated four-entry API candidate, based on `e327876` with uncommitted
+  changes, was staged checksum-verified under Stefano on Silvano's Mac for
+  later small full file-backed UMAP/t-SNE CPU and Metal device checks. The
+  active mass41 diagnostic still owned the Mac when staged, so no new
+  scientific calculation or package install was started. Its source archive
+  SHA-256 is `2e5649ddd0b8f150d2aa8cdcdf832ee28cab70b40aaa6098f27b9cf14544171e`.
