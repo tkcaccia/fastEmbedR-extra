@@ -50,3 +50,13 @@ Their t-SNE cases are reserved for a separately bounded wave. Compute-node
 audit `1606342` depends on both Fashion and flow18 arrays; it will reject
 missing, failed or identity-mismatched results. All cases remain
 resident-only; no file-backed or SSD-streaming science is run on the HPC.
+
+The first Fashion audit job `1606326` preserved an expected overlap issue:
+it reported 82 audited COIL20/Fashion cases, six incomplete flow18 results
+created by concurrently running flow18 workers, and 374 missing cases.
+Its strict full-cohort count assertion failed. These six entries were
+flow18 Leiden cases with incomplete in-progress manifests; they are not
+Fashion scientific failures. A versioned targeted auditor checks the full
+462-case plan identity but inspects only the exact 82 submitted COIL20 and
+Fashion cases. Its source and scheduler script are
+`audit_fashion_slice_v2.py` and `fashion_wave_audit_v2.sbatch`.
