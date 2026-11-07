@@ -44,3 +44,9 @@ It checks the complete plan identity, exact per-core case roster and Slurm
 array indices, backend, source, input, output, memory, timings and scheduler
 outcome. These 42 are accepted development cases for package commit `535d071`;
 the remaining v2 datasets have not completed.
+
+The source-locked Fashion-MNIST resident wave was queued as six 1–32-core
+arrays 1606419–1606424, with seven methods per core, one running task per
+array and a one-hour per-case limit. Compute audit 1606449 depends on all six
+array terminal states. These 42 cases are pending audit and are not accepted
+manuscript results.
