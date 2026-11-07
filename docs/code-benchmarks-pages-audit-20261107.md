@@ -176,7 +176,12 @@ source-locked; never run file-backed or SSD-streaming science on UCT HPC.
   completed. The Mac worker also does not record a separate output-write
   duration or enforce the requested effective CPU count for t-SNE; the HPC
   worker and auditor record and check both. Do not silently relabel the
-  existing Mac results as matched.
+  existing Mac results as matched. A new, separately versioned Mac t-SNE
+  pilot worker is staged at
+  `benchmarks/macos/matched-tsne-535d071-20261107-v4/`; its admission tests
+  and R parse pass, but it has not run while the active mass41 case is live.
+  It fixes the scientific controls and records input/PCA precision, effective
+  workers, and write time for a future matched comparison.
 - The accepted four-entry API is still incomplete on package main:
   `pca()` explicitly sends non-default `landmarks` to the resident-only
   landmark route, and its usage page correctly warns that a file-backed

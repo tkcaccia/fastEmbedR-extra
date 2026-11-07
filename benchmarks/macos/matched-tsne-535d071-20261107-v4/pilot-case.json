@@ -1,0 +1,32 @@
+{
+  "backend": "cpu",
+  "case_id": "coil20_tsne_cpu1_d2_s17_r1_535d071_v4",
+  "cores": 1,
+  "dataset": "COIL20",
+  "dimensions": 2,
+  "dll_sha256": "363be9aca774e7bd543c16da746a55449ecc326f8014e3060699b84f71069be5",
+  "expected_columns": 16384,
+  "expected_rows": 1440,
+  "fit_controls": {
+    "auto_config": false,
+    "early_exaggeration_iter": 250,
+    "n_iter": 300,
+    "perplexity": 30
+  },
+  "fit_scope": "full",
+  "input_path": "/Users/silvanopiazza/Documents/Stefano/data/data/COIL20/COIL20_float32.RData",
+  "input_sha256": "8e53030869bcfbc228edc06ca970e69b78ddae13fb188327e8899194d5841d66",
+  "method": "t-SNE",
+  "output_dir": "/Users/silvanopiazza/Documents/Stefano/fastEmbedR-matched-tsne-v4-20261107/results/coil20_tsne_cpu1_d2_s17_r1_535d071_v4",
+  "pca_rank": 30,
+  "quality_sample": 600,
+  "repetition": 1,
+  "scientific_tests": 1,
+  "seed": 17,
+  "source_dir": "/Users/silvanopiazza/Documents/Stefano/fastEmbedR-release-535d071-20261107",
+  "source_sha256": "0a613695c03c47d23d6d3f29fbc65cc116f0bfdc952c0cd621ff4f9742297979",
+  "spill": false,
+  "storage_mode": "resident",
+  "timeout_seconds": 1800,
+  "warmup_fits": 0
+}
