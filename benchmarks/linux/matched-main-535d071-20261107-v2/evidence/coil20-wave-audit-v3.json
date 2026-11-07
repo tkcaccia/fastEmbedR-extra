@@ -1,0 +1,608 @@
+{
+  "benchmark_source": "matched-main-535d071-20261107-v2",
+  "package_commit": "535d071849945db3fa550d3c50f80633b91748cc",
+  "dataset": "COIL20",
+  "job_ids_by_core": {
+    "1": "1606375",
+    "2": "1606376",
+    "4": "1606377",
+    "8": "1606378",
+    "16": "1606379",
+    "32": "1606380"
+  },
+  "planned": 42,
+  "counts": {
+    "audited": 42
+  },
+  "cases": [
+    {
+      "case_id": "coil20_leiden_cpu1_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606385",
+      "cores": 1,
+      "array_index": 0,
+      "array_job_id": "1606375",
+      "numeric_job_id": "1606385",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_louvain_cpu1_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606391",
+      "cores": 1,
+      "array_index": 1,
+      "array_job_id": "1606375",
+      "numeric_job_id": "1606391",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_pca_cpu1_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606398",
+      "cores": 1,
+      "array_index": 2,
+      "array_job_id": "1606375",
+      "numeric_job_id": "1606398",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_tsne_cpu1_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606404",
+      "cores": 1,
+      "array_index": 3,
+      "array_job_id": "1606375",
+      "numeric_job_id": "1606404",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_tsne_cpu1_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606414",
+      "cores": 1,
+      "array_index": 4,
+      "array_job_id": "1606375",
+      "numeric_job_id": "1606414",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_umap_cpu1_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606416",
+      "cores": 1,
+      "array_index": 5,
+      "array_job_id": "1606375",
+      "numeric_job_id": "1606416",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_umap_cpu1_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606375",
+      "cores": 1,
+      "array_index": 6,
+      "array_job_id": "1606375",
+      "numeric_job_id": "1606375",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_leiden_cpu2_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606386",
+      "cores": 2,
+      "array_index": 0,
+      "array_job_id": "1606376",
+      "numeric_job_id": "1606386",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_louvain_cpu2_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606392",
+      "cores": 2,
+      "array_index": 1,
+      "array_job_id": "1606376",
+      "numeric_job_id": "1606392",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_pca_cpu2_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606397",
+      "cores": 2,
+      "array_index": 2,
+      "array_job_id": "1606376",
+      "numeric_job_id": "1606397",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_tsne_cpu2_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606403",
+      "cores": 2,
+      "array_index": 3,
+      "array_job_id": "1606376",
+      "numeric_job_id": "1606403",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_tsne_cpu2_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606410",
+      "cores": 2,
+      "array_index": 4,
+      "array_job_id": "1606376",
+      "numeric_job_id": "1606410",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_umap_cpu2_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606415",
+      "cores": 2,
+      "array_index": 5,
+      "array_job_id": "1606376",
+      "numeric_job_id": "1606415",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_umap_cpu2_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606376",
+      "cores": 2,
+      "array_index": 6,
+      "array_job_id": "1606376",
+      "numeric_job_id": "1606376",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_leiden_cpu4_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606384",
+      "cores": 4,
+      "array_index": 0,
+      "array_job_id": "1606377",
+      "numeric_job_id": "1606384",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_louvain_cpu4_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606390",
+      "cores": 4,
+      "array_index": 1,
+      "array_job_id": "1606377",
+      "numeric_job_id": "1606390",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_pca_cpu4_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606396",
+      "cores": 4,
+      "array_index": 2,
+      "array_job_id": "1606377",
+      "numeric_job_id": "1606396",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_tsne_cpu4_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606402",
+      "cores": 4,
+      "array_index": 3,
+      "array_job_id": "1606377",
+      "numeric_job_id": "1606402",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_tsne_cpu4_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606408",
+      "cores": 4,
+      "array_index": 4,
+      "array_job_id": "1606377",
+      "numeric_job_id": "1606408",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_umap_cpu4_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606413",
+      "cores": 4,
+      "array_index": 5,
+      "array_job_id": "1606377",
+      "numeric_job_id": "1606413",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_umap_cpu4_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606377",
+      "cores": 4,
+      "array_index": 6,
+      "array_job_id": "1606377",
+      "numeric_job_id": "1606377",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_leiden_cpu8_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606383",
+      "cores": 8,
+      "array_index": 0,
+      "array_job_id": "1606378",
+      "numeric_job_id": "1606383",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_louvain_cpu8_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606387",
+      "cores": 8,
+      "array_index": 1,
+      "array_job_id": "1606378",
+      "numeric_job_id": "1606387",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_pca_cpu8_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606393",
+      "cores": 8,
+      "array_index": 2,
+      "array_job_id": "1606378",
+      "numeric_job_id": "1606393",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_tsne_cpu8_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606399",
+      "cores": 8,
+      "array_index": 3,
+      "array_job_id": "1606378",
+      "numeric_job_id": "1606399",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_tsne_cpu8_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606405",
+      "cores": 8,
+      "array_index": 4,
+      "array_job_id": "1606378",
+      "numeric_job_id": "1606405",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_umap_cpu8_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606411",
+      "cores": 8,
+      "array_index": 5,
+      "array_job_id": "1606378",
+      "numeric_job_id": "1606411",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_umap_cpu8_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606378",
+      "cores": 8,
+      "array_index": 6,
+      "array_job_id": "1606378",
+      "numeric_job_id": "1606378",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_leiden_cpu16_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606382",
+      "cores": 16,
+      "array_index": 0,
+      "array_job_id": "1606379",
+      "numeric_job_id": "1606382",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_louvain_cpu16_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606388",
+      "cores": 16,
+      "array_index": 1,
+      "array_job_id": "1606379",
+      "numeric_job_id": "1606388",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_pca_cpu16_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606394",
+      "cores": 16,
+      "array_index": 2,
+      "array_job_id": "1606379",
+      "numeric_job_id": "1606394",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_tsne_cpu16_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606400",
+      "cores": 16,
+      "array_index": 3,
+      "array_job_id": "1606379",
+      "numeric_job_id": "1606400",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_tsne_cpu16_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606406",
+      "cores": 16,
+      "array_index": 4,
+      "array_job_id": "1606379",
+      "numeric_job_id": "1606406",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_umap_cpu16_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606409",
+      "cores": 16,
+      "array_index": 5,
+      "array_job_id": "1606379",
+      "numeric_job_id": "1606409",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_umap_cpu16_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606379",
+      "cores": 16,
+      "array_index": 6,
+      "array_job_id": "1606379",
+      "numeric_job_id": "1606379",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_leiden_cpu32_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606381",
+      "cores": 32,
+      "array_index": 0,
+      "array_job_id": "1606380",
+      "numeric_job_id": "1606381",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_louvain_cpu32_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606389",
+      "cores": 32,
+      "array_index": 1,
+      "array_job_id": "1606380",
+      "numeric_job_id": "1606389",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_pca_cpu32_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606395",
+      "cores": 32,
+      "array_index": 2,
+      "array_job_id": "1606380",
+      "numeric_job_id": "1606395",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_tsne_cpu32_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606401",
+      "cores": 32,
+      "array_index": 3,
+      "array_job_id": "1606380",
+      "numeric_job_id": "1606401",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_tsne_cpu32_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606407",
+      "cores": 32,
+      "array_index": 4,
+      "array_job_id": "1606380",
+      "numeric_job_id": "1606407",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_umap_cpu32_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606412",
+      "cores": 32,
+      "array_index": 5,
+      "array_job_id": "1606380",
+      "numeric_job_id": "1606412",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_umap_cpu32_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606380",
+      "cores": 32,
+      "array_index": 6,
+      "array_job_id": "1606380",
+      "numeric_job_id": "1606380",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    }
+  ],
+  "status": "passed"
+}

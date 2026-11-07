@@ -20,7 +20,7 @@ the limit and its explicit metadata. Non-PCA routes still require the requested
 number of effective workers. The two v1 failures and their logs remain evidence.
 
 CPU-only source checks: `python3 -m unittest discover -s . -p 'test_*.py' -q`
-(20 tests passed on 2026-11-07), `Rscript -e 'parse("matched_worker_scaling.R")'`,
+(21 tests passed on 2026-11-07), `Rscript -e 'parse("matched_worker_scaling.R")'`,
 and `bash -n` for the staging and audit scripts.
 
 The two resident flow18 PCA pilot tasks 1606370_16 and 1606371_16 completed
@@ -33,7 +33,14 @@ v2 cohort or a 16/32-worker native PCA speedup.
 
 The seven COIL20 resident methods were queued as separate 1/2/4/8/16/32-core
 arrays 1606375–1606380 with ten-minute per-case limits and 4 GiB allocations.
-Compute audit 1606417 depends on all six array terminal states. It checks the
-complete plan identity, exact per-core case roster and Slurm array indices,
-backend, source, input, output, memory, timings and scheduler outcome. No COIL20
-v2 result is accepted until that audit passes.
+All 42 tasks completed. First compute audit 1606417 rejected 36 because Slurm
+assigned each array task a distinct numeric `SLURM_JOB_ID`; its failed report
+is preserved at [evidence/coil20-wave-audit-v2-failed.json](evidence/coil20-wave-audit-v2-failed.json).
+Versioned auditor v3 checks `JobIDRaw` for each exact array index. It reran
+read-only on compute job 1606418, with **42/42 audited** and no repeated
+scientific calculations. Its report is
+[evidence/coil20-wave-audit-v3.json](evidence/coil20-wave-audit-v3.json).
+It checks the complete plan identity, exact per-core case roster and Slurm
+array indices, backend, source, input, output, memory, timings and scheduler
+outcome. These 42 are accepted development cases for package commit `535d071`;
+the remaining v2 datasets have not completed.
