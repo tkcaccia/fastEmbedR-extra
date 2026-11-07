@@ -262,6 +262,12 @@ source-locked; never run file-backed or SSD-streaming science on UCT HPC.
   most one task at a time, four-hour limit. This uses the unchanged v3 worker
   and 535d071 image; it is a benchmark pilot, not a corrected control-contract
   cohort. Audit both terminal outcomes before expanding to other core counts.
+- The v3 matched CPU plan uses one seed (`4`), one repetition, and no warm-up
+  fits per case. Its embedding quality worker evaluates bounded samples of at
+  most 600 rows. These fields are recorded and useful for development and
+  memory scaling, but they do not provide repeated timing uncertainty or a
+  full-dataset quality estimate. Record sample indices and repeat seeds in a
+  new source-locked publication cohort before drawing comparative claims.
 - In [R CMD check run 42376832178](https://github.com/tkcaccia/fastEmbedR/actions/runs/42376832178),
   both hosted macOS standalone runtime probes built the extracted
   `signed_hash_project` pipeline under default, explicit-default, Metal 3.1,
