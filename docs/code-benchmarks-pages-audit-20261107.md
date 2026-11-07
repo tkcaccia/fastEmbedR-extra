@@ -140,3 +140,17 @@ source-locked; never run file-backed or SSD-streaming science on UCT HPC.
   fit. That matches current main, but does not meet the accepted one-call API.
   The accepted API candidate remains isolated and requires device/recovery
   qualification before Pages can truthfully present it.
+- An expanded read-only Pages crawl checked 78 pages and assets, following
+  2,003 internal links, with no HTTP failures. This verifies reachable links,
+  not that every example or scientific statement is correct.
+- One-L40S resident pilot 1607281 failed before calculation. Its copied
+  two-GPU launcher check required two distinct device IDs despite asking for
+  exactly one GPU. The 28-second Slurm failure, empty result directory, small
+  source-locked scripts, and logs are preserved under
+  `benchmarks/linux/resident-gpu-535d071-20261107-failed-pilot`. A corrected
+  versioned runner and six allocation tests are staged separately. Neither
+  pilot provides a CUDA result or qualifies shutdown after a GPU child.
+  Related two-L40S pilot 1607250 was still queued when checked. An attempted
+  hold was rejected by automatic approval review because changing an active
+  scheduler job conflicts with the project instruction to leave such jobs
+  untouched. No hold, replacement submission, or in-place script edit occurred.

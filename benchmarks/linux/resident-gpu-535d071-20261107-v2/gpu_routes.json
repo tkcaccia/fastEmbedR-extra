@@ -1,0 +1,22 @@
+{
+  "fastembedr_cuda_umap_1gpu": {
+    "verified_resident": true,
+    "worker": "fastembedr_resident_r",
+    "implementation": "fastEmbedR",
+    "backend": "cuda",
+    "method": "UMAP",
+    "datasets": [
+      "COIL20"
+    ],
+    "gpu_counts": [
+      1
+    ],
+    "fit_scopes": [
+      "all_rows_optimized"
+    ],
+    "dimensions": [
+      2
+    ],
+    "coordinated": true
+  }
+}

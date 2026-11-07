@@ -1,0 +1,2 @@
+{"event": "image_verified", "image": "/scratch/firenze/NN/singularity/release_535d071_20261107/fastembedr_535d071_20261107.sif", "sha256": "15b494004966c5e8ae4ada72db28024356cfa8a981333a37484ce75a09d08bf2", "utc": "2026-11-07T12:40:24Z"}
+{"event": "pilot_fail", "reason": "RuntimeError('Cannot prove the one visible GPU are allocated')", "utc": "2026-11-07T12:40:24Z"}
