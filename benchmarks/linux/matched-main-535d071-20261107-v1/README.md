@@ -60,3 +60,7 @@ Fashion scientific failures. A versioned targeted auditor checks the full
 462-case plan identity but inspects only the exact 82 submitted COIL20 and
 Fashion cases. Its source and scheduler script are
 `audit_fashion_slice_v2.py` and `fashion_wave_audit_v2.sbatch`.
+Versioned job `1606354` completed `0:0` on an Ada compute node and accepted
+all 82 selected cases with no missing or failed result. Its full case-level
+report is `fashion-wave-v2.json` in the audit directory. This audit does
+not certify the concurrently running flow18 cases.
