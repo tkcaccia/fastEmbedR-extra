@@ -1,0 +1,75 @@
+# Code, benchmark, and GitHub Pages audit — 2026-11-07
+
+## Scope and source identity
+
+- Package baseline: `tkcaccia/fastEmbedR` main `535d071849945db3fa550d3c50f80633b91748cc`.
+- Benchmark baseline: `tkcaccia/fastEmbedR-extra` main `57534e136cd8422c6ee9fde2ba6f6cfcbd70b1e9`.
+- Narrow corrections: package `9b50054` and companion `6b2fb22` on main.
+- The active source-locked benchmark jobs were not changed or restarted.
+
+This is a targeted review of the public API, current resident benchmark
+workers, HPC launch guards, CI results, and live Pages. It is not a formal
+verification of every native kernel.
+
+## Findings, in priority order
+
+1. **macOS hardware CI is red.** The baseline R CMD check passed on Ubuntu
+   release and devel but failed on macOS arm64 with 22 Metal tests reporting
+   `failed to build Metal pipeline: Compilation failed`. The log does not show
+   the compiler's underlying diagnostic. Capture that diagnostic and fix or
+   qualify the shader on the runner before claiming cross-platform release
+   validation. Do not suppress the device tests to make CI green.
+2. **The accepted one-call file-backed API is not on main.** Current full
+   file-backed `umap()` and `tsne()` require a prepared graph. The public
+   `graph_cluster()` signature still accepts landmark and graph controls in
+   `...`. A uniform fit summary with backend/devices, scope, stage timings,
+   memory and bounded output reads is incomplete. The four-entry candidate
+   exists in an isolated checkout and needs device and regression qualification
+   before integration. Pages accurately reflects current main, so it should
+   change together with the implementation.
+3. **An archived HPC worker accepted direct submission.** Its parent
+   `submit.sh` rejected the old mixed resident/file-backed campaign, but
+   `massive-data/real-data/case.sbatch` could be submitted independently and
+   run a legacy CUDA route without the qualified lifecycle wrapper. Commit
+   `6b2fb22` rejects it at entry; a test now verifies exit 78 before any
+   scheduler call. No HPC file-backed or streaming science was run in this
+   audit.
+4. **Baseline Windows CI was red for three POSIX-only file-backed tests.**
+   The relevant implementation uses POSIX memory mapping. Commit `9b50054`
+   adds Windows skips to the three tests that reached those routines. This
+   does not qualify file-backed execution on Windows. Recheck CI after the
+   commit.
+5. **Pages had three broken provenance links.** The rendered README linked
+   `inst/NOTICE`, `inst/COPYRIGHTS`, and
+   `inst/THIRD_PARTY_DEPENDENCIES.json` relative to the site root, returning
+   404. Commit `9b50054` points to the corresponding GitHub source files.
+6. **Benchmark result interpretation needs an explicit timing contract.**
+   The current matched CPU worker preserves float32 input and records loading,
+   preprocessing, graph construction, fitting, quality, and writing as
+   separate stages. `fit_seconds` alone excludes preprocessing and graph
+   construction. Publication comparisons must state which stages are included
+   and show matched end-to-end timing alongside fit time. Conversion to double
+   in the shared validation script is used for competitors or quality samples;
+   the fastEmbedR fit path requires float32.
+7. **The benchmark repository has no automatic validation workflow for its
+   policy or timing tests.** It currently has only the BigANN downloader
+   workflow. Add a lightweight CI gate for launcher rejection, float32 timing,
+   and matched worker contract tests before relying on future edits.
+
+## Checks performed
+
+- Package `Rscript tools/check_source_style.R`: passed.
+- Package and companion `git diff --check`: passed before commits.
+- Companion `benchmarks.linux.unified.test_gpu_pause` and
+  `benchmarks.shared.test_fastembedr_timing_precision`: 6 tests passed.
+- Matched CPU worker Python test discovery: 21 tests passed.
+- Live Pages home and reference index were inspected; Pages build succeeded
+  on the baseline even though the R CMD check failed.
+
+## Release gates
+
+Resolve macOS Metal CI, qualify and merge the four-entry API candidate,
+rerun the policy/timing tests on the final benchmark revision, and regenerate
+Pages from the same source commit before treating the manuscript tables as
+release evidence. Keep Mac CPU/Metal and HPC resident CPU/CUDA cohorts
+source-locked; never run file-backed or SSD-streaming science on UCT HPC.
