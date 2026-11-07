@@ -1,0 +1,8 @@
+{
+  "actual_sha256": "50e7154b6f34018200cc0f0afedb69a408eaa229dc57252c300feeecfdfbcbb0",
+  "expected_sha256": "50e7154b6f34018200cc0f0afedb69a408eaa229dc57252c300feeecfdfbcbb0",
+  "path": "/scratch/firenze/NN/Data/FlowRepository_FR-FCM-ZYRM_files/van_unen_FR-FCM-ZYRM_float32.RData",
+  "size_bytes": 399331943,
+  "status": "verified",
+  "verification_seconds": 1.4183094780892134
+}

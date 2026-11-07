@@ -1,0 +1,83 @@
+{
+  "scope": "small JSON manifests plus remote output stat; RDS content not independently read",
+  "source_sha256": {
+    "routes": "34f004afc00186621a8923e4111bde601ddcee311b3e1b8e63b4144c534d2ed1",
+    "worker": "6b8f33ebd001454bdcfd3a3d39a80f8744679e3b546b0c881a3e8f3b13937428"
+  },
+  "scheduler": {
+    "1607318_27": {
+      "job_id_raw": "1607319",
+      "state": "COMPLETED",
+      "exit": "0:0"
+    },
+    "1607318_34": {
+      "job_id_raw": "1607318",
+      "state": "COMPLETED",
+      "exit": "0:0"
+    },
+    "1607344_24": {
+      "job_id_raw": "1607345",
+      "state": "COMPLETED",
+      "exit": "0:0"
+    },
+    "1607344_31": {
+      "job_id_raw": "1607344",
+      "state": "COMPLETED",
+      "exit": "0:0"
+    }
+  },
+  "cases": [
+    {
+      "case_id": "flowrepository_umap_cpu8_d3_s4_matched_535d071",
+      "job_id": "1607319",
+      "status": "manifest_pass",
+      "issues": [],
+      "fit_seconds": 1022.84,
+      "peak_ram_bytes": 22686195712,
+      "quality": {
+        "trustworthiness": 0.965,
+        "label_accuracy": 0.4433
+      },
+      "output_bytes_stat_only": 52262316
+    },
+    {
+      "case_id": "imagenet_umap_cpu8_d3_s4_matched_535d071",
+      "job_id": "1607318",
+      "status": "manifest_pass",
+      "issues": [],
+      "fit_seconds": 239.76,
+      "peak_ram_bytes": 15944503296,
+      "quality": {
+        "trustworthiness": 0.7151,
+        "label_accuracy": 0.03
+      },
+      "output_bytes_stat_only": 10653388
+    },
+    {
+      "case_id": "flowrepository_tsne_cpu8_d2_s4_matched_535d071",
+      "job_id": "1607345",
+      "status": "manifest_pass",
+      "issues": [],
+      "fit_seconds": 1099.319,
+      "peak_ram_bytes": 10425139200,
+      "quality": {
+        "trustworthiness": 0.9493,
+        "label_accuracy": 0.47
+      },
+      "output_bytes_stat_only": 37009756
+    },
+    {
+      "case_id": "imagenet_tsne_cpu8_d2_s4_matched_535d071",
+      "job_id": "1607344",
+      "status": "manifest_pass",
+      "issues": [],
+      "fit_seconds": 124.453,
+      "peak_ram_bytes": 18974068736,
+      "quality": {
+        "trustworthiness": 0.7593,
+        "label_accuracy": 0.0483
+      },
+      "output_bytes_stat_only": 7537260
+    }
+  ]
+}

@@ -196,3 +196,12 @@ source-locked; never run file-backed or SSD-streaming science on UCT HPC.
   `massive_read_rows()` visible as storage helpers. The remaining low-level
   exports should stay available for compatibility but should not be used in
   introductory examples once the one-call workflows are qualified.
+- Four newly completed CPU8 resident cases (FlowRepository and ImageNet,
+  2D t-SNE and 3D UMAP) passed an independent **small-manifest** audit. The
+  package, input, case, route, and worker identities, actual CPU backend and
+  eight effective cores, float32 precision, stage timings, quality ranges,
+  cgroup peak RAM, and Slurm raw array-task IDs agree. Source-locked evidence
+  is in `benchmarks/linux/matched-main-535d071-20261107-v3/evidence/`
+  `fourcase-cpu8-20261107/`. The four RDS contents were not independently
+  inspected; these results are not yet a complete publication cohort. No
+  dataset or container checksum was computed on the HPC login node.

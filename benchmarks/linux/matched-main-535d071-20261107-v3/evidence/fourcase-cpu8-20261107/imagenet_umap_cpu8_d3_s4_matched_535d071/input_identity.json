@@ -1,0 +1,8 @@
+{
+  "actual_sha256": "b85fa6bdf7414216cf3f8f03c7d6862f881f1d8f61f61c85e2b6074f9bd5e2eb",
+  "expected_sha256": "b85fa6bdf7414216cf3f8f03c7d6862f881f1d8f61f61c85e2b6074f9bd5e2eb",
+  "path": "/scratch/firenze/NN/Data/imagenet/imagenet_float32.RData",
+  "size_bytes": 4854330094,
+  "status": "verified",
+  "verification_seconds": 6.894912095041946
+}

@@ -1,0 +1,21 @@
+{
+  "after": {
+    "current_bytes": 5267107840,
+    "job_id": "1607344",
+    "limit_bytes": null,
+    "path": "/sys/fs/cgroup/system.slice/slurmstepd.scope/job_1607344/step_batch/user/task_0",
+    "peak_bytes": 18974068736,
+    "requested_bytes": 68719476736
+  },
+  "before": {
+    "current_bytes": 4918382592,
+    "job_id": "1607344",
+    "limit_bytes": null,
+    "path": "/sys/fs/cgroup/system.slice/slurmstepd.scope/job_1607344/step_batch/user/task_0",
+    "peak_bytes": 4935204864,
+    "requested_bytes": 68719476736
+  },
+  "child_process_peak_bytes": 13951631360,
+  "peak_ram_bytes": 18974068736,
+  "scope": "slurm_job_cgroup"
+}

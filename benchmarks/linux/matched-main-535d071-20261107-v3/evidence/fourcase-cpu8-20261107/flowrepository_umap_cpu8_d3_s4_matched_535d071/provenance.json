@@ -1,0 +1,11 @@
+{
+  "case_sha256": "4687f460bebeff7b59737279545b147e84b374ef0ab2e277acbdda40e2c843b8",
+  "deep1b_loader_sha256": null,
+  "exit_code": 0,
+  "package_commit": "535d071849945db3fa550d3c50f80633b91748cc",
+  "routes_sha256": "34f004afc00186621a8923e4111bde601ddcee311b3e1b8e63b4144c534d2ed1",
+  "slurm_array_task_id": "27",
+  "slurm_job_id": "1607319",
+  "status": "completed",
+  "worker_sha256": "6b8f33ebd001454bdcfd3a3d39a80f8744679e3b546b0c881a3e8f3b13937428"
+}
