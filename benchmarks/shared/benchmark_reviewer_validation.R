@@ -1387,6 +1387,10 @@ run_method <- function(method, dataset_data) {
   x_fast <- if (!startsWith(method, "fastEmbedR") || is.null(dataset_data$float)) NULL else {
     as_float32_matrix(dataset_data$float$data)
   }
+  if (startsWith(method, "fastEmbedR") &&
+      !inherits(x_fast, "float32")) {
+    stop("fastEmbedR timing requires float32 input.", call. = FALSE)
+  }
   x_standard <- if (!method_uses_standard(method) || is.null(dataset_data$standard)) NULL else {
     as_double_matrix(dataset_data$standard$data)
   }

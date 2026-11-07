@@ -45,3 +45,24 @@ per-device work. Failed runs retain diagnostic files under
 `fastEmbedR-results/candidate-smoke`. A pending four-GPU smoke is a
 resource gate, not a successful validation. Never overwrite the stable
 image while jobs still use it.
+
+## UCT HPC image naming and storage
+
+Benchmark-worker changes that do not change the installed R package or its
+dependencies do **not** require rebuilding the SIF. The float32 timing-worker
+correction in the 2026-11-07 matched CPU cohort uses the existing package
+commit `535d071` image. Keep that image unchanged while its CPU arrays or
+L40S pilot are queued or running.
+
+For the next package release, use the existing stable HPC filename
+`/scratch/firenze/NN/singularity/fastembedr_cuda.sif`. Build to a temporary
+file **inside a compute allocation**, verify package and dependency identities
+there, then replace the stable file atomically only after every queued,
+running and held job that could read the previous bytes has ended. Never
+overwrite a SIF under an active job. Record the package commit, image SHA256,
+and benchmark-script hash in each cohort manifest. Check a large image digest
+on a compute node, never the head node. A job must refuse to start if its
+expected package or image identity differs. Keep old images only while a live
+job needs them or their retention is explicitly required; audit references
+before any cleanup. This uses one stable **deployed** filename while retaining
+source identity and fail-closed reproducibility.

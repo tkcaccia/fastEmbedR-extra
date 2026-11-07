@@ -201,6 +201,9 @@ resident_result_rows <- function(fit, method) {
 
 load_started <- proc.time()[[3L]]
 input <- resident_data(data_root, case$dataset, case)
+if (!inherits(input, "float32")) stop(
+    "Resident fastEmbedR timing requires float32 input; refusing conversion.",
+    call. = FALSE)
 if (case$fit_scope == "landmark_fit_plus_projection") {
     selected <- ceiling(nrow(input) * case$landmark_fraction)
     minimum <- switch(case$method,
@@ -312,6 +315,7 @@ summary <- list(
         fit$parameters$landmark_refinement_backend else NULL,
     n_rows = nrow(input),
     n_columns = ncol(input),
+    input_precision = "float32",
     input_object_bytes = as.numeric(object.size(input)),
     load_elapsed_sec = load_elapsed,
     elapsed_sec = elapsed,
