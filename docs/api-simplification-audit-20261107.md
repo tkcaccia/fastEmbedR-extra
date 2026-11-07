@@ -1,9 +1,10 @@
 # Public API simplification audit (7 November 2026)
 
 This audit compares package `main` at `535d071` with isolated candidate
-`0d2f2de`. The candidate is not a release: its installed API and resident KNN
-check passed HPC compute job `1607043`, but its file-backed KNN route still
-awaits an actual Mac test. No file-backed scientific test was run on UCT HPC.
+`e327876`. The candidate is not a release: its installed API and resident KNN
+check passed HPC compute job `1607055`, and pure R storage dispatch checks
+passed locally, but its file-backed KNN and clustering preflight still await
+an actual Mac package test. No file-backed scientific test was run on UCT HPC.
 
 ## Findings
 
@@ -11,7 +12,7 @@ awaits an actual Mac test. No file-backed scientific test was run on UCT HPC.
 | --- | --- | --- |
 | Too many visible entry points | `NAMESPACE` exports 31 functions, including 15 `massive_*` functions; pkgdown hides most of the latter, but `package::` still exposes them. | Keep `pca()`, `tsne()`, `umap()`, and one clustering function as the main analyses. Keep one input descriptor, one KNN preparation function, one bounded result reader, and model projection where necessary. Retain advanced exports temporarily with clear compatibility documentation; deprecate only after callers and saved results are audited. |
 | Long flat argument lists | Candidate `pca()` has 18 formals, `tsne()` 43, `umap()` 32, and `graph_cluster()` 17. | Keep common scientific controls explicit. Group less common optimizer, checkpoint, and graph preparation settings into typed, validated control objects. Print resolved defaults in results so benchmarks remain reproducible. |
-| Storage controls overlap | The same calls expose `storage`, `massive`, and sometimes `layout_storage` or `gpu_storage`; some values describe input location, others algorithm or optimizer state. | Define one shared `storage = "auto"/"resident"/"file_backed"` contract and a separate, documented fit-scope choice (`full` versus landmarks). Translate legacy `massive` internally and reject conflicting settings before work begins. Preserve generic `options(storage = ..., memory_limit = ...)` as session defaults with explicit arguments taking precedence. |
+| Storage controls overlap | The same calls expose `storage`, `massive`, and sometimes `layout_storage` or `gpu_storage`; some values describe input location, others algorithm or optimizer state. Candidate `e327876` adds early conflict checks and prevents explicitly file-backed clustering from choosing an in-memory auto route. | Define one shared `storage = "auto"/"resident"/"file_backed"` contract and a separate, documented fit-scope choice (`full` versus landmarks). Translate legacy `massive` internally and reject conflicting settings before work begins. Preserve generic `options(storage = ..., memory_limit = ...)` as session defaults with explicit arguments taking precedence. |
 | File-backed full embeddings require manual graph stages | `docs/usage-api.md` says full file-backed UMAP/t-SNE need a prepared fuzzy/affinity graph and initialization; `vignettes/massive-data.Rmd` calls `massive_umap_fuzzy_graph()` and `massive_tsne_affinities()`. | Make `umap(file_matrix, output = ...)` and `tsne(file_matrix, output = ...)` plan and run KNN, weights, initialization, and optimization in one validated call. Continue to accept prepared graphs for reuse and scientific control. Return stage timings and intermediate descriptors in the result. |
 | File-backed landmark PCA is not one call | `docs/usage-api.md` explicitly says `pca()` cannot use `landmarks` with a file-backed source. | Support `pca(file_matrix, landmarks = ..., output = ...)` with all-row scores and a recorded reference fit, or clearly mark it unsupported in the capability table until implemented. |
 | Clustering input name misleads | `graph_cluster(graph, ...)` accepts a raw matrix and file-backed matrix as well as a prepared graph; the resident landmark route is passed through `...`. | Keep one clustering entry point but make the input name and documentation cover data or graph. Give `landmarks`, `k`, and `vote_k` explicit validated controls instead of relying on `...`; preserve named `graph=` calls through a compatibility wrapper if renamed. |
