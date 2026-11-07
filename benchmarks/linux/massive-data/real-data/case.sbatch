@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+echo "policy_rejected: archived direct worker lacks resident GPU lifecycle qualification." >&2
+exit 78
 export OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1
 suite=${REAL_SUITE:?}

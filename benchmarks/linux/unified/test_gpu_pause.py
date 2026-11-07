@@ -56,6 +56,7 @@ ARCHIVED_ENTRYPOINTS = (
     "jss-review-validation/slurm/run_complete_campaign_controller_cpu1.sh",
     "jss-review-validation/file_backed/run_cases.sh",
     "massive-data/deep1b/submit_matrix.sh",
+    "massive-data/real-data/case.sbatch",
 )
 
 
