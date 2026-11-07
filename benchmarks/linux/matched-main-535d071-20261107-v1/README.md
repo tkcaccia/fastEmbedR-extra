@@ -43,5 +43,10 @@ accepted all 42 COIL20 cases and the four Fashion PCA cases: 46 accepted,
 The remaining Fashion-MNIST method/dimension cases were submitted as six
 one-hour, six-task arrays `1606292`–`1606297` for 1, 2, 4, 8, 16 and 32
 cores. They are not accepted until terminal results pass a new independent
-compute-node audit. All cases remain resident-only; no file-backed or
-SSD-streaming science is run on the HPC.
+compute-node audit `1606326`, which depends on all six arrays. The next
+resident flow18 PCA, UMAP, Leiden and Louvain cases were submitted as
+five-task, two-hour arrays `1606328`–`1606333` at the same six CPU counts.
+Their t-SNE cases are reserved for a separately bounded wave. Compute-node
+audit `1606342` depends on both Fashion and flow18 arrays; it will reject
+missing, failed or identity-mismatched results. All cases remain
+resident-only; no file-backed or SSD-streaming science is run on the HPC.
