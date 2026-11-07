@@ -20,7 +20,7 @@ the limit and its explicit metadata. Non-PCA routes still require the requested
 number of effective workers. The two v1 failures and their logs remain evidence.
 
 CPU-only source checks: `python3 -m unittest discover -s . -p 'test_*.py' -q`
-(19 tests passed on 2026-11-07), `Rscript -e 'parse("matched_worker_scaling.R")'`,
+(20 tests passed on 2026-11-07), `Rscript -e 'parse("matched_worker_scaling.R")'`,
 and `bash -n` for the staging and audit scripts.
 
 The two resident flow18 PCA pilot tasks 1606370_16 and 1606371_16 completed
@@ -30,3 +30,10 @@ Both report 11 native workers; the observed BLAS settings were 16 and 32.
 Fit stages took 0.335 and 0.344 seconds, with job-cgroup peak RAM of 1.17
 and 1.21 GB. This qualifies only these two v2 pilots, not the full 462-case
 v2 cohort or a 16/32-worker native PCA speedup.
+
+The seven COIL20 resident methods were queued as separate 1/2/4/8/16/32-core
+arrays 1606375–1606380 with ten-minute per-case limits and 4 GiB allocations.
+Compute audit 1606417 depends on all six array terminal states. It checks the
+complete plan identity, exact per-core case roster and Slurm array indices,
+backend, source, input, output, memory, timings and scheduler outcome. No COIL20
+v2 result is accepted until that audit passes.
