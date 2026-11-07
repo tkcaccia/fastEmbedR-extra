@@ -177,3 +177,17 @@ source-locked; never run file-backed or SSD-streaming science on UCT HPC.
   duration or enforce the requested effective CPU count for t-SNE; the HPC
   worker and auditor record and check both. Do not silently relabel the
   existing Mac results as matched.
+- The accepted four-entry API is still incomplete on package main:
+  `pca()` explicitly sends non-default `landmarks` to the resident-only
+  landmark route, and its usage page correctly warns that a file-backed
+  landmark PCA fit is not available in one call. Full file-backed `umap()`
+  and `tsne()` still require prepared graphs and initial coordinates, while
+  `graph_cluster()` keeps landmark controls in `...`. These are capability
+  gaps, not just missing Pages examples. The isolated API candidate must be
+  device- and recovery-tested before main and Pages can claim those routes.
+- `NAMESPACE` currently exports 31 functions, including 15 with the
+  `massive_` prefix. The Pages reference index gives the four agreed analysis
+  entry points the primary position and keeps `massive_matrix()` and
+  `massive_read_rows()` visible as storage helpers. The remaining low-level
+  exports should stay available for compatibility but should not be used in
+  introductory examples once the one-call workflows are qualified.
