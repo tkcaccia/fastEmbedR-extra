@@ -231,3 +231,33 @@ source-locked; never run file-backed or SSD-streaming science on UCT HPC.
   failures unrecoverable. Recovery needs a source/input-identified stage
   manifest and a restartable bucketed sort or an explicitly costed global
   sort option, then an actual interruption/resume equivalence test on Mac.
+
+## Control and publication follow-up on 2026-11-07
+
+- The v3 HPC matched CPU worker fixes t-SNE to perplexity 30, 250 early
+  exaggeration iterations, 300 fit iterations, and `auto_config = FALSE`;
+  UMAP uses 30 neighbors and clustering constructs a 30-neighbor graph.
+  The independent `audit_manifest_controls.py` checked all 77 v3 case
+  manifests. All 22 t-SNE cases omit `auto_config`, one COIL20 2D t-SNE case
+  also omits its three numeric controls, all 22 UMAP cases omit `n_neighbors`,
+  and all 22 clustering cases omit `graph_k`. The worker's fixed values mean
+  these omissions do **not** show a different executed fit, but the case
+  manifest alone does not fully specify its scientific calculation. Current
+  v3 policy even disallows `auto_config` and `graph_k` as fields. Keep v3
+  results as diagnostic evidence. In the next versioned worker and policy,
+  require explicit controls and pass the checked values into the fit; verify
+  manifest, worker, and output metadata together before publication. Do not
+  mutate the active v3 HPC source tree or relabel it as corrected.
+- The live [UMAP reference page](https://tkcaccia.github.io/fastEmbedR/reference/umap.html)
+  returned HTTP 200 during this review. It still says full file-backed UMAP
+  requires a prepared symmetric graph and file-backed initialization. That
+  matches released package main but does not satisfy the accepted one-call
+  API. Regenerate Pages only after that route and its recovery behavior pass
+  device tests. The attempted browser reader could not reach GitHub Pages;
+  the page was verified by a direct read of its published HTML.
+- Two missing Flow18 resident CPU4 t-SNE cases (2D and 3D) were independently
+  checked for input SHA, exact shape, all-row scope, no spill, and no existing
+  results. They were submitted together as HPC Slurm array **1607452**, at
+  most one task at a time, four-hour limit. This uses the unchanged v3 worker
+  and 535d071 image; it is a benchmark pilot, not a corrected control-contract
+  cohort. Audit both terminal outcomes before expanding to other core counts.
