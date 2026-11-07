@@ -1,0 +1,5 @@
+R_PACKAGES fastEmbedR=TRUE float=TRUE Rtsne=TRUE uwot=TRUE umap=TRUE irlba=TRUE
+FITSNE_WRAPPER TRUE
+FITSNE_BINARY TRUE
+PY_PACKAGES numpy=True scipy=True sklearn=True openTSNE=True umap=True cuml=True cupy=True
+resident_comparator_dependency_probe_pass job=1606763 host=srvrochpc100.uct.ac.za
