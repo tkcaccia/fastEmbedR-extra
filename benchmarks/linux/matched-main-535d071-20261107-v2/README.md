@@ -20,7 +20,7 @@ the limit and its explicit metadata. Non-PCA routes still require the requested
 number of effective workers. The two v1 failures and their logs remain evidence.
 
 CPU-only source checks: `python3 -m unittest discover -s . -p 'test_*.py' -q`
-(21 tests passed on 2026-11-07), `Rscript -e 'parse("matched_worker_scaling.R")'`,
+(22 tests passed on 2026-11-07), `Rscript -e 'parse("matched_worker_scaling.R")'`,
 and `bash -n` for the staging and audit scripts.
 
 The two resident flow18 PCA pilot tasks 1606370_16 and 1606371_16 completed
@@ -48,8 +48,8 @@ the remaining v2 datasets have not completed.
 The source-locked Fashion-MNIST resident wave was queued as six 1–32-core
 arrays 1606419–1606424, with seven methods per core, one running task per
 array and a one-hour per-case limit. Compute audit 1606449 depends on all six
-array terminal states. These 42 cases are pending audit and are not accepted
-manuscript results.
+array terminal states. All 42 passed; see
+[evidence/fashion-wave-audit-v3.json](evidence/fashion-wave-audit-v3.json).
 
 The MetRef resident wave used arrays 1606460–1606465 and compute audit
 1606502. All 42 cases passed the source, scheduler and result checks; see
@@ -59,3 +59,7 @@ audit 1606543. All 42 USPS cases passed; see
 [evidence/usps-wave-audit-v3.json](evidence/usps-wave-audit-v3.json).
 The next MNIST resident wave is queued as arrays 1606549–1606554 with
 compute audit 1606579. Its 42 cases remain pending audit.
+
+The larger mass41 dataset is undergoing a seven-method CPU4 pilot, array
+1606597, before the other core counts are submitted. Compute audit 1606599
+depends on that array. No mass41 v2 case is accepted yet.
