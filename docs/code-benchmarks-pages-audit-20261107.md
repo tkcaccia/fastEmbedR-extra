@@ -252,12 +252,24 @@ source-locked; never run file-backed or SSD-streaming science on UCT HPC.
   returned HTTP 200 during this review. It still says full file-backed UMAP
   requires a prepared symmetric graph and file-backed initialization. That
   matches released package main but does not satisfy the accepted one-call
-  API. Regenerate Pages only after that route and its recovery behavior pass
-  device tests. The attempted browser reader could not reach GitHub Pages;
-  the page was verified by a direct read of its published HTML.
+  API. The live PCA, t-SNE, and clustering reference pages also returned
+  HTTP 200; t-SNE still documents a prepared graph and initialization, and
+  clustering keeps landmark controls under `...`. Regenerate Pages only
+  after the accepted routes and recovery behavior pass device tests.
 - Two missing Flow18 resident CPU4 t-SNE cases (2D and 3D) were independently
   checked for input SHA, exact shape, all-row scope, no spill, and no existing
   results. They were submitted together as HPC Slurm array **1607452**, at
   most one task at a time, four-hour limit. This uses the unchanged v3 worker
   and 535d071 image; it is a benchmark pilot, not a corrected control-contract
   cohort. Audit both terminal outcomes before expanding to other core counts.
+- In [R CMD check run 42376832178](https://github.com/tkcaccia/fastEmbedR/actions/runs/42376832178),
+  both hosted macOS standalone runtime probes built the extracted
+  `signed_hash_project` pipeline under default, explicit-default, Metal 3.1,
+  fast-math, and combined options. The subsequent installed package check
+  still failed 22 Metal tests on each runner at pipeline creation. Windows
+  and both Ubuntu checks passed. Therefore the compile options alone do not
+  explain this failure. Package commit `c7cbbfa` adds a bounded macOS CI
+  probe to install the canonical package and call its native Metal KNN
+  outside `R CMD check`, separating a package runtime issue from a check-
+  environment issue. [Run 42378139026](https://github.com/tkcaccia/fastEmbedR/actions/runs/42378139026)
+  is in progress; its result is not yet qualified.
