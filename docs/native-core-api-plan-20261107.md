@@ -11,7 +11,23 @@ use the same algorithms without loading R or copying the implementations.
 This is an architectural requirement, not an assertion that today's package
 already provides a stable native API.
 
+## First isolated implementation slice
+
+An unpublished candidate at `/tmp/fer-native-core-20261107` extracts CPU
+exact KNN into a standalone C++ source with a versioned C ABI. The existing
+R exact-KNN adapter calls that source; an installed header and R C-callable
+interface allow a separately compiled R package to call the same operation.
+Standalone C++ and Python `ctypes` calls passed without R linked. R 4.6
+package and downstream fixture builds passed on a UCT compute node. A
+versioned diagnostic job `1607192` confirmed identical direct and external
+R-package outputs and zero numerical distance difference from the public
+float32 KNN result. This qualifies only the first exact-CPU-KNN slice; it
+does not qualify the other algorithms, file-backed routes, or GPUs.
+
 ## Current state and gap
+
+The observations below describe package `main` at `535d071`; the isolated
+candidate above has not been merged into that branch.
 
 - The package registers generated Rcpp `.Call` entries in
   `src/RcppExports.cpp` and disables dynamic symbol lookup. It does not
