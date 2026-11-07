@@ -50,3 +50,10 @@ arrays 1606419–1606424, with seven methods per core, one running task per
 array and a one-hour per-case limit. Compute audit 1606449 depends on all six
 array terminal states. These 42 cases are pending audit and are not accepted
 manuscript results.
+
+The MetRef resident wave used arrays 1606460–1606465 and compute audit
+1606502. All 42 cases passed the source, scheduler and result checks; see
+[evidence/metref-wave-audit-v3.json](evidence/metref-wave-audit-v3.json).
+The USPS resident wave is queued as arrays 1606504–1606509, with compute
+audit 1606543 depending on all six terminal states. The USPS cases remain
+pending audit.
