@@ -48,5 +48,11 @@ audit 1606834 passed **42/42**; see `evidence/mnist-wave-audit-v3.json`.
 A Tabula Muris v3 CPU4 seven-method pilot was array 1606868 with a one-hour
 per-case limit. Compute audit 1606869 passed **7/7**; see
 `evidence/tabula-cpu4-pilot-audit-v3.json`. The remaining CPU1/2/8/16/32
-arrays are 1606883–1606887 with a 35-minute per-case limit. Dependent full
-wave audit 1606888 will check all 42 cases after those arrays terminate.
+arrays were 1606883–1606887 with a 35-minute per-case limit. Full-wave
+compute audit 1606888 passed **42/42**; see
+`evidence/tabula-wave-audit-v3.json`.
+
+Macosko retina now has a CPU4 seven-method pilot array 1606939 with a
+30-minute per-case limit. Dependent audit 1606940 uses the versioned
+`audit_single_core_v2.sbatch` entry point. Other core counts wait for this
+pilot to pass.
