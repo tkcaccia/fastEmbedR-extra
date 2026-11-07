@@ -1,0 +1,16 @@
+# Benchmark and API issues for the next correction round
+
+These items are development findings. Preserve the original outputs and logs;
+never silently relabel a failed or mismatched cohort as a final JSS result.
+
+| Priority | Issue | Evidence and required next action |
+|---|---|---|
+| High | File-backed KNN is absent from the simplified API. | `precompute_knn()` prepares a resident matrix; `knn_graph()` rejects a file-backed descriptor. `massive_full_knn_graph()` builds a file-backed full KNN graph and internal landmark/sharded routes exist. Add a reviewed public dispatch that preserves resident behavior, requires an explicit output prefix for disk results, documents its different descriptor type, and tests CPU/Metal/CUDA without fallback. Keep all such scientific tests off UCT HPC. |
+| High | First COIL20 R t-SNE competitor pilot used 300 total iterations. | The matched fastEmbedR case uses 250 early plus 300 normal iterations. Keep pilot 1606770 as diagnostic evidence. The corrected 550-total-iteration Rtsne/FIt-SNE pilot 1606879 passed audit 1606880, 2/2. Extend to repeated and larger cases before publication. |
+| High | Old HPC matched cohorts used double rather than source float32. | v1/v2 remain diagnostic. The source-locked v3 worker rejects widening. COIL20, Fashion-MNIST, MetRef, and USPS are independently audited 42/42; MNIST and Tabula Muris are in progress. Do not combine v1/v2 timing with the Mac v2 panel. |
+| Medium | Seeded umap-learn forces serial optimization. | COIL20 Python pilot 1606824 passed, but its log states the four requested jobs were overridden to one. Record effective execution; avoid presenting that pilot as four-core speedup. Decide whether a deterministic single-thread comparison or an unseeded parallel comparison belongs in the final table. |
+| High | Metal full-data UMAP Fashion quality remains below CPU on a paired fixed graph. | Resolve optimizer quality and rerun on the Mac before making parity or speed claims. Do not disturb the active source-locked Mac panel. |
+| High | CUDA beyond-combined-VRAM clustering and more-than-four-GPU scaling remain unqualified at useful size. | The eight-A100 tiny graph established device routing and exact partition parity only. Test capacity and performance on permitted non-HPC file-backed hardware with a source-locked candidate and bounded cost; HPC is resident-only. |
+| Medium | HPC L40S pilot still waits for resources. | Monitor job 1606281 without duplicate submission. Audit assigned devices, source/image identity, output, descendants, and GPU-context cleanup before broad CUDA benchmark jobs. |
+| Medium | Competitor pilots are one seed on COIL20 only. | Extend the resident-only comparator lane to the agreed datasets and 2D/3D where supported, with matched rows, preprocessing, schedule, repeats, separate conversion cost, quality, and source-locked audits. Never use the archived file-backed JSS controller on HPC. |
+| Medium | Python t-SNE iteration semantics still need a source review. | The openTSNE pilot passed device and output checks with `n_iter = 300`, but do not place its timing beside fastEmbedR until the installed openTSNE version's early-exaggeration and normal-phase schedule is recorded and matched. |

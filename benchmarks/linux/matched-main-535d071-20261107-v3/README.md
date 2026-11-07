@@ -45,7 +45,8 @@ The MNIST v3 resident wave uses arrays 1606828–1606833 for CPU1/2/4/8/16/32,
 with exactly seven cases per core and a 20-minute per-case limit. Its dependent
 audit 1606834 must pass before treating any case as an audited result.
 
-A Tabula Muris v3 CPU4 seven-method pilot is array 1606868 with a one-hour
-per-case limit. Dependent compute audit 1606869 uses the versioned
-`audit_single_core_v1.sbatch` entry point. The pilot must pass before a
-six-core-count wave is admitted.
+A Tabula Muris v3 CPU4 seven-method pilot was array 1606868 with a one-hour
+per-case limit. Compute audit 1606869 passed **7/7**; see
+`evidence/tabula-cpu4-pilot-audit-v3.json`. The remaining CPU1/2/8/16/32
+arrays are 1606883–1606887 with a 35-minute per-case limit. Dependent full
+wave audit 1606888 will check all 42 cases after those arrays terminate.

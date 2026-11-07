@@ -38,6 +38,28 @@ and is recorded separately. Conversion to double happened before the fit
 timer. These values are not publication comparisons with fastEmbedR until
 the parameter and repetition audit is complete.
 
+The pilot's Rtsne and FIt-SNE calls requested `max_iter = 300`, which is a
+**total** iteration budget. The matched fastEmbedR t-SNE cases request 250
+early-exaggeration iterations **plus** 300 normal iterations. Therefore the
+two R t-SNE timings above are diagnostic only and must never be placed beside
+the matched fastEmbedR timings as a fair speed comparison. A compute-node
+wrapper API probe 1606877 confirmed FIt-SNE exposes
+`stop_early_exag_iter` and `mom_switch_iter`; its formals are preserved in
+`evidence/fitsne-formals-1606877.out`. The versioned 550-total-iteration
+Rtsne/FIt-SNE correction is pilot 1606879. Independent audit 1606880 passed
+**2/2**. Its two cases write to distinct result folders and leave the first
+pilot unchanged.
+
+| Corrected t-SNE method | Fit seconds | Trustworthiness | Label accuracy |
+|---|---:|---:|---:|
+| Rtsne, 250 + 300 iterations | 0.717 | 0.9831 | 0.8933 |
+| FIt-SNE, 250 + 300 iterations | 5.467 | 0.9796 | 0.9017 |
+
+The first pilot's FIt-SNE time was 2.218 seconds with only 300 total
+iterations, confirming that iteration mismatch materially changed its timing.
+The corrected pilot remains one seed and does not establish a publication
+speed or quality ranking.
+
 Compute-only bridge probe 1606775 confirmed that R 4.6 in the same image can
 use `/opt/conda/bin/python` through `reticulate` and import NumPy, openTSNE,
 and umap-learn. The source-locked two-method COIL20 Python pilot 1606824
