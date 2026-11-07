@@ -1,0 +1,608 @@
+{
+  "benchmark_source": "matched-main-535d071-20261107-v2",
+  "package_commit": "535d071849945db3fa550d3c50f80633b91748cc",
+  "dataset": "USPS",
+  "job_ids_by_core": {
+    "1": "1606504",
+    "2": "1606505",
+    "4": "1606506",
+    "8": "1606507",
+    "16": "1606508",
+    "32": "1606509"
+  },
+  "planned": 42,
+  "counts": {
+    "audited": 42
+  },
+  "cases": [
+    {
+      "case_id": "usps_leiden_cpu1_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606515",
+      "cores": 1,
+      "array_index": 70,
+      "array_job_id": "1606504",
+      "numeric_job_id": "1606515",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_louvain_cpu1_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606520",
+      "cores": 1,
+      "array_index": 71,
+      "array_job_id": "1606504",
+      "numeric_job_id": "1606520",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_pca_cpu1_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606528",
+      "cores": 1,
+      "array_index": 72,
+      "array_job_id": "1606504",
+      "numeric_job_id": "1606528",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_tsne_cpu1_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606534",
+      "cores": 1,
+      "array_index": 73,
+      "array_job_id": "1606504",
+      "numeric_job_id": "1606534",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_tsne_cpu1_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606540",
+      "cores": 1,
+      "array_index": 74,
+      "array_job_id": "1606504",
+      "numeric_job_id": "1606540",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_umap_cpu1_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606547",
+      "cores": 1,
+      "array_index": 75,
+      "array_job_id": "1606504",
+      "numeric_job_id": "1606547",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_umap_cpu1_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606504",
+      "cores": 1,
+      "array_index": 76,
+      "array_job_id": "1606504",
+      "numeric_job_id": "1606504",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_leiden_cpu2_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606514",
+      "cores": 2,
+      "array_index": 70,
+      "array_job_id": "1606505",
+      "numeric_job_id": "1606514",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_louvain_cpu2_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606519",
+      "cores": 2,
+      "array_index": 71,
+      "array_job_id": "1606505",
+      "numeric_job_id": "1606519",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_pca_cpu2_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606526",
+      "cores": 2,
+      "array_index": 72,
+      "array_job_id": "1606505",
+      "numeric_job_id": "1606526",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_tsne_cpu2_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606533",
+      "cores": 2,
+      "array_index": 73,
+      "array_job_id": "1606505",
+      "numeric_job_id": "1606533",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_tsne_cpu2_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606539",
+      "cores": 2,
+      "array_index": 74,
+      "array_job_id": "1606505",
+      "numeric_job_id": "1606539",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_umap_cpu2_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606548",
+      "cores": 2,
+      "array_index": 75,
+      "array_job_id": "1606505",
+      "numeric_job_id": "1606548",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_umap_cpu2_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606505",
+      "cores": 2,
+      "array_index": 76,
+      "array_job_id": "1606505",
+      "numeric_job_id": "1606505",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_leiden_cpu4_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606513",
+      "cores": 4,
+      "array_index": 70,
+      "array_job_id": "1606506",
+      "numeric_job_id": "1606513",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_louvain_cpu4_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606517",
+      "cores": 4,
+      "array_index": 71,
+      "array_job_id": "1606506",
+      "numeric_job_id": "1606517",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_pca_cpu4_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606523",
+      "cores": 4,
+      "array_index": 72,
+      "array_job_id": "1606506",
+      "numeric_job_id": "1606523",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_tsne_cpu4_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606530",
+      "cores": 4,
+      "array_index": 73,
+      "array_job_id": "1606506",
+      "numeric_job_id": "1606530",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_tsne_cpu4_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606537",
+      "cores": 4,
+      "array_index": 74,
+      "array_job_id": "1606506",
+      "numeric_job_id": "1606537",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_umap_cpu4_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606545",
+      "cores": 4,
+      "array_index": 75,
+      "array_job_id": "1606506",
+      "numeric_job_id": "1606545",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_umap_cpu4_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606506",
+      "cores": 4,
+      "array_index": 76,
+      "array_job_id": "1606506",
+      "numeric_job_id": "1606506",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_leiden_cpu8_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606512",
+      "cores": 8,
+      "array_index": 70,
+      "array_job_id": "1606507",
+      "numeric_job_id": "1606512",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_louvain_cpu8_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606516",
+      "cores": 8,
+      "array_index": 71,
+      "array_job_id": "1606507",
+      "numeric_job_id": "1606516",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_pca_cpu8_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606522",
+      "cores": 8,
+      "array_index": 72,
+      "array_job_id": "1606507",
+      "numeric_job_id": "1606522",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_tsne_cpu8_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606529",
+      "cores": 8,
+      "array_index": 73,
+      "array_job_id": "1606507",
+      "numeric_job_id": "1606529",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_tsne_cpu8_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606536",
+      "cores": 8,
+      "array_index": 74,
+      "array_job_id": "1606507",
+      "numeric_job_id": "1606536",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_umap_cpu8_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606544",
+      "cores": 8,
+      "array_index": 75,
+      "array_job_id": "1606507",
+      "numeric_job_id": "1606544",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_umap_cpu8_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606507",
+      "cores": 8,
+      "array_index": 76,
+      "array_job_id": "1606507",
+      "numeric_job_id": "1606507",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_leiden_cpu16_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606511",
+      "cores": 16,
+      "array_index": 70,
+      "array_job_id": "1606508",
+      "numeric_job_id": "1606511",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_louvain_cpu16_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606518",
+      "cores": 16,
+      "array_index": 71,
+      "array_job_id": "1606508",
+      "numeric_job_id": "1606518",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_pca_cpu16_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606524",
+      "cores": 16,
+      "array_index": 72,
+      "array_job_id": "1606508",
+      "numeric_job_id": "1606524",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_tsne_cpu16_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606531",
+      "cores": 16,
+      "array_index": 73,
+      "array_job_id": "1606508",
+      "numeric_job_id": "1606531",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_tsne_cpu16_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606535",
+      "cores": 16,
+      "array_index": 74,
+      "array_job_id": "1606508",
+      "numeric_job_id": "1606535",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_umap_cpu16_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606542",
+      "cores": 16,
+      "array_index": 75,
+      "array_job_id": "1606508",
+      "numeric_job_id": "1606542",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_umap_cpu16_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606508",
+      "cores": 16,
+      "array_index": 76,
+      "array_job_id": "1606508",
+      "numeric_job_id": "1606508",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_leiden_cpu32_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606510",
+      "cores": 32,
+      "array_index": 70,
+      "array_job_id": "1606509",
+      "numeric_job_id": "1606510",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_louvain_cpu32_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606521",
+      "cores": 32,
+      "array_index": 71,
+      "array_job_id": "1606509",
+      "numeric_job_id": "1606521",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_pca_cpu32_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606527",
+      "cores": 32,
+      "array_index": 72,
+      "array_job_id": "1606509",
+      "numeric_job_id": "1606527",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_tsne_cpu32_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606532",
+      "cores": 32,
+      "array_index": 73,
+      "array_job_id": "1606509",
+      "numeric_job_id": "1606532",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_tsne_cpu32_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606538",
+      "cores": 32,
+      "array_index": 74,
+      "array_job_id": "1606509",
+      "numeric_job_id": "1606538",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_umap_cpu32_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606541",
+      "cores": 32,
+      "array_index": 75,
+      "array_job_id": "1606509",
+      "numeric_job_id": "1606541",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "usps_umap_cpu32_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606509",
+      "cores": 32,
+      "array_index": 76,
+      "array_job_id": "1606509",
+      "numeric_job_id": "1606509",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    }
+  ],
+  "status": "passed"
+}

@@ -55,5 +55,7 @@ The MetRef resident wave used arrays 1606460–1606465 and compute audit
 1606502. All 42 cases passed the source, scheduler and result checks; see
 [evidence/metref-wave-audit-v3.json](evidence/metref-wave-audit-v3.json).
 The USPS resident wave is queued as arrays 1606504–1606509, with compute
-audit 1606543 depending on all six terminal states. The USPS cases remain
-pending audit.
+audit 1606543. All 42 USPS cases passed; see
+[evidence/usps-wave-audit-v3.json](evidence/usps-wave-audit-v3.json).
+The next MNIST resident wave is queued as arrays 1606549–1606554 with
+compute audit 1606579. Its 42 cases remain pending audit.
