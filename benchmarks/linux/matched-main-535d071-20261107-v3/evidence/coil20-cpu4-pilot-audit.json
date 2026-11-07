@@ -1,0 +1,98 @@
+{
+  "benchmark_source": "matched-main-535d071-20261107-v3",
+  "package_commit": "535d071849945db3fa550d3c50f80633b91748cc",
+  "dataset": "COIL20",
+  "cores": 4,
+  "array_job_id": "1606618",
+  "planned": 7,
+  "counts": {
+    "audited": 7
+  },
+  "cases": [
+    {
+      "case_id": "coil20_leiden_cpu4_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606619",
+      "array_index": 0,
+      "numeric_job_id": "1606619",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_louvain_cpu4_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606620",
+      "array_index": 1,
+      "numeric_job_id": "1606620",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_pca_cpu4_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606621",
+      "array_index": 2,
+      "numeric_job_id": "1606621",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_tsne_cpu4_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606622",
+      "array_index": 3,
+      "numeric_job_id": "1606622",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_tsne_cpu4_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606623",
+      "array_index": 4,
+      "numeric_job_id": "1606623",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_umap_cpu4_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606625",
+      "array_index": 5,
+      "numeric_job_id": "1606625",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "coil20_umap_cpu4_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606618",
+      "array_index": 6,
+      "numeric_job_id": "1606618",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    }
+  ],
+  "status": "passed"
+}

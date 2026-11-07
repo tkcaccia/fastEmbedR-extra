@@ -57,8 +57,19 @@ The MetRef resident wave used arrays 1606460–1606465 and compute audit
 The USPS resident wave is queued as arrays 1606504–1606509, with compute
 audit 1606543. All 42 USPS cases passed; see
 [evidence/usps-wave-audit-v3.json](evidence/usps-wave-audit-v3.json).
-The next MNIST resident wave is queued as arrays 1606549–1606554 with
-compute audit 1606579. Its 42 cases remain pending audit.
+The MNIST resident wave used arrays 1606549–1606554 and compute audit
+1606579. All 42 cases passed; see
+[evidence/mnist-wave-audit-v3.json](evidence/mnist-wave-audit-v3.json).
+
+The Tabula Muris seven-method CPU4 pilot used array 1606601 and compute audit
+1606606. All seven cases passed; see
+[evidence/tabula-cpu4-pilot-audit.json](evidence/tabula-cpu4-pilot-audit.json).
+
+The v2 worker converts `float32` source input to double, while the Mac worker
+uses the source `float32` object. This changes memory use and may change fit
+timings or quality. Preserve every v2 result as diagnostic evidence. A new
+source-locked v3 cohort preserves `float32` and must be used for matched
+Mac/HPC comparisons after its independent audit.
 
 The larger mass41 dataset is undergoing a seven-method CPU4 pilot, array
 1606597, before the other core counts are submitted. Compute audit 1606599

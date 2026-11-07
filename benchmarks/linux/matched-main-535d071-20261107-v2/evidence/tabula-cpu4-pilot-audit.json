@@ -1,0 +1,98 @@
+{
+  "benchmark_source": "matched-main-535d071-20261107-v2",
+  "package_commit": "535d071849945db3fa550d3c50f80633b91748cc",
+  "dataset": "Tabula Muris",
+  "cores": 4,
+  "array_job_id": "1606601",
+  "planned": 7,
+  "counts": {
+    "audited": 7
+  },
+  "cases": [
+    {
+      "case_id": "tabulamuris_leiden_cpu4_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606602",
+      "array_index": 63,
+      "numeric_job_id": "1606602",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "tabulamuris_louvain_cpu4_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606603",
+      "array_index": 64,
+      "numeric_job_id": "1606603",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "tabulamuris_pca_cpu4_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606604",
+      "array_index": 65,
+      "numeric_job_id": "1606604",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "tabulamuris_tsne_cpu4_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606605",
+      "array_index": 66,
+      "numeric_job_id": "1606605",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "tabulamuris_tsne_cpu4_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606607",
+      "array_index": 67,
+      "numeric_job_id": "1606607",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "tabulamuris_umap_cpu4_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606613",
+      "array_index": 68,
+      "numeric_job_id": "1606613",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "tabulamuris_umap_cpu4_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606601",
+      "array_index": 69,
+      "numeric_job_id": "1606601",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    }
+  ],
+  "status": "passed"
+}
