@@ -1,0 +1,608 @@
+{
+  "benchmark_source": "matched-main-535d071-20261107-v3",
+  "package_commit": "535d071849945db3fa550d3c50f80633b91748cc",
+  "dataset": "Macosko retina",
+  "job_ids_by_core": {
+    "1": "1606947",
+    "2": "1606948",
+    "4": "1606939",
+    "8": "1606949",
+    "16": "1606950",
+    "32": "1606951"
+  },
+  "planned": 42,
+  "counts": {
+    "audited": 42
+  },
+  "cases": [
+    {
+      "case_id": "macosko_leiden_cpu1_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606957",
+      "cores": 1,
+      "array_index": 35,
+      "array_job_id": "1606947",
+      "numeric_job_id": "1606957",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_louvain_cpu1_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606960",
+      "cores": 1,
+      "array_index": 36,
+      "array_job_id": "1606947",
+      "numeric_job_id": "1606960",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_pca_cpu1_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606966",
+      "cores": 1,
+      "array_index": 37,
+      "array_job_id": "1606947",
+      "numeric_job_id": "1606966",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_tsne_cpu1_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606971",
+      "cores": 1,
+      "array_index": 38,
+      "array_job_id": "1606947",
+      "numeric_job_id": "1606971",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_tsne_cpu1_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606978",
+      "cores": 1,
+      "array_index": 39,
+      "array_job_id": "1606947",
+      "numeric_job_id": "1606978",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_umap_cpu1_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606984",
+      "cores": 1,
+      "array_index": 40,
+      "array_job_id": "1606947",
+      "numeric_job_id": "1606984",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_umap_cpu1_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606947",
+      "cores": 1,
+      "array_index": 41,
+      "array_job_id": "1606947",
+      "numeric_job_id": "1606947",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_leiden_cpu2_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606956",
+      "cores": 2,
+      "array_index": 35,
+      "array_job_id": "1606948",
+      "numeric_job_id": "1606956",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_louvain_cpu2_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606961",
+      "cores": 2,
+      "array_index": 36,
+      "array_job_id": "1606948",
+      "numeric_job_id": "1606961",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_pca_cpu2_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606968",
+      "cores": 2,
+      "array_index": 37,
+      "array_job_id": "1606948",
+      "numeric_job_id": "1606968",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_tsne_cpu2_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606972",
+      "cores": 2,
+      "array_index": 38,
+      "array_job_id": "1606948",
+      "numeric_job_id": "1606972",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_tsne_cpu2_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606976",
+      "cores": 2,
+      "array_index": 39,
+      "array_job_id": "1606948",
+      "numeric_job_id": "1606976",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_umap_cpu2_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606981",
+      "cores": 2,
+      "array_index": 40,
+      "array_job_id": "1606948",
+      "numeric_job_id": "1606981",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_umap_cpu2_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606948",
+      "cores": 2,
+      "array_index": 41,
+      "array_job_id": "1606948",
+      "numeric_job_id": "1606948",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_leiden_cpu4_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606941",
+      "cores": 4,
+      "array_index": 35,
+      "array_job_id": "1606939",
+      "numeric_job_id": "1606941",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_louvain_cpu4_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606942",
+      "cores": 4,
+      "array_index": 36,
+      "array_job_id": "1606939",
+      "numeric_job_id": "1606942",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_pca_cpu4_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606943",
+      "cores": 4,
+      "array_index": 37,
+      "array_job_id": "1606939",
+      "numeric_job_id": "1606943",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_tsne_cpu4_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606944",
+      "cores": 4,
+      "array_index": 38,
+      "array_job_id": "1606939",
+      "numeric_job_id": "1606944",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_tsne_cpu4_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606945",
+      "cores": 4,
+      "array_index": 39,
+      "array_job_id": "1606939",
+      "numeric_job_id": "1606945",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_umap_cpu4_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606946",
+      "cores": 4,
+      "array_index": 40,
+      "array_job_id": "1606939",
+      "numeric_job_id": "1606946",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_umap_cpu4_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606939",
+      "cores": 4,
+      "array_index": 41,
+      "array_job_id": "1606939",
+      "numeric_job_id": "1606939",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_leiden_cpu8_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606955",
+      "cores": 8,
+      "array_index": 35,
+      "array_job_id": "1606949",
+      "numeric_job_id": "1606955",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_louvain_cpu8_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606958",
+      "cores": 8,
+      "array_index": 36,
+      "array_job_id": "1606949",
+      "numeric_job_id": "1606958",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_pca_cpu8_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606964",
+      "cores": 8,
+      "array_index": 37,
+      "array_job_id": "1606949",
+      "numeric_job_id": "1606964",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_tsne_cpu8_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606969",
+      "cores": 8,
+      "array_index": 38,
+      "array_job_id": "1606949",
+      "numeric_job_id": "1606969",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_tsne_cpu8_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606975",
+      "cores": 8,
+      "array_index": 39,
+      "array_job_id": "1606949",
+      "numeric_job_id": "1606975",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_umap_cpu8_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606980",
+      "cores": 8,
+      "array_index": 40,
+      "array_job_id": "1606949",
+      "numeric_job_id": "1606980",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_umap_cpu8_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606949",
+      "cores": 8,
+      "array_index": 41,
+      "array_job_id": "1606949",
+      "numeric_job_id": "1606949",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_leiden_cpu16_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606954",
+      "cores": 16,
+      "array_index": 35,
+      "array_job_id": "1606950",
+      "numeric_job_id": "1606954",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_louvain_cpu16_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606959",
+      "cores": 16,
+      "array_index": 36,
+      "array_job_id": "1606950",
+      "numeric_job_id": "1606959",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_pca_cpu16_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606963",
+      "cores": 16,
+      "array_index": 37,
+      "array_job_id": "1606950",
+      "numeric_job_id": "1606963",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_tsne_cpu16_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606967",
+      "cores": 16,
+      "array_index": 38,
+      "array_job_id": "1606950",
+      "numeric_job_id": "1606967",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_tsne_cpu16_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606973",
+      "cores": 16,
+      "array_index": 39,
+      "array_job_id": "1606950",
+      "numeric_job_id": "1606973",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_umap_cpu16_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606979",
+      "cores": 16,
+      "array_index": 40,
+      "array_job_id": "1606950",
+      "numeric_job_id": "1606979",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_umap_cpu16_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606950",
+      "cores": 16,
+      "array_index": 41,
+      "array_job_id": "1606950",
+      "numeric_job_id": "1606950",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_leiden_cpu32_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606953",
+      "cores": 32,
+      "array_index": 35,
+      "array_job_id": "1606951",
+      "numeric_job_id": "1606953",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_louvain_cpu32_d0_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606962",
+      "cores": 32,
+      "array_index": 36,
+      "array_job_id": "1606951",
+      "numeric_job_id": "1606962",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_pca_cpu32_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606965",
+      "cores": 32,
+      "array_index": 37,
+      "array_job_id": "1606951",
+      "numeric_job_id": "1606965",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_tsne_cpu32_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606970",
+      "cores": 32,
+      "array_index": 38,
+      "array_job_id": "1606951",
+      "numeric_job_id": "1606970",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_tsne_cpu32_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606974",
+      "cores": 32,
+      "array_index": 39,
+      "array_job_id": "1606951",
+      "numeric_job_id": "1606974",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_umap_cpu32_d2_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606977",
+      "cores": 32,
+      "array_index": 40,
+      "array_job_id": "1606951",
+      "numeric_job_id": "1606977",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    },
+    {
+      "case_id": "macosko_umap_cpu32_d3_s4_matched_535d071",
+      "status": "audited",
+      "issues": [],
+      "job_id": "1606951",
+      "cores": 32,
+      "array_index": 41,
+      "array_job_id": "1606951",
+      "numeric_job_id": "1606951",
+      "scheduler_state": [
+        "COMPLETED",
+        "0:0"
+      ]
+    }
+  ],
+  "status": "passed"
+}
