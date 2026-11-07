@@ -74,3 +74,35 @@ rerun the policy/timing tests on the final benchmark revision, and regenerate
 Pages from the same source commit before treating the manuscript tables as
 release evidence. Keep Mac CPU/Metal and HPC resident CPU/CUDA cohorts
 source-locked; never run file-backed or SSD-streaming science on UCT HPC.
+
+## Live follow-up on 2026-11-07
+
+- Package main `110f0f2` added a macOS 15 arm64 check beside the latest macOS
+  runner. In [run 42371222345](https://github.com/tkcaccia/fastEmbedR/actions/runs/42371222345),
+  the source build, Windows release check and Ubuntu release check passed.
+  The macOS latest check still failed 22 Metal tests at pipeline creation for
+  `signed_hash_project` on hosted macOS 26.7.2. The error reports only
+  `CompilerError Code=2`, without a shader diagnostic. macOS 15 and Ubuntu
+  devel had not finished at the time of this audit. This remains a release
+  blocker; the passing small physical M3 Ultra device probe does not resolve
+  the hosted-runner failure.
+- The live Pages home, reference index and UMAP page returned HTTP 200. All
+  31 distinct internal links found across those three pages also returned
+  HTTP 200. The reference index puts `pca()`, `tsne()`, `umap()` and
+  `graph_cluster()` in its main section, and the home page's previously broken
+  provenance links now target GitHub source files. The published UMAP manual
+  still requires a prepared symmetric graph and file-backed initialization
+  for a full file-backed fit. It must be regenerated after the accepted
+  one-call API is implemented and qualified.
+- The source-locked Mac panel completed 459 cases, then stopped on the
+  965,282-row mass41 3D CPU1 t-SNE case after its 7,200-second limit. A
+  separate CPU4 diagnostic was still running when checked; its outcome must
+  be retained before starting the guarded continuation. This is a real
+  resource-limited case, not a successful benchmark measurement.
+- The matched HPC resident worker enforces float32 input and separate stage
+  timers. Its v3 Python test set passed 21 tests. An additional ImageNet
+  8-core Louvain pilot reached scheduler `COMPLETED 0:0` and wrote source,
+  input, memory and method manifests; the other FlowRepository pilot was
+  still running. Treat the ImageNet numbers as provisional until the
+  cohort's complete per-case audit has run. No file-backed science or
+  large-image checksum was performed on the HPC head node.
