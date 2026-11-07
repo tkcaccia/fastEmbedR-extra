@@ -46,3 +46,25 @@ were submitted for case indices 7–13 with twenty-minute limits. Prior
 same-settings four-core Fashion cases completed within roughly three minutes;
 these new-source cases still require terminal input, backend, quality,
 memory and scheduler audit. Do not duplicate them while queued or running.
+
+The Fashion-MNIST arrays are terminal. Compute-node audit `1606221` checked
+the full 462-case manifest, current Slurm accounting, input and route
+identities, output quality, memory and cleanup. It accepted 80 completed
+COIL20/Fashion cases, preserved four failed Fashion PCA cases at 4, 8, 16
+and 32 cores, and marked the remaining 378 cases unrun. The failure came
+from `resolve_projection_threads()` silently capping explicit PCA requests
+to two workers for Fashion's 784 input columns. The worker correctly stopped
+these cases rather than recording them as a scaling result. Original result
+folders and scheduler logs remain under the cohort root; the terminal audit
+JSON is under `/scratch/firenze/NN/benchmarks/` in
+`audit_matched_77b852f_20261106_v1/audit-fashion-20261107.json`.
+
+Package main `535d071849945db3fa550d3c50f80633b91748cc` corrects explicit
+thread requests while retaining automatic small-task caps. A CPU-only
+candidate from this code passed 4, 8, 16 and 32 worker metadata and score
+parity on a resident 384-by-784 matrix (`1606217`), plus the installed
+`test-embed.R` and `test-transform-tsne.R` files (`1606218`, `1606219`).
+Initial probe `1606215` inadvertently loaded the older image library; the
+versioned diagnostic `1606216` established that cause. Preserve those logs.
+The new package requires its own image and separate benchmark cohort;
+do not replace the four failed `77b852f` cases in place.
