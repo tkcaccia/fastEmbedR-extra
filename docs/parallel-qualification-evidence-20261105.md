@@ -40,3 +40,19 @@ unchanged landmark reference coordinates, then logged
 This qualifies a small device and lifecycle route, not real-data quality,
 multi-GPU speedup, or the manuscript campaign. No file-backed or streaming
 scientific calculation ran on HPC.
+
+An eight-A100 Hugging Face qualification job
+[`6aed848c0e0338d1bb80eb48`](https://huggingface.co/jobs/tkcaccia/6aed848c0e0338d1bb80eb48)
+finished with stage `COMPLETED` on 7 November. Its source archive SHA-256
+was `1de2d92cf39cf419251476290998a248ed601a3d4138a7fd7d3d14396d4d4b40`;
+the worker SHA-256 was
+`deaa1ab627ad24fc20b17ce897ba32ef868e679c23ab39365add7d7ee5d16c4c`.
+On the same 7,200-vertex, 14,400-edge graph, 2, 4 and 8 GPU runs had
+identical label SHA-256, 2,400 communities, modularity 0.9995833333333334,
+and distinct requested device identities. Elapsed times were 5.57, 5.67
+and 7.26 seconds, respectively. The terminal log printed
+`FASTEMBEDR_EIGHT_A100_ROUTING_PASS`. This is a device-routing and parity
+check only: the graph file was 172,808 bytes, reported peak GPU pool memory
+was 16,896 bytes per device, and eight GPUs were slower than two. It does
+not prove over-VRAM capacity, beneficial scaling, clustering quality on a
+real dataset, or cleanup beyond the source-locked driver's terminal marker.
