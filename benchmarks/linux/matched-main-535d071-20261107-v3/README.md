@@ -57,3 +57,9 @@ Macosko retina CPU4 seven-method pilot array 1606939 passed compute audit
 CPU1/2/8/16/32 arrays were 1606947–1606951 with a 20-minute per-case limit.
 Dependent full-wave compute audit 1606952 passed **42/42**; see
 `evidence/retina-wave-audit-v3.json`.
+
+The mass41 v3 CPU4 pilot starts with resident Leiden, Louvain, and PCA
+(array 1607023, exact indices 42–44). Compute audit 1607026 depends on all
+three terminal states. The three-case subset is deliberately separate from
+the seven-method cohort until the diagnostic v2 3D t-SNE runtime is reviewed;
+it is not a complete mass41 result.
