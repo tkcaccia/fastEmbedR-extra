@@ -222,3 +222,12 @@ source-locked; never run file-backed or SSD-streaming science on UCT HPC.
   active mass41 diagnostic still owned the Mac when staged, so no new
   scientific calculation or package install was started. Its source archive
   SHA-256 is `2e5649ddd0b8f150d2aa8cdcdf832ee28cab70b40aaa6098f27b9cf14544171e`.
+- The candidate's one-call full file-backed UMAP/t-SNE path explicitly
+  rejects `checkpoint` and `resume`. This is a real recovery gap, not a
+  documentation choice. Its low-disk `bucketed` graph sort is rejected for
+  checkpointing in both R and `massive_symmetrize_graph_cpp`; the path can
+  consume the KNN files before graph construction finishes. Simply passing
+  `resume = TRUE` into the optimizer would therefore leave earlier stage
+  failures unrecoverable. Recovery needs a source/input-identified stage
+  manifest and a restartable bucketed sort or an explicitly costed global
+  sort option, then an actual interruption/resume equivalence test on Mac.
