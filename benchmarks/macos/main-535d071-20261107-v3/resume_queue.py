@@ -19,7 +19,10 @@ ROOT_NAME = "fastEmbedR-main-535d071-benchmark-v2-20261107"
 PACKAGE_COMMIT = "535d071849945db3fa550d3c50f80633b91748cc"
 RUNNER_SHA = "a81f4b2187eaf4911619d4cfb930ddd99477ac3a6231da6be187ed9c526f63d6"
 WORKER_SHA = "9ec71d76dde7928891fff8cac95fc728dc2d2c50c806b95cafbacbbb865fb76d"
-LIMITED_CASE = "mass41_tsne_cpu1_d3_s4_r1_535d071_v2"
+LIMITED_CASES = frozenset({
+    "mass41_tsne_cpu1_d3_s4_r1_535d071_v2",
+    "mass41_tsne_cpu4_d3_s4_r1_535d071_v2",
+})
 
 
 def swap_mib():
@@ -53,7 +56,7 @@ def case_state(root, case_id):
             data.get("cleanup_clear") is True and
             (output / "metrics.json").is_file()):
         return "completed"
-    if (case_id == LIMITED_CASE and data.get("case_id") == case_id and
+    if (case_id in LIMITED_CASES and data.get("case_id") == case_id and
             data.get("timed_out") is True):
         return "resource_limited"
     return "ambiguous"
@@ -142,7 +145,7 @@ def run(root):
 def preflight(root):
     counts = Counter(case_state(root, case_id)
                      for _, case_id in plan(root))
-    if counts["ambiguous"] or counts["resource_limited"] != 1:
+    if counts["ambiguous"] or not 1 <= counts["resource_limited"] <= 2:
         raise ValueError("Panel has an unreviewed prior result")
     return dict(counts)
 

@@ -34,8 +34,9 @@ class ResumeAdmissionTest(unittest.TestCase):
                             "package_commit": resume.PACKAGE_COMMIT,
                             "storage_mode": "resident", "fit_scope": "full",
                             "source_sha256": "source", "dll_sha256": "dll"}))
-            names = ["case_0", resume.LIMITED_CASE] + [
-                f"case_{i}" for i in range(2, 693)]
+            limited_names = sorted(resume.LIMITED_CASES)
+            names = ["case_0", *limited_names] + [
+                f"case_{i}" for i in range(3, 693)]
             (root / "queue.txt").write_text("\n".join(
                 name + ".json" for name in names) + "\n")
             for name in names:
@@ -59,7 +60,16 @@ class ResumeAdmissionTest(unittest.TestCase):
                 json.dumps({"case_id": names[1], "timed_out": True}))
             self.assertEqual(resume.preflight(root), {
                 "completed": 1, "resource_limited": 1, "pending": 691})
-            (root / "results" / names[2]).mkdir()
+            second = limited_names[1]
+            second_path = root / "results" / second
+            second_path.mkdir()
+            (second_path / "run.json").write_text(json.dumps({
+                "case_id": second, "timed_out": True}))
+            self.assertEqual(resume.case_state(root, second),
+                             "resource_limited")
+            self.assertEqual(resume.preflight(root), {
+                "completed": 1, "resource_limited": 2, "pending": 690})
+            (root / "results" / names[3]).mkdir()
             with self.assertRaisesRegex(ValueError, "unreviewed"):
                 resume.preflight(root)
 
