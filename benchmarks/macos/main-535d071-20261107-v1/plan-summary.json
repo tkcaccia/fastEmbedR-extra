@@ -1,0 +1,18 @@
+{
+  "package_commit": "535d071849945db3fa550d3c50f80633b91748cc",
+  "cases": 693,
+  "queued": 693,
+  "precompleted": 0,
+  "storage_mode": "resident",
+  "fit_scope": "full",
+  "source_sha256": "0a613695c03c47d23d6d3f29fbc65cc116f0bfdc952c0cd621ff4f9742297979",
+  "dll_sha256": "363be9aca774e7bd543c16da746a55449ecc326f8014e3060699b84f71069be5",
+  "cases_sha256": "55e16a0474bdbec7ecaaba9e3a575d6e168aa989422bbdad9eddb504ed53597a",
+  "scope": "11 datasets, seven methods/dimensions, three seeds, CPU1/CPU4/Metal1",
+  "excluded": [
+    "file-backed",
+    "landmark",
+    "competitors",
+    "Deep1B"
+  ]
+}
